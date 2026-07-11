@@ -171,12 +171,20 @@ export function PoseDetector() {
 
   const stopCamera = useCallback(() => {
     cameraRef.current?.stop()
+    cameraRef.current = null
+    void poseRef.current?.close()
+    poseRef.current = null
     setIsActive(false)
     setRepCount(0)
     setFeedback('Get in position to start')
   }, [])
 
-  useEffect(() => { return () => { cameraRef.current?.stop() } }, [])
+  useEffect(() => {
+    return () => {
+      cameraRef.current?.stop()
+      void poseRef.current?.close()
+    }
+  }, [])
 
   return (
     <div className="space-y-6">

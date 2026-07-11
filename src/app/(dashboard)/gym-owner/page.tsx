@@ -14,12 +14,33 @@ import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
+interface GymDetails {
+  name: string
+  address: string
+  country: string
+  description: string
+  phone: string
+  email: string
+  logo: string
+  verificationStatus?: string
+}
+
 export default function GymOwnerPage() {
   const { user, isLoading: authLoading } = useAuth()
   const [trainers, setTrainers] = useState<Trainer[]>([])
   const [loading, setLoading] = useState(true)
   const [trainerEmail, setTrainerEmail] = useState('')
   const [adding, setAdding] = useState(false)
+  const [savingGym, setSavingGym] = useState(false)
+  const [gym, setGym] = useState<GymDetails>({
+    name: '',
+    address: '',
+    country: 'Pakistan',
+    description: '',
+    phone: '',
+    email: '',
+    logo: '',
+  })
 
   const loadTrainers = () => {
     setLoading(true)
@@ -29,11 +50,32 @@ export default function GymOwnerPage() {
       .finally(() => setLoading(false))
   }
 
+  const loadGym = () => {
+    fetch('/api/gym-owner/gym')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data) return
+        setGym({
+          name: data.name || '',
+          address: data.address || '',
+          country: data.country || 'Pakistan',
+          description: data.description || '',
+          phone: data.phone || '',
+          email: data.email || '',
+          logo: data.logo || '',
+          verificationStatus: data.verificationStatus,
+        })
+      })
+  }
+
   useEffect(() => {
-    if (user?.role === 'gym_owner') loadTrainers()
+    if (user?.role === 'gym_owner') {
+      loadTrainers()
+      loadGym()
+    }
   }, [user])
 
-  const gymName = trainers[0]?.gymName || 'My Gym'
+  const gymName = gym.name || trainers[0]?.gymName || 'My Gym'
   const verifiedCount = trainers.filter(t => t.isFullyVerified).length
   const avgRating = trainers.length
     ? (trainers.reduce((s, t) => s + (t.rating || 0), 0) / trainers.length).toFixed(1)
@@ -64,6 +106,42 @@ export default function GymOwnerPage() {
       toast.error(err instanceof Error ? err.message : 'Failed to add trainer')
     } finally {
       setAdding(false)
+    }
+  }
+
+  const saveGym = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSavingGym(true)
+    try {
+      const res = await fetch('/api/gym-owner/gym', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(gym),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message)
+      setGym((current) => ({ ...current, ...data.gym }))
+      toast.success('Gym details updated')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update gym')
+    } finally {
+      setSavingGym(false)
+    }
+  }
+
+  const updateTrainer = async (trainerId: string, action: 'approve' | 'remove') => {
+    try {
+      const res = await fetch('/api/gym-owner/trainers', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trainerId, action }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message)
+      toast.success(data.message)
+      loadTrainers()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Trainer action failed')
     }
   }
 
@@ -114,6 +192,49 @@ export default function GymOwnerPage() {
                     <div className="text-3xl font-black text-[#00ff87]">{avgRating}</div>
                   </div>
                 </div>
+                <form onSubmit={saveGym} className="grid gap-4 border-t border-[#1a1a1a] pt-6 sm:grid-cols-2">
+                  {[
+                    { key: 'name', label: 'Gym Name', required: true },
+                    { key: 'address', label: 'Address', required: true },
+                    { key: 'country', label: 'Country', required: false },
+                    { key: 'phone', label: 'Phone', required: false },
+                    { key: 'email', label: 'Email', required: false },
+                    { key: 'logo', label: 'Logo URL', required: false },
+                  ].map((field) => (
+                    <div key={field.key}>
+                      <Label htmlFor={`gym-${field.key}`}>{field.label}</Label>
+                      <Input
+                        id={`gym-${field.key}`}
+                        type={field.key === 'email' ? 'email' : 'text'}
+                        required={field.required}
+                        value={gym[field.key as keyof GymDetails] || ''}
+                        onChange={(event) => setGym((current) => ({
+                          ...current,
+                          [field.key]: event.target.value,
+                        }))}
+                        className="mt-1 bg-[#0a0a0a] border-[#2a2a2a]"
+                      />
+                    </div>
+                  ))}
+                  <div className="sm:col-span-2">
+                    <Label htmlFor="gym-description">Description</Label>
+                    <textarea
+                      id="gym-description"
+                      value={gym.description}
+                      onChange={(event) => setGym((current) => ({ ...current, description: event.target.value }))}
+                      rows={4}
+                      className="mt-1 w-full rounded-xl border border-[#2a2a2a] bg-[#0a0a0a] px-3 py-2 text-sm outline-none focus:border-[#00ff87]"
+                    />
+                  </div>
+                  <div className="sm:col-span-2 flex items-center justify-between gap-3">
+                    <Badge variant="outline" className="capitalize">
+                      {gym.verificationStatus || 'pending'}
+                    </Badge>
+                    <Button type="submit" disabled={savingGym} className="bg-[#00ff87] text-black hover:bg-[#00cc6a]">
+                      {savingGym ? 'Saving...' : 'Save Gym Details'}
+                    </Button>
+                  </div>
+                </form>
                 <div className="border-t border-[#1a1a1a] pt-6">
                   <h3 className="font-bold mb-4">Add Trainer to Gym</h3>
                   <form onSubmit={handleAddTrainer} className="flex gap-3 flex-wrap">
@@ -157,6 +278,24 @@ export default function GymOwnerPage() {
                             <Badge variant="outline" className={t.isFullyVerified ? 'border-[#00ff87]/30 text-[#00ff87]' : 'border-yellow-500/30 text-yellow-400'}>
                               {t.isFullyVerified ? 'Verified' : 'Pending'}
                             </Badge>
+                          </div>
+                          <div className="mt-3 flex gap-2">
+                            {!t.isFullyVerified && (
+                              <Button
+                                size="sm"
+                                onClick={() => updateTrainer(t._id, 'approve')}
+                                className="bg-[#00ff87] text-black hover:bg-[#00cc6a]"
+                              >
+                                Approve
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => updateTrainer(t._id, 'remove')}
+                            >
+                              Remove
+                            </Button>
                           </div>
                         </div>
                       </div>

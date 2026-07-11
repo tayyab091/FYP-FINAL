@@ -13,6 +13,9 @@ export async function POST(req: NextRequest) {
     if (!fullName || !email || !password) {
       return NextResponse.json({ message: 'Name, email and password required' }, { status: 400 })
     }
+    if (typeof password !== 'string' || password.length < 8) {
+      return NextResponse.json({ message: 'Password must be at least 8 characters' }, { status: 400 })
+    }
 
     const existing = await User.findOne({ email: email.toLowerCase() })
     if (existing) {

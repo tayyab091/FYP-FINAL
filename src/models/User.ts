@@ -22,6 +22,11 @@ const UserSchema = new Schema({
   isSuspended: { type: Boolean, default: false },
   freeChatsUsed: { type: Number, default: 0 },
   fitnessGoal: { type: String, default: '' },
+  activityLevel: {
+    type: String,
+    enum: ['sedentary', 'light', 'moderate', 'very_active'],
+    default: 'moderate'
+  },
   targetWeight: { type: Number },
   currentWeight: { type: Number },
 }, { timestamps: true })

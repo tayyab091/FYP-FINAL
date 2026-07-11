@@ -13,8 +13,8 @@ export async function POST(req: NextRequest) {
     if (!currentPassword || !newPassword) {
       return NextResponse.json({ message: 'Current and new password are required' }, { status: 400 })
     }
-    if (newPassword.length < 6) {
-      return NextResponse.json({ message: 'New password must be at least 6 characters' }, { status: 400 })
+    if (newPassword.length < 8) {
+      return NextResponse.json({ message: 'New password must be at least 8 characters' }, { status: 400 })
     }
 
     await connectDB()

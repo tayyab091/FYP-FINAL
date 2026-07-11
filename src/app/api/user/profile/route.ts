@@ -8,11 +8,23 @@ export async function PUT(req: NextRequest) {
     const tokenUser = await getUser(req)
     if (!tokenUser) return NextResponse.json({ message: 'Not authenticated' }, { status: 401 })
     await connectDB()
-    const { fullName, country, profileImage, bio, currentWeight, targetWeight, fitnessGoal } = await req.json()
+    const { fullName, country, profileImage, bio, currentWeight, targetWeight, fitnessGoal, activityLevel } = await req.json()
+    if (typeof fullName !== 'string' || fullName.trim().length < 2) {
+      return NextResponse.json({ message: 'Full name must be at least 2 characters' }, { status: 400 })
+    }
     const user = await User.findByIdAndUpdate(
       tokenUser.userId,
-      { fullName, country, profileImage, bio, currentWeight, targetWeight, fitnessGoal },
-      { new: true }
+      {
+        fullName: fullName.trim(),
+        country,
+        profileImage,
+        bio,
+        currentWeight,
+        targetWeight,
+        fitnessGoal,
+        activityLevel,
+      },
+      { new: true, runValidators: true }
     ).select('-password')
     return NextResponse.json({ user, message: 'Profile updated' })
   } catch {

@@ -14,6 +14,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const { id } = await params
     const { action } = await req.json() // 'verify' or 'reject'
+    if (!['verify', 'reject'].includes(action)) {
+      return NextResponse.json({ message: 'Invalid action' }, { status: 400 })
+    }
 
     await connectDB()
     const trainer = await Trainer.findById(id)

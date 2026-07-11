@@ -12,18 +12,17 @@ const PROTECTED = [
 
 const GUEST_ONLY = ['/login', '/signup', '/register-trainer', '/register-gym-owner']
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
-  const token = request.cookies.get('token')?.value
-  const isLoggedIn = !!token
+  const isLoggedIn = Boolean(request.cookies.get('token')?.value)
 
-  if (PROTECTED.some(r => pathname.startsWith(r)) && !isLoggedIn) {
+  if (PROTECTED.some((route) => pathname.startsWith(route)) && !isLoggedIn) {
     const url = new URL('/login', request.url)
     url.searchParams.set('redirect', pathname)
     return NextResponse.redirect(url)
   }
 
-  if (GUEST_ONLY.some(r => pathname.startsWith(r)) && isLoggedIn) {
+  if (GUEST_ONLY.some((route) => pathname.startsWith(route)) && isLoggedIn) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 
