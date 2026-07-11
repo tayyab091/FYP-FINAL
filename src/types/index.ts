@@ -127,3 +127,15 @@ export interface Relationship {
   canEditSchedule: boolean
   createdAt: string
 }
+
+export interface AppNotification {
+  _id: string
+  userId: string
+  title: string
+  message: string
+  type: 'chat' | 'workout' | 'system' | 'trainer' | 'payment'
+  isRead: boolean
+  link?: string
+  createdAt: string
+  updatedAt: string
+}

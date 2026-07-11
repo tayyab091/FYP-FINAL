@@ -5,6 +5,7 @@ import Trainer from '@/models/Trainer'
 import User from '@/models/User'
 import { getUser } from '@/lib/auth'
 import { syncUserSubscription, getTrainerConnectionLimit, normalizePlan } from '@/lib/subscription'
+import { createNotification } from '@/lib/notifications'
 import mongoose from 'mongoose'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ trainerId: string }> }) {
@@ -55,6 +56,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tra
         { $inc: { freeChatsUsed: 1 } },
       )
     }
+
+    await createNotification({
+      userId: trainer.userId,
+      title: 'New connection request',
+      message: `${user.fullName} wants to connect with you as a client.`,
+      type: 'trainer',
+      link: '/trainer-dashboard',
+    })
 
     return NextResponse.json({ message: 'Connection request sent', relationship }, { status: 201 })
   } catch (error) {

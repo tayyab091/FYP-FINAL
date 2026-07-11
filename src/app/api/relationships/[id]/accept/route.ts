@@ -5,6 +5,7 @@ import Conversation from '@/models/Conversation'
 import Trainer from '@/models/Trainer'
 import { getUser } from '@/lib/auth'
 import { awardXp, XP_REWARDS } from '@/lib/gamification'
+import { createNotification } from '@/lib/notifications'
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -47,6 +48,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       relationship.userId.toString(),
       XP_REWARDS.trainer_connected,
     )
+
+    await createNotification({
+      userId: relationship.userId,
+      title: 'Request accepted',
+      message: `${trainer.name} accepted your connection request. You can now chat and start training.`,
+      type: 'trainer',
+      link: `/chat/${conversation._id}`,
+    })
 
     return NextResponse.json({
       message: 'Client accepted',
