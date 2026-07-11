@@ -9,30 +9,7 @@ import { AuthField } from '@/components/auth/AuthField'
 import { Eye, EyeOff, Dumbbell } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { easeTransition, fadeUp } from '@/lib/motion'
-
-function getPostLoginPath(role: string, requestedPath: string | null) {
-  const roleHome: Record<string, string> = {
-    user: '/my-fitness',
-    trainer: '/trainer-dashboard',
-    gym_owner: '/gym-owner',
-    admin: '/admin',
-    super_admin: '/admin',
-  }
-  const fallback = roleHome[role] || '/my-fitness'
-  if (!requestedPath?.startsWith('/') || requestedPath.startsWith('//')) return fallback
-  if (['/login', '/signup', '/register-trainer', '/register-gym-owner'].some((path) => requestedPath.startsWith(path))) {
-    return fallback
-  }
-
-  const restrictions = [
-    { prefix: '/admin', roles: ['admin', 'super_admin'] },
-    { prefix: '/trainer-dashboard', roles: ['trainer'] },
-    { prefix: '/gym-owner', roles: ['gym_owner'] },
-    { prefix: '/my-fitness', roles: ['user'] },
-  ]
-  const restriction = restrictions.find(({ prefix }) => requestedPath.startsWith(prefix))
-  return restriction && !restriction.roles.includes(role) ? fallback : requestedPath
-}
+import { resolvePostLoginPath } from '@/lib/route-access'
 
 export default function LoginPage() {
   const { login, user, isLoading: authLoading } = useAuth()
@@ -46,7 +23,7 @@ export default function LoginPage() {
   useEffect(() => {
     if (authLoading || !user) return
     const redirect = searchParams.get('redirect')
-    router.replace(getPostLoginPath(user.role, redirect))
+    router.replace(resolvePostLoginPath(user.role, redirect))
   }, [authLoading, router, searchParams, user])
 
   const handleSubmit = async (e: React.FormEvent) => {

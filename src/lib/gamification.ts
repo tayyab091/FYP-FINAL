@@ -260,8 +260,11 @@ export async function getGamificationMe(userId: string): Promise<GamificationMeR
   const profile = await getOrCreateProfile(userId)
   const streak = await computeWorkoutStreak(userId)
   const levelInfo = levelFromXp(profile.xp)
-  const unlockedMap = new Map(
-    profile.achievements.map((a: { id: string; unlockedAt?: Date }) => [a.id, a.unlockedAt?.toISOString()]),
+  const unlockedMap = new Map<string, string | undefined>(
+    profile.achievements.map((a: { id: string; unlockedAt?: Date }): [string, string | undefined] => [
+      a.id,
+      a.unlockedAt?.toISOString(),
+    ]),
   )
 
   return {
@@ -282,7 +285,7 @@ export async function getGamificationMe(userId: string): Promise<GamificationMeR
       label: def.label,
       desc: def.desc,
       unlocked: unlockedMap.has(def.id),
-      unlockedAt: unlockedMap.get(def.id),
+      unlockedAt: unlockedMap.get(def.id) as string | undefined,
     })),
     streak,
     formCheckerSessions: profile.formCheckerSessions,
