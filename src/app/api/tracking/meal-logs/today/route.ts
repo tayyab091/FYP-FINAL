@@ -17,6 +17,9 @@ export async function GET(req: NextRequest) {
   try {
     const tokenUser = await getUser(req)
     if (!tokenUser) return NextResponse.json({ message: 'Not authenticated' }, { status: 401 })
+    if (tokenUser.role !== 'user') {
+      return NextResponse.json({ message: 'Member account required' }, { status: 403 })
+    }
 
     await connectDB()
     const today = new Date()
@@ -46,6 +49,9 @@ export async function POST(req: NextRequest) {
   try {
     const tokenUser = await getUser(req)
     if (!tokenUser) return NextResponse.json({ message: 'Not authenticated' }, { status: 401 })
+    if (tokenUser.role !== 'user') {
+      return NextResponse.json({ message: 'Member account required' }, { status: 403 })
+    }
 
     await connectDB()
     const { mealType, foods } = await req.json() as { mealType?: unknown; foods?: unknown }

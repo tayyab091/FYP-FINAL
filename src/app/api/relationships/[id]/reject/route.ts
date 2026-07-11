@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import Relationship from '@/models/Relationship'
 import Trainer from '@/models/Trainer'
+import User from '@/models/User'
 import { getUser } from '@/lib/auth'
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -23,6 +24,15 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       status: 'pending',
     })
     if (!relationship) return NextResponse.json({ message: 'Request not found' }, { status: 404 })
+
+    await User.updateOne(
+      {
+        _id: relationship.userId,
+        'subscription.plan': 'basic',
+        freeChatsUsed: { $gt: 0 },
+      },
+      { $inc: { freeChatsUsed: -1 } },
+    )
 
     return NextResponse.json({ message: 'Request rejected' })
   } catch {

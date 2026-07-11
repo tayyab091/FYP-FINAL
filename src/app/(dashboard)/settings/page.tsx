@@ -97,8 +97,9 @@ export default function SettingsPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.message)
-      toast.success('Password changed!')
+      toast.success('Password changed. Please sign in again.')
       setPasswords({ current: '', newPass: '', confirm: '' })
+      await logout()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to change password')
     } finally {
@@ -112,6 +113,7 @@ export default function SettingsPage() {
       <p className="text-[#a0a0a0]">Please sign in to access settings</p>
     </div>
   )
+  const settingsTabs = user.role === 'user' ? ['profile', 'fitness', 'account'] : ['profile', 'account']
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] pt-8 pb-28 px-6">
@@ -121,7 +123,7 @@ export default function SettingsPage() {
 
         <Tabs defaultValue="profile">
           <TabsList className="bg-[#111] border border-[#1a1a1a] mb-8">
-            {['profile', 'fitness', 'account'].map(t => (
+            {settingsTabs.map(t => (
               <TabsTrigger key={t} value={t} className="capitalize data-active:bg-[#00ff87]/10 data-active:text-[#00ff87]">
                 {t === 'fitness' ? 'Fitness Goals' : t === 'account' ? 'Account' : 'Profile'}
               </TabsTrigger>
@@ -172,7 +174,7 @@ export default function SettingsPage() {
             )}
           </TabsContent>
 
-          <TabsContent value="fitness">
+          {user.role === 'user' && <TabsContent value="fitness">
             {loading ? <Skeleton className="h-48 bg-[#1a1a1a]" /> : (
               <Card className="bg-[#111] border-[#1a1a1a] text-white">
                 <CardHeader><CardTitle>Fitness Goals</CardTitle></CardHeader>
@@ -223,7 +225,7 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
             )}
-          </TabsContent>
+          </TabsContent>}
 
           <TabsContent value="account">
             <div className="space-y-6">

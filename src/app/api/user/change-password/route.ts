@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { connectDB } from '@/lib/mongodb'
 import User from '@/models/User'
-import { getUser } from '@/lib/auth'
+import { cookieOptions, getUser } from '@/lib/auth'
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,7 +27,11 @@ export async function POST(req: NextRequest) {
     user.password = await bcrypt.hash(newPassword, 12)
     await user.save()
 
-    return NextResponse.json({ message: 'Password changed successfully' })
+    const response = NextResponse.json({
+      message: 'Password changed successfully. Please sign in again.',
+    })
+    response.cookies.set('token', '', { ...cookieOptions(), maxAge: 0 })
+    return response
   } catch {
     return NextResponse.json({ message: 'Server error' }, { status: 500 })
   }

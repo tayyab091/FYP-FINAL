@@ -20,6 +20,9 @@ export async function POST(
     if (!tokenUser) {
       return NextResponse.json({ message: 'Not authenticated' }, { status: 401 })
     }
+    if (tokenUser.role !== 'user') {
+      return NextResponse.json({ message: 'Member account required' }, { status: 403 })
+    }
 
     const { id } = await params
     const body = await req.json()
