@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
 import { Salad, ClipboardList, UtensilsCrossed, ChevronDown, ChevronUp, Globe } from 'lucide-react'
 import { SectionHeading } from '@/components/shared/SectionHeading'
-import { FadeIn, StaggerChildren, CountUp } from '@/components/motion'
+import { FadeIn, CountUp } from '@/components/motion'
 import { calculateDailyCalories } from '@/lib/nutrition'
 
 interface MealSummary {
@@ -159,34 +159,47 @@ export default function NutritionPage() {
   }, [debouncedMealSearch, mealCategory, mealArea, mealLetter])
 
   useEffect(() => {
+    const controller = new AbortController()
     setMealsLoading(true)
     setMealPage(1)
-    fetch(`/api/meals?meta=true&${buildMealQuery(1)}`)
+
+    fetch(`/api/meals?meta=true&${buildMealQuery(1)}`, { signal: controller.signal })
       .then((r) => (r.ok ? r.json() : { meals: [] }))
       .then((data) => {
         setRecipeMeals(data.meals || [])
         setMealTotal(data.total ?? 0)
         setMealTotalPages(data.totalPages ?? 1)
+        setMealPage(data.page ?? 1)
         if (data.meta) {
           setMealCategories(data.meta.categories || [])
           setMealAreas(data.meta.areas || [])
           setMealCatalogTotal(data.meta.total ?? 0)
         }
       })
-      .catch(() => setRecipeMeals([]))
-      .finally(() => setMealsLoading(false))
+      .catch(() => {
+        if (!controller.signal.aborted) setRecipeMeals([])
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setMealsLoading(false)
+      })
+
+    return () => controller.abort()
   }, [buildMealQuery])
 
   const loadMoreMeals = async () => {
-    if (mealPage >= mealTotalPages || mealsLoadingMore) return
-    setMealsLoadingMore(true)
+    if (mealsLoading || mealsLoadingMore) return
     const nextPage = mealPage + 1
+    if (nextPage > mealTotalPages) return
+    setMealsLoadingMore(true)
     try {
       const res = await fetch(`/api/meals?${buildMealQuery(nextPage)}`)
       if (res.ok) {
         const data = await res.json()
-        setRecipeMeals((prev) => [...prev, ...(data.meals || [])])
-        setMealPage(nextPage)
+        const incoming = data.meals || []
+        if (incoming.length > 0) {
+          setRecipeMeals((prev) => [...prev, ...incoming])
+          setMealPage(data.page ?? nextPage)
+        }
       }
     } finally {
       setMealsLoadingMore(false)
@@ -363,7 +376,7 @@ export default function NutritionPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              <StaggerChildren className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="glass rounded-2xl p-5 border border-primary/20 card-athletic interactive-lift">
                   <p className="workout-label text-muted-foreground">Calories</p>
                   <p className="text-2xl font-black text-primary mt-1">
@@ -389,7 +402,7 @@ export default function NutritionPage() {
                     <CountUp value={Math.round(totals.fat)} suffix="g" />
                   </p>
                 </div>
-              </StaggerChildren>
+              </div>
 
               <div className="glass rounded-2xl p-5">
                 <div className="flex justify-between text-sm mb-2">
@@ -598,13 +611,13 @@ export default function NutritionPage() {
             </div>
           ) : (
             <>
-              <StaggerChildren className="dashboard-grid cols-3">
+              <div className="dashboard-grid cols-3">
                 {recipeMeals.map((recipe) => {
                   const detail = mealDetails[recipe.id]
                   const isOpen = expandedMeal === recipe.id
                   return (
                     <div key={recipe.id} className="glass interactive-lift card-athletic flex h-full flex-col overflow-hidden rounded-2xl">
-                      <div className="relative h-44 bg-card">
+                      <Link href={`/nutrition/${recipe.id}`} className="relative block h-44 bg-card">
                         {recipe.thumb ? (
                           <Image src={recipe.thumb} alt={recipe.name} fill sizes="(max-width:768px) 100vw, 33vw" className="object-cover" loading="lazy" />
                         ) : (
@@ -613,31 +626,38 @@ export default function NutritionPage() {
                         <span className="absolute left-3 top-3 rounded-full border border-primary/20 bg-black/60 px-2 py-0.5 text-[10px] font-bold text-primary backdrop-blur">
                           {recipe.category}
                         </span>
-                      </div>
+                      </Link>
                       <div className="flex flex-1 flex-col p-5">
-                        <p className="text-white font-semibold leading-tight">{recipe.name}</p>
+                        <Link href={`/nutrition/${recipe.id}`} className="text-white font-semibold leading-tight hover:text-primary transition-colors">
+                          {recipe.name}
+                        </Link>
                         <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
                           <Globe className="size-3" /> {recipe.area}
                         </div>
+                        <Link
+                          href={`/nutrition/${recipe.id}`}
+                          className="mt-2 text-xs font-medium text-primary hover:text-primary/80"
+                        >
+                          View full recipe →
+                        </Link>
                         <button
                           onClick={() => void toggleMeal(recipe.id)}
-                          className="mt-4 flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80"
+                          className="mt-3 flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80"
                         >
-                          {isOpen ? <><ChevronUp className="size-3" /> Hide recipe</> : <><ChevronDown className="size-3" /> View recipe</>}
+                          {isOpen ? <><ChevronUp className="size-3" /> Hide preview</> : <><ChevronDown className="size-3" /> Quick preview</>}
                         </button>
                         {isOpen && detail && (
                           <div className="mt-3 space-y-3 border-t border-border pt-3 text-xs">
                             <div>
                               <p className="workout-label text-muted-foreground mb-1">Ingredients</p>
                               <ul className="space-y-0.5 text-muted-foreground">
-                                {detail.ingredients.map((ing) => (
+                                {detail.ingredients.slice(0, 5).map((ing) => (
                                   <li key={ing.name}>· {ing.measure} {ing.name}</li>
                                 ))}
+                                {detail.ingredients.length > 5 && (
+                                  <li className="text-primary">+ {detail.ingredients.length - 5} more on detail page</li>
+                                )}
                               </ul>
-                            </div>
-                            <div>
-                              <p className="workout-label text-muted-foreground mb-1">Instructions</p>
-                              <p className="leading-relaxed text-muted-foreground whitespace-pre-line">{detail.instructions}</p>
                             </div>
                           </div>
                         )}
@@ -645,7 +665,13 @@ export default function NutritionPage() {
                     </div>
                   )
                 })}
-              </StaggerChildren>
+              </div>
+
+              {mealsLoadingMore && (
+                <div className="dashboard-grid cols-3 mt-4">
+                  {[...Array(3)].map((_, i) => <div key={i} className="glass skeleton h-72 rounded-2xl" />)}
+                </div>
+              )}
 
               {mealPage < mealTotalPages && (
                 <div className="mt-8 text-center">
