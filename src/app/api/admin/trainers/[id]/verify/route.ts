@@ -23,7 +23,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (!trainer) return NextResponse.json({ message: 'Trainer not found' }, { status: 404 })
 
     trainer.adminVerificationStatus = action === 'verify' ? 'approved' : 'rejected'
-    trainer.isFullyVerified = trainer.adminVerificationStatus === 'approved' && trainer.gymVerificationStatus === 'approved'
+    const gymApproved = !trainer.gymId || trainer.gymVerificationStatus === 'approved'
+    trainer.isFullyVerified = trainer.adminVerificationStatus === 'approved' && gymApproved
     await trainer.save()
 
     await AuditLog.create({

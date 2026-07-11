@@ -45,6 +45,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tra
       trainerId,
       status: 'pending',
     })
+    if (user.subscription.plan === 'basic') {
+      await User.updateOne(
+        { _id: tokenUser.userId },
+        { $inc: { freeChatsUsed: 1 } },
+      )
+    }
 
     return NextResponse.json({ message: 'Connection request sent', relationship }, { status: 201 })
   } catch (error) {

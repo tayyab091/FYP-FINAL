@@ -38,7 +38,7 @@ const PLANS = [
 ]
 
 export default function SubscriptionPage() {
-  const { user, isLoading: authLoading } = useAuth()
+  const { user, isLoading: authLoading, refreshUser } = useAuth()
   const router = useRouter()
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<PlanId | null>(null)
@@ -63,12 +63,24 @@ export default function SubscriptionPage() {
   const handleConfirmPayment = async () => {
     if (!selectedPlan) return
     setProcessing(true)
-    await new Promise(r => setTimeout(r, 1200))
-    const planName = PLANS.find(p => p.id === selectedPlan)?.name || 'Pro'
-    toast.success(`Payment simulated! ${planName} activated.`)
-    setModalOpen(false)
-    setSelectedPlan(null)
-    setProcessing(false)
+    try {
+      const res = await fetch('/api/subscription', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: selectedPlan, simulatedPayment: true }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message)
+      await refreshUser()
+      const planName = PLANS.find(p => p.id === selectedPlan)?.name || 'Pro'
+      toast.success(`Payment simulated! ${planName} activated.`)
+      setModalOpen(false)
+      setSelectedPlan(null)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Payment simulation failed')
+    } finally {
+      setProcessing(false)
+    }
   }
 
   const getButtonLabel = (plan: typeof PLANS[0]) => {

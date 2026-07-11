@@ -22,6 +22,7 @@ export function Navbar() {
   const navLinks = [
     { label: 'Find Trainers', href: '/coaching' },
     { label: 'Exercises', href: '/exercises' },
+    { label: 'Form Checker', href: '/exercise-check' },
     { label: 'Nutrition', href: '/nutrition' },
     { label: 'Pricing', href: '/subscription' },
   ]
@@ -65,6 +66,10 @@ export function Navbar() {
                 className="text-sm text-[#a0a0a0] hover:text-white transition-colors font-medium">
                 Dashboard
               </Link>
+              <Link href="/settings"
+                className="text-sm text-[#a0a0a0] hover:text-white transition-colors font-medium">
+                Settings
+              </Link>
               <button onClick={logout}
                 className="text-sm text-[#a0a0a0] hover:text-[#ef4444] transition-colors font-medium">
                 Logout
@@ -104,6 +109,10 @@ export function Navbar() {
                 <Link href={getDashboardHref()} onClick={() => setMenuOpen(false)}
                   className="text-center border border-[#2a2a2a] text-white py-3 rounded-2xl font-medium">
                   Dashboard
+                </Link>
+                <Link href="/settings" onClick={() => setMenuOpen(false)}
+                  className="text-center border border-[#2a2a2a] text-white py-3 rounded-2xl font-medium">
+                  Settings
                 </Link>
                 <button onClick={() => { logout(); setMenuOpen(false) }}
                   className="text-center text-[#ef4444] font-medium py-2">

@@ -49,6 +49,9 @@ export async function POST(req: NextRequest) {
       },
       { new: true }
     )
+    if (trainer) {
+      await Gym.updateOne({ _id: gym._id }, { $addToSet: { trainers: trainer._id } })
+    }
     return NextResponse.json({ message: 'Trainer added to gym', trainer })
   } catch {
     return NextResponse.json({ message: 'Server error' }, { status: 500 })
@@ -83,6 +86,7 @@ export async function PUT(req: NextRequest) {
       trainer.gymName = undefined
       trainer.gymVerificationStatus = 'pending'
       trainer.isFullyVerified = false
+      await Gym.updateOne({ _id: gym._id }, { $pull: { trainers: trainer._id } })
     }
     await trainer.save()
 
