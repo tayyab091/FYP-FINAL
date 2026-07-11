@@ -93,9 +93,9 @@ export default function ChatConversationPage() {
   )
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex flex-col pt-16 pb-4 md:pb-4">
+    <div className="min-h-[calc(100vh-4rem)] bg-[#0a0a0a] flex flex-col pb-4 md:pb-4">
       {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-40 bg-[#111]/95 backdrop-blur-xl border-b border-[#1a1a1a] px-4 py-3 flex items-center gap-3">
+      <div className="sticky top-0 z-30 bg-[#111]/95 backdrop-blur-xl border-b border-[#1a1a1a] px-4 py-3 flex items-center gap-3">
         <Link href="/chat" className="text-[#a0a0a0] hover:text-white text-xl">←</Link>
         <div className="w-9 h-9 rounded-full bg-[#1a1a1a] flex items-center justify-center text-[#00ff87] font-bold">
           💬

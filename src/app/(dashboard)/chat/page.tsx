@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useAuth } from '@/hooks/useAuth'
 import { Conversation } from '@/types'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -28,7 +29,7 @@ export default function ChatListPage() {
   )
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pt-24 pb-28 px-6">
+    <div className="min-h-screen bg-[#0a0a0a] pt-8 pb-28 px-6">
       <div className="max-w-2xl mx-auto">
         <h1 className="text-3xl font-black mb-2">Messages</h1>
         <p className="text-[#a0a0a0] mb-8">Your conversations</p>
@@ -48,9 +49,9 @@ export default function ChatListPage() {
             {conversations.map(c => (
               <Link key={c._id} href={`/chat/${c._id}`}
                 className="flex items-center gap-4 p-4 bg-[#111] border border-[#1a1a1a] rounded-xl hover:border-[#00ff87]/30 transition-all">
-                <div className="w-12 h-12 rounded-full bg-[#1a1a1a] overflow-hidden flex-shrink-0 flex items-center justify-center">
+                <div className="relative w-12 h-12 rounded-full bg-[#1a1a1a] overflow-hidden flex-shrink-0 flex items-center justify-center">
                   {c.otherUser?.profileImage ? (
-                    <img src={c.otherUser.profileImage} alt="" className="w-full h-full object-cover" />
+                    <Image src={c.otherUser.profileImage} alt="" fill sizes="48px" className="object-cover" />
                   ) : (
                     <span className="text-[#00ff87] font-bold text-lg">{c.otherUser?.fullName?.[0] || '?'}</span>
                   )}

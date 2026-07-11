@@ -1,9 +1,11 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 
 interface Message { role: 'user' | 'assistant'; content: string }
 
 export function AIChatbot() {
+  const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([
     { role: 'assistant', content: 'Hi! I\'m your T.E.S.T. AI fitness coach 🤖 Ask me anything about workouts, nutrition, or your fitness goals!' }
@@ -15,6 +17,8 @@ export function AIChatbot() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
+
+  if (pathname.startsWith('/chat')) return null
 
   const send = async () => {
     if (!input.trim() || loading) return

@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 
 interface Exercise {
   id: number
@@ -52,7 +53,8 @@ function ExerciseCard({ exercise }: { exercise: Exercise }) {
     <div className="glass rounded-2xl overflow-hidden hover:border-[#2a2a2a] transition-colors">
       <div className="relative h-48 bg-[#0d0d0d] flex items-center justify-center overflow-hidden">
         {!imgError ? (
-          <img src={exercise.gifUrl} alt={exercise.name} className="w-full h-full object-cover" onError={() => setImgError(true)} />
+          <Image src={exercise.gifUrl} alt={exercise.name} fill sizes="(max-width: 768px) 100vw, 33vw"
+            className="object-cover" onError={() => setImgError(true)} />
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-[#555]">
             <div className="text-4xl mb-2">🏋️</div>

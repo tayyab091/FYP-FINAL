@@ -80,12 +80,12 @@ export default function SignupPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {[
-              { label: 'Full Name', field: 'fullName', type: 'text', placeholder: 'Ali Hassan' },
-              { label: 'Email', field: 'email', type: 'email', placeholder: 'you@example.com' },
+              { label: 'Full Name', field: 'fullName' as const, type: 'text', placeholder: 'Ali Hassan' },
+              { label: 'Email', field: 'email' as const, type: 'email', placeholder: 'you@example.com' },
             ].map(({ label, field, type, placeholder }) => (
               <div key={field}>
                 <label className="block text-sm font-medium text-[#a0a0a0] mb-1.5">{label}</label>
-                <input type={type} value={(form as any)[field]} onChange={set(field)} placeholder={placeholder} required
+                <input type={type} value={form[field]} onChange={set(field)} placeholder={placeholder} required
                   className="w-full bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl px-4 py-3 text-white text-sm placeholder-[#555] outline-none focus:border-[#00ff87] transition-colors" />
                 {errors[field] && <p className="text-red-400 text-xs mt-1">{errors[field]}</p>}
               </div>
