@@ -1,0 +1,20 @@
+import { NextResponse } from 'next/server'
+
+export async function GET() {
+  // Return built-in exercise library — always works, no external API needed
+  const exercises = [
+    { id: 1, name: 'Push-Up', muscle: 'Chest', equipment: 'Bodyweight', difficulty: 'Beginner', sets: 3, reps: '15', gifUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/Pushup_from_the_side.gif/320px-Pushup_from_the_side.gif', instructions: 'Start in high plank. Lower chest to floor keeping elbows at 45°. Push back up explosively. Keep core braced.' },
+    { id: 2, name: 'Squat', muscle: 'Legs', equipment: 'Bodyweight', difficulty: 'Beginner', sets: 3, reps: '20', gifUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Squat_animation.gif/240px-Squat_animation.gif', instructions: 'Feet shoulder-width. Push hips back and down until thighs parallel to floor. Drive through heels to stand.' },
+    { id: 3, name: 'Plank', muscle: 'Core', equipment: 'Bodyweight', difficulty: 'Beginner', sets: 3, reps: '45 sec', gifUrl: 'https://media1.tenor.com/m/TFUbZgW7RLEAAAAC/plank.gif', instructions: 'Forearms on ground elbows under shoulders. Body straight from head to heels. Breathe steadily. Do not let hips sag.' },
+    { id: 4, name: 'Pull-Up', muscle: 'Back', equipment: 'Pull-up Bar', difficulty: 'Intermediate', sets: 3, reps: '8', gifUrl: 'https://media1.tenor.com/m/K3a7oN5jGW4AAAAd/pull-up.gif', instructions: 'Grip bar overhand shoulder-width. Pull chest to bar squeezing lats. Lower with full control.' },
+    { id: 5, name: 'Deadlift', muscle: 'Back', equipment: 'Barbell', difficulty: 'Intermediate', sets: 4, reps: '8', gifUrl: 'https://media1.tenor.com/m/BIrFBxQxvAIAAAAC/deadlift.gif', instructions: 'Bar over mid-foot. Hinge at hips, grip just outside legs. Drive through floor keeping back straight.' },
+    { id: 6, name: 'Bench Press', muscle: 'Chest', equipment: 'Barbell', difficulty: 'Intermediate', sets: 4, reps: '10', gifUrl: 'https://media1.tenor.com/m/kGGAQJBTZvQAAAAC/bench-press.gif', instructions: 'Lie on bench. Grip slightly wider than shoulders. Lower bar to lower chest. Press up to full extension.' },
+    { id: 7, name: 'Shoulder Press', muscle: 'Shoulders', equipment: 'Dumbbells', difficulty: 'Intermediate', sets: 3, reps: '12', gifUrl: 'https://media1.tenor.com/m/eQqNmNmDXfQAAAAC/shoulder-press.gif', instructions: 'Sit upright. Start with dumbbells at shoulder height. Press overhead until arms fully extended. Lower slowly.' },
+    { id: 8, name: 'Bicep Curl', muscle: 'Arms', equipment: 'Dumbbells', difficulty: 'Beginner', sets: 3, reps: '12', gifUrl: 'https://media1.tenor.com/m/uiLJhRXJzMUAAAAC/bicep-curl-dumbbell.gif', instructions: 'Stand holding dumbbells. Keep elbows tucked. Curl to shoulder height. Squeeze at top. Lower slowly.' },
+    { id: 9, name: 'Lunge', muscle: 'Legs', equipment: 'Bodyweight', difficulty: 'Beginner', sets: 3, reps: '12 each', gifUrl: 'https://media1.tenor.com/m/xC4WJNO2CGIAAAAC/lunge-exercise.gif', instructions: 'Step forward into lunge. Lower back knee toward floor. Front knee stays over ankle. Push front heel to return.' },
+    { id: 10, name: 'Mountain Climbers', muscle: 'Cardio', equipment: 'Bodyweight', difficulty: 'Beginner', sets: 3, reps: '30 sec', gifUrl: 'https://media1.tenor.com/m/7mphJSAGvvEAAAAC/mountain-climbers.gif', instructions: 'High plank position. Drive knees to chest alternately in running motion. Keep hips level. Move fast.' },
+    { id: 11, name: 'Burpee', muscle: 'Cardio', equipment: 'Bodyweight', difficulty: 'Intermediate', sets: 3, reps: '10', gifUrl: 'https://media1.tenor.com/m/KdYy62HHHbMAAAAC/burpees.gif', instructions: 'From standing: drop to squat, kick feet back to plank, do push-up, jump feet back, explode up with jump.' },
+    { id: 12, name: 'Russian Twist', muscle: 'Core', equipment: 'Bodyweight', difficulty: 'Intermediate', sets: 3, reps: '20 total', gifUrl: 'https://media1.tenor.com/m/RPzSMZPIiLsAAAAC/russian-twist.gif', instructions: 'Sit at 45 degrees feet off floor. Rotate torso side to side touching floor each side. Keep core braced.' },
+  ]
+  return NextResponse.json(exercises)
+}
