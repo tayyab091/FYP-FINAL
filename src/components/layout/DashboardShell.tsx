@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { getRoleHomePath } from '@/lib/access'
+import { NotificationBell } from '@/components/notifications/NotificationBell'
 
 type UserRole = 'user' | 'trainer' | 'gym_owner' | 'admin' | 'super_admin'
 
@@ -96,6 +97,7 @@ const pageTitles: Record<string, string> = {
   '/exercise-check': 'AI Form Checker',
   '/coaching': 'Find Trainers',
   '/chat': 'Messages',
+  '/notifications': 'Notifications',
   '/settings': 'Settings',
 }
 
@@ -243,9 +245,12 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             <h1 className="font-heading text-base font-bold tracking-tight text-white">{pageTitle}</h1>
           </div>
         </div>
-        <div className="hidden items-center gap-2 text-xs text-[#666] sm:flex">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-primary shadow-[0_0_10px_rgba(34,245,154,.7)]" />
-          Secure session
+        <div className="flex items-center gap-3">
+          <NotificationBell />
+          <div className="hidden items-center gap-2 text-xs text-[#666] sm:flex">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-primary shadow-[0_0_10px_rgba(34,245,154,.7)]" />
+            Secure session
+          </div>
         </div>
       </header>
 

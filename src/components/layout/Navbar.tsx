@@ -6,6 +6,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { useAuth } from '@/hooks/useAuth'
 import { Activity, ArrowUpRight, Menu, X } from 'lucide-react'
 import { easeTransition } from '@/lib/motion'
+import { NotificationBell } from '@/components/notifications/NotificationBell'
 
 export function Navbar() {
   const { user, isLoading, logout } = useAuth()
@@ -91,6 +92,7 @@ export function Navbar() {
             <div className="w-24 h-8 skeleton rounded-full" />
           ) : user ? (
             <>
+              <NotificationBell />
               <Link href={getDashboardHref()}
                 className="text-sm text-muted-foreground hover:text-white transition-colors font-medium">
                 Dashboard

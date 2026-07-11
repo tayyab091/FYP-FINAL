@@ -8,6 +8,7 @@ import Relationship from '@/models/Relationship'
 import WorkoutPlan from '@/models/WorkoutPlan'
 import Trainer from '@/models/Trainer'
 import { getUser } from '@/lib/auth'
+import { createNotification } from '@/lib/notifications'
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -128,6 +129,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       },
       ...(Object.keys(unreadIncrements).length > 0 && { $inc: unreadIncrements }),
     })
+
+    const senderName = user?.fullName || 'Someone'
+    const preview = content.trim().slice(0, 80)
+    await Promise.all(
+      conversation.participants
+        .map((participantId: { toString(): string }) => participantId.toString())
+        .filter((participantId: string) => participantId !== tokenUser.userId)
+        .map((recipientId: string) =>
+          createNotification({
+            userId: recipientId,
+            title: `New message from ${senderName}`,
+            message: preview,
+            type: 'chat',
+            link: `/chat/${id}`,
+          }),
+        ),
+    )
 
     const populated = await Message.findById(message._id).populate('attachedPlanId').lean()
     return NextResponse.json(
