@@ -16,7 +16,10 @@ import { FadeIn, StaggerChildren, CountUp, FitnessBadge, ScrollProgress, Paralla
 import { MARKETING_PLANS } from '@/lib/plans'
 import { calculateDailyCalories } from '@/lib/nutrition'
 import { getRoleHomePath } from '@/lib/access'
-import { Bot, BadgeCheck, Apple, BarChart3, MessageCircle, Building2, LayoutDashboard, Users, Dumbbell, Flame, Search, Zap, Trophy, Target, Medal } from 'lucide-react'
+import { ACHIEVEMENT_DEFINITIONS, JOURNEY_LEVELS } from '@/lib/achievements'
+import type { GamificationMeResponse } from '@/lib/gamification'
+import { GamificationStats } from '@/components/gamification/GamificationStats'
+import { Bot, BadgeCheck, Apple, BarChart3, MessageCircle, Building2, LayoutDashboard, Users, Dumbbell, Flame, Search, Zap } from 'lucide-react'
 import { easeTransition } from '@/lib/motion'
 
 const STATS = [
@@ -32,19 +35,7 @@ const STEPS = [
   { step: '03', title: 'Train & Track', desc: 'Follow personalized plans, log meals, and track progress.' },
 ]
 
-const ACHIEVEMENTS = [
-  { icon: Trophy, label: 'First Workout', desc: 'Show up. That\'s half the battle.' },
-  { icon: Target, label: 'Macro Master', desc: 'Hit your protein target 5 days straight.' },
-  { icon: Medal, label: 'Consistency King', desc: '7-day training streak unlocked.' },
-  { icon: Flame, label: 'Calorie Crusher', desc: 'Stay within 100 cal of your goal.' },
-]
-
-const JOURNEY_LEVELS = [
-  { level: 1, title: 'Rookie', xp: 0, desc: 'Building the habit' },
-  { level: 2, title: 'Regular', xp: 250, desc: 'Showing up weekly' },
-  { level: 3, title: 'Committed', xp: 750, desc: 'Training with purpose' },
-  { level: 4, title: 'Elite', xp: 1500, desc: 'Living the lifestyle' },
-]
+const ACHIEVEMENTS = ACHIEVEMENT_DEFINITIONS
 
 const FEATURES = [
   { icon: Bot, title: 'AI Coaching', desc: 'Get instant workout and nutrition advice powered by AI.' },
@@ -185,7 +176,7 @@ function GuestPage() {
             {ACHIEVEMENTS.map((a) => {
               const Icon = a.icon
               return (
-                <div key={a.label} className="glass interactive-lift card-athletic rounded-2xl p-5">
+                <div key={a.id} className="glass interactive-lift card-athletic rounded-2xl p-5">
                   <div className="mb-3 flex size-11 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
                     <Icon className="size-5" />
                   </div>
@@ -346,6 +337,7 @@ function LoggedInDashboard() {
   const [plan, setPlan] = useState<WorkoutPlan | null>(null)
   const [calories, setCalories] = useState({ calories: 0, protein: 0, carbs: 0, fat: 0 })
   const [calorieGoal, setCalorieGoal] = useState(2000)
+  const [gamification, setGamification] = useState<GamificationMeResponse | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -356,7 +348,8 @@ function LoggedInDashboard() {
       fetch('/api/tracking/plans/my-plan', { signal: controller.signal }).then(r => r.ok ? r.json() : null),
       fetch('/api/tracking/meal-logs/today', { signal: controller.signal }).then(r => r.ok ? r.json() : { totals: { calories: 0, protein: 0, carbs: 0, fat: 0 } }),
       fetch('/api/auth/me', { signal: controller.signal }).then(r => r.ok ? r.json() : null),
-    ]).then(([planData, mealData, meData]) => {
+      fetch('/api/gamification/me', { signal: controller.signal }).then(r => r.ok ? r.json() : null),
+    ]).then(([planData, mealData, meData, gamificationData]) => {
       if (planData?.plan === null) setPlan(null)
       else if (planData?._id) setPlan(planData)
       else if (planData?.plan) setPlan(planData.plan)
@@ -371,6 +364,7 @@ function LoggedInDashboard() {
           activityLevel: u.activityLevel,
         }))
       }
+      if (gamificationData?.xp !== undefined) setGamification(gamificationData)
     }).catch(() => {
       setPlan(null)
       setCalories({ calories: 0, protein: 0, carbs: 0, fat: 0 })
@@ -420,6 +414,10 @@ function LoggedInDashboard() {
             </Link>
           )})}
         </StaggerChildren>
+
+        <FadeIn>
+          <GamificationStats data={gamification} loading={loading} />
+        </FadeIn>
 
         <StaggerChildren className="dashboard-grid cols-2">
           {/* Active Plan */}

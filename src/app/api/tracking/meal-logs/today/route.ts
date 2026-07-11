@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import MealLog from '@/models/MealLog'
 import { getUser } from '@/lib/auth'
+import { awardXp, XP_REWARDS } from '@/lib/gamification'
 
 interface MealFood {
   name: string
@@ -88,7 +89,12 @@ export async function POST(req: NextRequest) {
       date: new Date(),
     })
 
-    return NextResponse.json(meal, { status: 201 })
+    const gamification = await awardXp(tokenUser.userId, XP_REWARDS.meal_log)
+
+    return NextResponse.json(
+      { ...meal.toObject(), xpAwarded: XP_REWARDS.meal_log, gamification },
+      { status: 201 },
+    )
   } catch {
     return NextResponse.json({ message: 'Server error' }, { status: 500 })
   }

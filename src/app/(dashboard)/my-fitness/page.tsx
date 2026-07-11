@@ -18,6 +18,8 @@ import { PageLoader } from '@/components/shared/PageLoader'
 import { SignInGate } from '@/components/shared/AccessGate'
 import { FadeIn, StaggerChildren, CountUp } from '@/components/motion'
 import { DataTable, DataTableBody, DataTableCell, DataTableHead, DataTableHeaderCell, DataTableRow } from '@/components/shared/DataTable'
+import { GamificationStats } from '@/components/gamification/GamificationStats'
+import type { GamificationMeResponse } from '@/lib/gamification'
 
 interface FoodResult {
   name: string
@@ -51,6 +53,7 @@ export default function MyFitnessPage() {
   const [mealType, setMealType] = useState('breakfast')
   const [foodQuantity, setFoodQuantity] = useState('100')
   const [loggingMeal, setLoggingMeal] = useState(false)
+  const [gamification, setGamification] = useState<GamificationMeResponse | null>(null)
 
   const loadData = () => {
     setLoading(true)
@@ -59,12 +62,14 @@ export default function MyFitnessPage() {
       fetch('/api/tracking/progress').then(r => r.ok ? r.json() : []),
       fetch('/api/tracking/meal-logs/today').then(r => r.ok ? r.json() : { meals: [], totals: { calories: 0, protein: 0, carbs: 0, fat: 0 } }),
       fetch('/api/tracking/logs?limit=10').then(r => r.ok ? r.json() : { logs: [], streak: 0, totalCompleted: 0 }),
-    ]).then(([planData, progressData, mealData, historyData]) => {
+      fetch('/api/gamification/me').then(r => r.ok ? r.json() : null),
+    ]).then(([planData, progressData, mealData, historyData, gamificationData]) => {
       if (planData?.plan === null) setPlan(null)
       else if (planData?._id) setPlan(planData)
       setProgress(Array.isArray(progressData) ? progressData : [])
       setMeals(mealData)
       setWorkoutHistory(historyData)
+      if (gamificationData?.xp !== undefined) setGamification(gamificationData)
     }).finally(() => setLoading(false))
   }
 
@@ -132,7 +137,8 @@ export default function MyFitnessPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.message)
 
-      toast.success('Workout completed! Great work.')
+      const xpMsg = data.xpAwarded ? ` +${data.xpAwarded} XP` : ''
+      toast.success(`Workout completed! Great work.${xpMsg}`)
       setWorkoutStarted(false)
       setCompletedExercises([])
       loadData()
@@ -194,7 +200,8 @@ export default function MyFitnessPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.message)
-      toast.success('Meal logged')
+      const xpMsg = data.xpAwarded ? ` +${data.xpAwarded} XP` : ''
+      toast.success(`Meal logged${xpMsg}`)
       setSelectedFood(null)
       setFoodResults([])
       setFoodSearch('')
@@ -232,7 +239,8 @@ export default function MyFitnessPage() {
 
           <TabsContent value="overview">
             {loading ? <Skeleton className="h-48 bg-muted" /> : (
-              <StaggerChildren className="dashboard-grid cols-3">
+              <>
+              <StaggerChildren className="dashboard-grid cols-3 mb-6">
                 <Card className="card-athletic interactive-lift">
                   <CardHeader><CardTitle className="workout-label text-muted-foreground">Active Plan</CardTitle></CardHeader>
                   <CardContent>
@@ -259,6 +267,12 @@ export default function MyFitnessPage() {
                   </CardContent>
                 </Card>
               </StaggerChildren>
+              {!loading && (
+                <div className="mt-2">
+                  <GamificationStats data={gamification} loading={loading} />
+                </div>
+              )}
+              </>
             )}
           </TabsContent>
 

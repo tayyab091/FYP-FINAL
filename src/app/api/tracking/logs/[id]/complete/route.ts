@@ -4,6 +4,7 @@ import { getUser } from '@/lib/auth'
 import WorkoutPlan from '@/models/WorkoutPlan'
 import WorkoutLog from '@/models/WorkoutLog'
 import { syncUserSubscription, getWorkoutWeeklyLimit, normalizePlan } from '@/lib/subscription'
+import { awardWorkoutXp } from '@/lib/gamification'
 
 interface CompletedExercise {
   name: string
@@ -73,8 +74,17 @@ export async function POST(
       date: new Date(),
     })
 
+    const gamificationResult = await awardWorkoutXp(tokenUser.userId)
+
     return NextResponse.json(
-      { message: 'Workout completed', log },
+      {
+        message: 'Workout completed',
+        log,
+        xpAwarded: gamificationResult.xpAwarded,
+        streakBonus: gamificationResult.streakBonus,
+        newlyUnlocked: gamificationResult.newlyUnlocked,
+        gamification: gamificationResult.gamification,
+      },
       { status: 201 },
     )
   } catch {
