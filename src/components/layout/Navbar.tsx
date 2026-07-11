@@ -16,7 +16,7 @@ export function Navbar() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  const hideOn = ['/admin', '/gym-owner', '/trainer-dashboard']
+  const hideOn = ['/admin', '/gym-owner', '/trainer-dashboard', '/my-fitness', '/chat', '/settings']
   if (hideOn.some(p => pathname.startsWith(p))) return null
 
   const navLinks = [

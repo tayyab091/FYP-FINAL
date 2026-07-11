@@ -24,6 +24,20 @@ const NUTRITION_DB: Record<string, { calories: number; protein: number; carbs: n
   'haleem': { calories: 175, protein: 14, carbs: 15, fat: 7 },
 }
 
+interface SpoonacularNutrient {
+  name?: string
+  amount?: number
+}
+
+interface SpoonacularResult {
+  name?: string
+  nutrition?: { nutrients?: SpoonacularNutrient[] }
+}
+
+interface SpoonacularResponse {
+  results?: SpoonacularResult[]
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = req.nextUrl
@@ -42,20 +56,21 @@ export async function GET(req: NextRequest) {
           { next: { revalidate: 3600 } }
         )
         if (res.ok) {
-          const data = await res.json()
-          if (data.results?.length > 0) {
-            const results = data.results.map((item: any) => ({
-              name: item.name,
-              calories: Math.round(item.nutrition?.nutrients?.find((n: any) => n.name === 'Calories')?.amount || 0),
-              protein: Math.round(item.nutrition?.nutrients?.find((n: any) => n.name === 'Protein')?.amount || 0),
-              carbs: Math.round(item.nutrition?.nutrients?.find((n: any) => n.name === 'Carbohydrates')?.amount || 0),
-              fat: Math.round(item.nutrition?.nutrients?.find((n: any) => n.name === 'Fat')?.amount || 0),
+          const data = await res.json() as SpoonacularResponse
+          const spoonResults = data.results || []
+          if (spoonResults.length > 0) {
+            const results = spoonResults.map((item) => ({
+              name: item.name || 'Food',
+              calories: Math.round(item.nutrition?.nutrients?.find((n) => n.name === 'Calories')?.amount || 0),
+              protein: Math.round(item.nutrition?.nutrients?.find((n) => n.name === 'Protein')?.amount || 0),
+              carbs: Math.round(item.nutrition?.nutrients?.find((n) => n.name === 'Carbohydrates')?.amount || 0),
+              fat: Math.round(item.nutrition?.nutrients?.find((n) => n.name === 'Fat')?.amount || 0),
               per: '100g',
             }))
             return NextResponse.json({ results })
           }
         }
-      } catch (e) {
+      } catch {
         // Fall through to local DB
       }
     }
@@ -85,7 +100,7 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({ results })
-  } catch (error) {
+  } catch {
     return NextResponse.json({ message: 'Server error' }, { status: 500 })
   }
 }

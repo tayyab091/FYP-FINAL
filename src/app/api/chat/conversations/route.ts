@@ -3,6 +3,23 @@ import { connectDB } from '@/lib/mongodb'
 import Conversation from '@/models/Conversation'
 import { getUser } from '@/lib/auth'
 
+interface PopulatedParticipant {
+  _id: { toString(): string }
+  fullName: string
+  email: string
+  profileImage?: string
+  role: string
+}
+
+interface LeanConversation {
+  _id: unknown
+  participants?: PopulatedParticipant[]
+  lastMessage?: string
+  lastMessageTime?: Date
+  updatedAt?: Date
+  unreadCounts?: Record<string, number> | Map<string, number>
+}
+
 export async function GET(req: NextRequest) {
   try {
     const tokenUser = await getUser(req)
@@ -15,14 +32,17 @@ export async function GET(req: NextRequest) {
       .lean()
 
     // Shape for frontend — show the other participant
-    const shaped = conversations.map((c: any) => {
-      const other = c.participants?.find((p: any) => p._id.toString() !== tokenUser.userId)
+    const shaped = (conversations as unknown as LeanConversation[]).map((c) => {
+      const other = c.participants?.find((participant) => participant._id.toString() !== tokenUser.userId)
+      const unreadCount = c.unreadCounts instanceof Map
+        ? c.unreadCounts.get(tokenUser.userId)
+        : c.unreadCounts?.[tokenUser.userId]
       return {
         _id: c._id,
         otherUser: other || { fullName: 'Unknown', email: '' },
         lastMessage: c.lastMessage || '',
         lastMessageTime: c.lastMessageTime || c.updatedAt,
-        unreadCount: (c.unreadCounts as any)?.[tokenUser.userId] || 0,
+        unreadCount: unreadCount || 0,
       }
     })
 

@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = req.nextUrl
     const status = searchParams.get('status')
 
-    const query: Record<string, any> = {}
+    const query: Record<string, unknown> = {}
     if (tokenUser.role === 'trainer') {
       const Trainer = (await import('@/models/Trainer')).default
       const trainer = await Trainer.findOne({ userId: tokenUser.userId })

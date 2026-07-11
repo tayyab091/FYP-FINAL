@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
 
     response.cookies.set('token', token, cookieOptions())
     return response
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Register error:', error)
     return NextResponse.json({ message: 'Server error. Please try again.' }, { status: 500 })
   }

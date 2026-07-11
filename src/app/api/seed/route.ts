@@ -89,8 +89,11 @@ export async function POST(req: NextRequest) {
         user: 'user1@test.com / User@123',
       }
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Seed error:', error)
-    return NextResponse.json({ message: 'Seed failed', error: error.message }, { status: 500 })
+    return NextResponse.json({
+      message: 'Seed failed',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }, { status: 500 })
   }
 }

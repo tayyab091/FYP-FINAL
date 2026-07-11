@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useAuth } from '@/hooks/useAuth'
 import { Trainer, WorkoutPlan } from '@/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -147,9 +148,9 @@ function GuestPage() {
               {trainers.map(t => (
                 <div key={t._id} className="group bg-[#111] border border-[#1a1a1a] rounded-2xl p-6 hover:border-[#00ff87]/40 transition-all">
                   <div className="flex items-start gap-4">
-                    <div className="w-14 h-14 rounded-full bg-[#1a1a1a] overflow-hidden flex-shrink-0">
+                    <div className="relative w-14 h-14 rounded-full bg-[#1a1a1a] overflow-hidden flex-shrink-0">
                       {t.profileImage ? (
-                        <img src={t.profileImage} alt={t.name} className="w-full h-full object-cover" />
+                        <Image src={t.profileImage} alt={t.name} fill sizes="56px" className="object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-[#00ff87] font-bold">{t.name[0]}</div>
                       )}

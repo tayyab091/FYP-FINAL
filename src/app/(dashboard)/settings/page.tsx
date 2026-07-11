@@ -114,7 +114,7 @@ export default function SettingsPage() {
   )
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pt-24 pb-28 px-6">
+    <div className="min-h-screen bg-[#0a0a0a] pt-8 pb-28 px-6">
       <div className="max-w-2xl mx-auto">
         <h1 className="text-3xl font-black mb-2">Settings</h1>
         <p className="text-[#a0a0a0] mb-8">Manage your profile and account</p>

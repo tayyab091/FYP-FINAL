@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { useAuth } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -39,8 +40,8 @@ function TrainerCard({ trainer, onConnect }: { trainer: Trainer; onConnect: (id:
     <div className="glass rounded-2xl overflow-hidden hover:border-[#00ff87]/30 transition-all duration-200 group flex flex-col">
       <div className="relative h-40 bg-gradient-to-br from-[#00ff87]/10 to-[#00bfff]/5 flex items-center justify-center">
         {image ? (
-          <img src={image} alt={name}
-            className="w-20 h-20 rounded-full object-cover ring-4 ring-[#0a0a0a] shadow-xl" />
+          <Image src={image} alt={name} width={80} height={80}
+            className="h-20 w-20 rounded-full object-cover ring-4 ring-[#0a0a0a] shadow-xl" />
         ) : (
           <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#00ff87] to-[#00bfff] flex items-center justify-center text-black font-black text-2xl ring-4 ring-[#0a0a0a]">
             {initials}

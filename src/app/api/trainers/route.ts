@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     const limit = Number.isFinite(requestedLimit) ? Math.min(100, Math.max(1, requestedLimit)) : 20
     const featured = searchParams.get('featured')
 
-    const query: Record<string, any> = { isFullyVerified: true, isActive: true }
+    const query: Record<string, unknown> = { isFullyVerified: true, isActive: true }
     if (specialty) query.specialty = { $in: [new RegExp(escapeRegex(specialty), 'i')] }
     if (country) query.country = new RegExp(escapeRegex(country), 'i')
     if (featured) query.isFeatured = true
