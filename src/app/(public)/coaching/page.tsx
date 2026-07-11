@@ -163,8 +163,16 @@ export default function CoachingPage() {
         signal: controller.signal,
       })
       if (res.status === 409) { toast('Request already sent'); throw new Error('pending') }
-      if (res.status === 403) { toast.error('Upgrade your plan to connect'); router.push('/subscription'); throw new Error('upgrade') }
-      if (!res.ok) { toast.error('Failed to send request'); throw new Error('error') }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ message: 'Failed to send request' }))
+        const message = typeof data.message === 'string' ? data.message : 'Failed to send request'
+        toast.error(message)
+        if (res.status === 403 && message.toLowerCase().includes('upgrade')) {
+          router.push('/subscription')
+          throw new Error('upgrade')
+        }
+        throw new Error('error')
+      }
       toast.success('Connection request sent! 🎉')
     } finally {
       clearTimeout(timeout)

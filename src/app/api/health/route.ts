@@ -12,9 +12,10 @@ export async function GET() {
     })
   } catch {
     return NextResponse.json({
-      status: 'ok',
-      message: 'T.E.S.T. API is running',
+      status: 'error',
+      message: 'T.E.S.T. API cannot reach the database',
       database: 'disconnected',
-    })
+      timestamp: new Date().toISOString(),
+    }, { status: 503 })
   }
 }

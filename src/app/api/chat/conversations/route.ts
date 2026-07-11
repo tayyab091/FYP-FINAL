@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import Conversation from '@/models/Conversation'
+import Relationship from '@/models/Relationship'
 import { getUser } from '@/lib/auth'
 
 interface PopulatedParticipant {
@@ -26,7 +27,19 @@ export async function GET(req: NextRequest) {
     if (!tokenUser) return NextResponse.json({ message: 'Not authenticated' }, { status: 401 })
 
     await connectDB()
-    const conversations = await Conversation.find({ participants: tokenUser.userId })
+    const conversationRefs = await Conversation.find({
+      participants: tokenUser.userId,
+    }).select('relationshipId').lean()
+    const relationshipIds = await Relationship.find({
+      _id: { $in: conversationRefs.map((conversation) => conversation.relationshipId) },
+      status: 'active',
+      canChat: true,
+    }).distinct('_id')
+
+    const conversations = await Conversation.find({
+      participants: tokenUser.userId,
+      relationshipId: { $in: relationshipIds },
+    })
       .populate('participants', 'fullName email profileImage role')
       .sort({ updatedAt: -1 })
       .lean()

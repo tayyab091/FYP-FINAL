@@ -16,7 +16,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ message: 'User not found' }, { status: 404 })
     }
 
-    return NextResponse.json({ user })
+    return NextResponse.json({
+      user: {
+        ...user,
+        id: user._id.toString(),
+      },
+    })
   } catch {
     return NextResponse.json({ message: 'Server error' }, { status: 500 })
   }

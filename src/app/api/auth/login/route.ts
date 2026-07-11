@@ -9,11 +9,11 @@ export async function POST(req: NextRequest) {
     await connectDB()
     const { email, password } = await req.json()
 
-    if (!email || !password) {
+    if (typeof email !== 'string' || typeof password !== 'string' || !email.trim() || !password) {
       return NextResponse.json({ message: 'Email and password are required' }, { status: 400 })
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() })
+    const user = await User.findOne({ email: email.toLowerCase().trim() })
     if (!user) {
       return NextResponse.json({ message: 'Invalid email or password' }, { status: 401 })
     }
