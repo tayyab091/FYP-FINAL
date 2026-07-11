@@ -7,6 +7,8 @@ import { useAuth } from '@/hooks/useAuth'
 import { Conversation } from '@/types'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
+import { SignInGate } from '@/components/shared/AccessGate'
+import { PageLoader } from '@/components/shared/PageLoader'
 
 export default function ChatListPage() {
   const { user, isLoading: authLoading } = useAuth()
@@ -21,54 +23,53 @@ export default function ChatListPage() {
       .finally(() => setLoading(false))
   }, [user])
 
-  if (authLoading) return <Loader />
-  if (!user) return (
-    <div className="min-h-screen bg-[#0a0a0a] pt-24 flex items-center justify-center">
-      <Link href="/login" className="btn-accent px-8 py-3">Sign in to chat</Link>
-    </div>
-  )
+  if (authLoading) return <PageLoader />
+  if (!user) return <SignInGate redirectLabel="Sign in to chat" />
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pt-8 pb-28 px-6">
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-black mb-2">Messages</h1>
-        <p className="text-[#a0a0a0] mb-8">Your conversations</p>
+    <div className="min-h-screen pt-6 pb-28 px-4 sm:px-6">
+      <div className="max-w-3xl mx-auto">
+        <div className="page-hero mb-6 px-6 py-8 sm:px-8">
+          <p className="eyebrow mb-2">Coaching Conversations</p>
+          <h1 className="display-title text-3xl md:text-4xl">Messages</h1>
+          <p className="mt-2 text-muted-foreground">Stay aligned with your coach and keep momentum moving.</p>
+        </div>
 
         {loading ? (
           <div className="space-y-3">
-            {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 bg-[#1a1a1a] rounded-xl" />)}
+            {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 bg-muted rounded-xl" />)}
           </div>
         ) : conversations.length === 0 ? (
           <div className="text-center py-16">
             <div className="text-5xl mb-4">💬</div>
-            <p className="text-[#a0a0a0] mb-4">No conversations yet</p>
-            <Link href="/coaching" className="text-[#00ff87] hover:underline">Find a trainer to start chatting</Link>
+            <p className="text-muted-foreground mb-4">No conversations yet</p>
+            <Link href="/coaching" className="text-primary hover:underline">Find a trainer to start chatting</Link>
           </div>
         ) : (
           <div className="space-y-2">
             {conversations.map(c => (
               <Link key={c._id} href={`/chat/${c._id}`}
-                className="flex items-center gap-4 p-4 bg-[#111] border border-[#1a1a1a] rounded-xl hover:border-[#00ff87]/30 transition-all">
-                <div className="relative w-12 h-12 rounded-full bg-[#1a1a1a] overflow-hidden flex-shrink-0 flex items-center justify-center">
+                className="elite-panel interactive-lift flex items-center gap-4 rounded-2xl p-4">
+                <div className="relative w-12 h-12 rounded-full bg-muted overflow-hidden flex-shrink-0 flex items-center justify-center">
                   {c.otherUser?.profileImage ? (
                     <Image src={c.otherUser.profileImage} alt="" fill sizes="48px" className="object-cover" />
                   ) : (
-                    <span className="text-[#00ff87] font-bold text-lg">{c.otherUser?.fullName?.[0] || '?'}</span>
+                    <span className="text-primary font-bold text-lg">{c.otherUser?.fullName?.[0] || '?'}</span>
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold">{c.otherUser?.fullName || 'Unknown'}</span>
                     {c.lastMessageTime && (
-                      <span className="text-[#555] text-xs">
+                      <span className="text-muted-foreground text-xs">
                         {new Date(c.lastMessageTime).toLocaleDateString()}
                       </span>
                     )}
                   </div>
-                  <p className="text-[#555] text-sm truncate mt-0.5">{c.lastMessage || 'No messages yet'}</p>
+                  <p className="text-muted-foreground text-sm truncate mt-0.5">{c.lastMessage || 'No messages yet'}</p>
                 </div>
                 {c.unreadCount > 0 && (
-                  <Badge className="bg-[#00ff87] text-black flex-shrink-0">{c.unreadCount}</Badge>
+                  <Badge className="bg-primary text-black flex-shrink-0">{c.unreadCount}</Badge>
                 )}
               </Link>
             ))}
@@ -79,10 +80,3 @@ export default function ChatListPage() {
   )
 }
 
-function Loader() {
-  return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-[#00ff87] border-t-transparent rounded-full animate-spin" />
-    </div>
-  )
-}

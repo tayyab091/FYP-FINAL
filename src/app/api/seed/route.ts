@@ -74,7 +74,23 @@ export async function POST(req: NextRequest) {
 
     for (const u of usersData) {
       if (!await User.findOne({ email: u.email })) {
-        await User.create({ fullName: u.fullName, email: u.email, password: hash('User@123'), role: 'user', country: 'Pakistan', subscription: { plan: u.plan, status: 'active' } })
+        const endDate = u.plan !== 'basic' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : undefined
+        await User.create({
+          fullName: u.fullName,
+          email: u.email,
+          password: hash('User@123'),
+          role: 'user',
+          country: 'Pakistan',
+          currentWeight: 70,
+          fitnessGoal: 'general_fitness',
+          activityLevel: 'moderate',
+          subscription: {
+            plan: u.plan,
+            status: 'active',
+            startDate: new Date(),
+            ...(endDate && { endDate }),
+          },
+        })
         results.push(`✓ User: ${u.email} / User@123 (${u.plan})`)
       } else results.push(`→ User ${u.email} already exists`)
     }

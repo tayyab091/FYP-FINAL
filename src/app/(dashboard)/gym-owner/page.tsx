@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
 import { Trainer } from '@/types'
@@ -13,6 +12,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { chartTheme } from '@/lib/chart-theme'
+import { Building2, Users, Star } from 'lucide-react'
+import { AccessGate } from '@/components/shared/AccessGate'
+import { PageLoader } from '@/components/shared/PageLoader'
+import { StatCard } from '@/components/shared/StatCard'
+import { StaggerChildren } from '@/components/motion'
 
 interface GymDetails {
   name: string
@@ -145,54 +150,56 @@ export default function GymOwnerPage() {
     }
   }
 
-  if (authLoading) return <Loader />
+  if (authLoading) return <PageLoader />
   if (!user || user.role !== 'gym_owner') return (
-    <div className="min-h-screen bg-[#0a0a0a] pt-24 flex items-center justify-center">
-      <p className="text-[#a0a0a0]">Gym owner access only</p>
-    </div>
+    <AccessGate
+      icon={Building2}
+      title="Gym owner access only"
+      description="Manage your facility, trainers, and analytics from the gym owner workspace."
+    />
   )
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pt-8 pb-12 px-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
+    <div className="min-h-screen pt-6 pb-12 px-4 sm:px-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="page-hero flex items-center justify-between mb-6 px-6 py-8 sm:px-8">
           <div>
-            <h1 className="text-3xl font-black">Gym Owner Dashboard</h1>
-            <p className="text-[#a0a0a0]">Manage {gymName}</p>
+            <p className="eyebrow mb-2">Facility Workspace</p>
+            <h1 className="display-title text-3xl md:text-4xl">{gymName}</h1>
+            <p className="mt-2 text-muted-foreground">Manage your facility, trainers, and business performance.</p>
           </div>
-          <Link href="/" className="text-[#a0a0a0] hover:text-white text-sm">← Home</Link>
         </div>
 
         <Tabs defaultValue="gym">
-          <TabsList className="bg-[#111] border border-[#1a1a1a] mb-8">
+          <TabsList className="mb-8">
             {['gym', 'trainers', 'analytics'].map(t => (
-              <TabsTrigger key={t} value={t} className="capitalize data-active:bg-[#00ff87]/10 data-active:text-[#00ff87]">
+              <TabsTrigger key={t} value={t} className="capitalize">
                 {t === 'gym' ? 'My Gym' : t === 'trainers' ? 'My Trainers' : 'Analytics'}
               </TabsTrigger>
             ))}
           </TabsList>
 
           <TabsContent value="gym">
-            <Card className="bg-[#111] border-[#1a1a1a] text-white">
+            <Card>
               <CardHeader>
                 <CardTitle className="text-2xl">{gymName}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid sm:grid-cols-3 gap-6">
                   <div>
-                    <div className="text-[#555] text-sm">Total Trainers</div>
-                    <div className="text-3xl font-black text-[#00ff87]">{trainers.length}</div>
+                    <div className="text-muted-foreground text-sm">Total Trainers</div>
+                    <div className="text-3xl font-black text-primary">{trainers.length}</div>
                   </div>
                   <div>
-                    <div className="text-[#555] text-sm">Verified Trainers</div>
-                    <div className="text-3xl font-black text-[#00ff87]">{verifiedCount}</div>
+                    <div className="text-muted-foreground text-sm">Verified Trainers</div>
+                    <div className="text-3xl font-black text-primary">{verifiedCount}</div>
                   </div>
                   <div>
-                    <div className="text-[#555] text-sm">Avg Rating</div>
-                    <div className="text-3xl font-black text-[#00ff87]">{avgRating}</div>
+                    <div className="text-muted-foreground text-sm">Avg Rating</div>
+                    <div className="text-3xl font-black text-primary">{avgRating}</div>
                   </div>
                 </div>
-                <form onSubmit={saveGym} className="grid gap-4 border-t border-[#1a1a1a] pt-6 sm:grid-cols-2">
+                <form onSubmit={saveGym} className="grid gap-4 border-t border-border pt-6 sm:grid-cols-2">
                   {[
                     { key: 'name', label: 'Gym Name', required: true },
                     { key: 'address', label: 'Address', required: true },
@@ -212,7 +219,7 @@ export default function GymOwnerPage() {
                           ...current,
                           [field.key]: event.target.value,
                         }))}
-                        className="mt-1 bg-[#0a0a0a] border-[#2a2a2a]"
+                        className="mt-1 bg-background border-border"
                       />
                     </div>
                   ))}
@@ -223,28 +230,28 @@ export default function GymOwnerPage() {
                       value={gym.description}
                       onChange={(event) => setGym((current) => ({ ...current, description: event.target.value }))}
                       rows={4}
-                      className="mt-1 w-full rounded-xl border border-[#2a2a2a] bg-[#0a0a0a] px-3 py-2 text-sm outline-none focus:border-[#00ff87]"
+                      className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
                     />
                   </div>
                   <div className="sm:col-span-2 flex items-center justify-between gap-3">
                     <Badge variant="outline" className="capitalize">
                       {gym.verificationStatus || 'pending'}
                     </Badge>
-                    <Button type="submit" disabled={savingGym} className="bg-[#00ff87] text-black hover:bg-[#00cc6a]">
+                    <Button type="submit" disabled={savingGym} className="bg-primary text-black hover:brightness-95">
                       {savingGym ? 'Saving...' : 'Save Gym Details'}
                     </Button>
                   </div>
                 </form>
-                <div className="border-t border-[#1a1a1a] pt-6">
+                <div className="border-t border-border pt-6">
                   <h3 className="font-bold mb-4">Add Trainer to Gym</h3>
                   <form onSubmit={handleAddTrainer} className="flex gap-3 flex-wrap">
                     <div className="flex-1 min-w-[200px]">
                       <Label htmlFor="email" className="sr-only">Trainer Email</Label>
                       <Input id="email" type="email" placeholder="trainer@email.com" value={trainerEmail}
                         onChange={e => setTrainerEmail(e.target.value)}
-                        className="bg-[#0a0a0a] border-[#2a2a2a]" />
+                        className="bg-background border-border" />
                     </div>
-                    <Button type="submit" disabled={adding} className="bg-[#00ff87] text-black hover:bg-[#00cc6a]">
+                    <Button type="submit" disabled={adding} className="bg-primary text-black hover:brightness-95">
                       {adding ? 'Adding...' : 'Add Trainer'}
                     </Button>
                   </form>
@@ -254,28 +261,28 @@ export default function GymOwnerPage() {
           </TabsContent>
 
           <TabsContent value="trainers">
-            {loading ? <Skeleton className="h-48 bg-[#1a1a1a]" /> : trainers.length === 0 ? (
-              <p className="text-[#a0a0a0] text-center py-12">No trainers linked to your gym yet</p>
+            {loading ? <Skeleton className="h-48 bg-muted" /> : trainers.length === 0 ? (
+              <p className="text-muted-foreground text-center py-12">No trainers linked to your gym yet</p>
             ) : (
               <div className="grid sm:grid-cols-2 gap-4">
                 {trainers.map(t => (
-                  <Card key={t._id} className="bg-[#111] border-[#1a1a1a] text-white">
+                  <Card key={t._id}>
                     <CardContent className="pt-6">
                       <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 rounded-full bg-[#1a1a1a] flex items-center justify-center text-[#00ff87] font-bold">
+                        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-primary font-bold">
                           {t.name[0]}
                         </div>
                         <div className="flex-1">
                           <div className="font-bold">{t.name}</div>
-                          <div className="text-[#555] text-sm">{t.email}</div>
+                          <div className="text-muted-foreground text-sm">{t.email}</div>
                           <div className="flex flex-wrap gap-1 mt-2">
                             {t.specialty?.slice(0, 3).map(s => (
-                              <Badge key={s} className="bg-[#00ff87]/10 text-[#00ff87] text-xs">{s}</Badge>
+                              <Badge key={s} className="bg-primary/10 text-primary text-xs">{s}</Badge>
                             ))}
                           </div>
                           <div className="flex items-center gap-3 mt-2 text-sm">
-                            <span className="text-[#00ff87]">★ {t.rating?.toFixed(1)}</span>
-                            <Badge variant="outline" className={t.isFullyVerified ? 'border-[#00ff87]/30 text-[#00ff87]' : 'border-yellow-500/30 text-yellow-400'}>
+                            <span className="text-primary">★ {t.rating?.toFixed(1)}</span>
+                            <Badge variant="outline" className={t.isFullyVerified ? 'border-primary/30 text-primary' : 'border-yellow-500/30 text-yellow-400'}>
                               {t.isFullyVerified ? 'Verified' : 'Pending'}
                             </Badge>
                           </div>
@@ -284,7 +291,7 @@ export default function GymOwnerPage() {
                               <Button
                                 size="sm"
                                 onClick={() => updateTrainer(t._id, 'approve')}
-                                className="bg-[#00ff87] text-black hover:bg-[#00cc6a]"
+                                className="bg-primary text-black hover:brightness-95"
                               >
                                 Approve
                               </Button>
@@ -307,26 +314,26 @@ export default function GymOwnerPage() {
           </TabsContent>
 
           <TabsContent value="analytics">
-            {loading ? <Skeleton className="h-64 bg-[#1a1a1a]" /> : trainers.length === 0 ? (
-              <p className="text-[#a0a0a0] text-center py-12">Add trainers to see analytics</p>
+            {loading ? <Skeleton className="h-64 bg-muted" /> : trainers.length === 0 ? (
+              <p className="text-muted-foreground text-center py-12">Add trainers to see analytics</p>
             ) : (
               <div className="space-y-8">
-                <div className="grid sm:grid-cols-3 gap-6">
-                  <StatCard label="Total Clients" value={trainers.reduce((s, t) => s + (t.totalClients || 0), 0)} />
-                  <StatCard label="Active Trainers" value={trainers.filter(t => t.isActive).length} />
-                  <StatCard label="Featured Trainers" value={trainers.filter(t => t.isFeatured).length} />
-                </div>
-                <Card className="bg-[#111] border-[#1a1a1a] text-white">
+                <StaggerChildren className="dashboard-grid cols-3">
+                  <StatCard label="Total Clients" value={trainers.reduce((s, t) => s + (t.totalClients || 0), 0)} icon={Users} variant="primary" />
+                  <StatCard label="Active Trainers" value={trainers.filter(t => t.isActive).length} icon={Building2} variant="sky" />
+                  <StatCard label="Featured Trainers" value={trainers.filter(t => t.isFeatured).length} icon={Star} variant="amber" />
+                </StaggerChildren>
+                <Card>
                   <CardHeader><CardTitle>Trainer Performance</CardTitle></CardHeader>
                   <CardContent>
                     <ResponsiveContainer width="100%" height={300}>
                       <BarChart data={chartData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
-                        <XAxis dataKey="name" stroke="#555" fontSize={12} />
-                        <YAxis stroke="#555" fontSize={12} />
-                        <Tooltip contentStyle={{ background: '#111', border: '1px solid #2a2a2a', borderRadius: 8 }} />
-                        <Bar dataKey="clients" fill="#00ff87" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="rating" fill="#00bfff" radius={[4, 4, 0, 0]} />
+                        <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+                        <XAxis dataKey="name" stroke={chartTheme.axis} fontSize={12} />
+                        <YAxis stroke={chartTheme.axis} fontSize={12} />
+                        <Tooltip contentStyle={{ background: chartTheme.tooltip.background, border: `1px solid ${chartTheme.tooltip.border}`, borderRadius: chartTheme.tooltip.borderRadius }} />
+                        <Bar dataKey="clients" fill={chartTheme.primary} radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="rating" fill={chartTheme.secondary} radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </CardContent>
@@ -340,19 +347,4 @@ export default function GymOwnerPage() {
   )
 }
 
-function StatCard({ label, value }: { label: string; value: number }) {
-  return (
-    <Card className="bg-[#111] border-[#1a1a1a] text-white">
-      <CardHeader><CardTitle className="text-sm text-[#a0a0a0]">{label}</CardTitle></CardHeader>
-      <CardContent><div className="text-3xl font-black text-[#00ff87]">{value}</div></CardContent>
-    </Card>
-  )
-}
 
-function Loader() {
-  return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-[#00ff87] border-t-transparent rounded-full animate-spin" />
-    </div>
-  )
-}

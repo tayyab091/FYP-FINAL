@@ -6,13 +6,18 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Dumbbell, Users, ClipboardList } from 'lucide-react'
+import { AccessGate } from '@/components/shared/AccessGate'
+import { PageLoader } from '@/components/shared/PageLoader'
+import { StatCard } from '@/components/shared/StatCard'
+import { StaggerChildren } from '@/components/motion'
 
 interface PendingRequest {
   _id: string
@@ -70,6 +75,10 @@ export default function TrainerDashboardPage() {
   const [planForm, setPlanForm] = useState({ title: '', goal: 'general_fitness', durationWeeks: '8', difficulty: 'beginner' })
   const [planSchedule, setPlanSchedule] = useState<DraftDay[]>(createEmptySchedule)
   const [creating, setCreating] = useState(false)
+  const [sendPlanViaChat, setSendPlanViaChat] = useState(true)
+  const [clientProgress, setClientProgress] = useState<Record<string, unknown> | null>(null)
+  const [progressClient, setProgressClient] = useState<Client | null>(null)
+  const [loadingProgress, setLoadingProgress] = useState(false)
 
   const loadData = () => {
     setLoading(true)
@@ -193,7 +202,23 @@ export default function TrainerDashboardPage() {
       if (!res.ok) throw new Error(plan.message)
       const activateRes = await fetch(`/api/tracking/plans/${plan._id}/activate`, { method: 'PUT' })
       if (!activateRes.ok) throw new Error('Plan was created but could not be activated')
-      toast.success('Workout plan created and activated!')
+
+      if (sendPlanViaChat && selectedClient.conversationId) {
+        const msgRes = await fetch(`/api/chat/conversations/${selectedClient.conversationId}/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'workout_plan',
+            attachedPlanId: plan._id,
+            content: `Your new workout plan "${planForm.title}" is ready!`,
+          }),
+        })
+        if (!msgRes.ok) toast.error('Plan created but could not be sent via chat')
+      }
+
+      toast.success(sendPlanViaChat && selectedClient.conversationId
+        ? 'Workout plan created, activated, and sent to client!'
+        : 'Workout plan created and activated!')
       setPlanModalOpen(false)
       setPlanForm({ title: '', goal: 'general_fitness', durationWeeks: '8', difficulty: 'beginner' })
       setPlanSchedule(createEmptySchedule())
@@ -205,59 +230,78 @@ export default function TrainerDashboardPage() {
     }
   }
 
-  if (authLoading) return <Loader />
+  const viewClientProgress = async (client: Client) => {
+    setProgressClient(client)
+    setLoadingProgress(true)
+    setClientProgress(null)
+    try {
+      const res = await fetch(`/api/trainers/clients/${client.userId._id}/progress`)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message)
+      setClientProgress(data)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to load client progress')
+      setProgressClient(null)
+    } finally {
+      setLoadingProgress(false)
+    }
+  }
+
+  if (authLoading) return <PageLoader />
   if (!user || user.role !== 'trainer') return (
-    <div className="min-h-screen bg-[#0a0a0a] pt-24 flex items-center justify-center">
-      <p className="text-[#a0a0a0]">Trainer access only</p>
-    </div>
+    <AccessGate
+      icon={Dumbbell}
+      title="Trainer access only"
+      description="This workspace is reserved for verified fitness coaches."
+    />
   )
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pt-8 pb-12 px-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
+    <div className="min-h-screen pt-6 pb-12 px-4 sm:px-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="page-hero flex items-center justify-between mb-6 px-6 py-8 sm:px-8">
           <div>
-            <h1 className="text-3xl font-black">Trainer Dashboard</h1>
-            <p className="text-[#a0a0a0]">Welcome, {user.fullName}</p>
+            <p className="eyebrow mb-2">Coaching Workspace</p>
+            <h1 className="display-title text-3xl md:text-4xl">Welcome, {user.fullName.split(' ')[0]}</h1>
+            <p className="mt-2 text-muted-foreground">Manage clients, programs, and every coaching conversation.</p>
           </div>
-          <Link href="/" className="text-[#a0a0a0] hover:text-white text-sm">← Home</Link>
         </div>
 
         <Tabs defaultValue="overview">
-          <TabsList className="bg-[#111] border border-[#1a1a1a] mb-8">
+          <TabsList className="mb-8">
             {['overview', 'requests', 'clients', 'chat'].map(t => (
-              <TabsTrigger key={t} value={t} className="capitalize data-active:bg-[#00ff87]/10 data-active:text-[#00ff87]">
+              <TabsTrigger key={t} value={t} className="capitalize">
                 {t === 'requests' ? 'Client Requests' : t === 'clients' ? 'My Clients' : t}
               </TabsTrigger>
             ))}
           </TabsList>
 
           <TabsContent value="overview">
-            {loading ? <Skeleton className="h-32 bg-[#1a1a1a]" /> : (
+            {loading ? <Skeleton className="h-32 bg-muted" /> : (
               <div className="space-y-8">
-                <div className="grid md:grid-cols-3 gap-6">
-                  <StatCard label="Active Clients" value={clients.length} />
-                  <StatCard label="Pending Requests" value={requests.length} />
-                  <StatCard label="Active Plans" value={activePlanCount} />
-                </div>
+                <StaggerChildren className="dashboard-grid cols-3">
+                  <StatCard label="Active Clients" value={clients.length} icon={Users} variant="primary" />
+                  <StatCard label="Pending Requests" value={requests.length} icon={ClipboardList} variant="amber" />
+                  <StatCard label="Active Plans" value={activePlanCount} icon={Dumbbell} variant="sky" />
+                </StaggerChildren>
                 <div>
                   <h2 className="mb-3 text-lg font-bold">Recent Messages</h2>
                   {conversations.length === 0 ? (
-                    <p className="text-sm text-[#a0a0a0]">No conversations yet.</p>
+                    <p className="text-sm text-muted-foreground">No conversations yet.</p>
                   ) : (
                     <div className="space-y-2">
                       {conversations.slice(0, 3).map((conversation) => (
                         <Link
                           key={conversation._id}
                           href={`/chat/${conversation._id}`}
-                          className="flex items-center justify-between rounded-xl border border-[#1a1a1a] bg-[#111] p-4 hover:border-[#00ff87]/30"
+                          className="flex items-center justify-between rounded-xl border border-border bg-card/60 p-4 hover:border-primary/30"
                         >
                           <div>
                             <div className="font-medium">{conversation.otherUser?.fullName}</div>
-                            <div className="text-sm text-[#555]">{conversation.lastMessage || 'No messages yet'}</div>
+                            <div className="text-sm text-muted-foreground">{conversation.lastMessage || 'No messages yet'}</div>
                           </div>
                           {conversation.unreadCount > 0 && (
-                            <Badge className="bg-[#00ff87] text-black">{conversation.unreadCount}</Badge>
+                            <Badge className="bg-primary text-black">{conversation.unreadCount}</Badge>
                           )}
                         </Link>
                       ))}
@@ -269,24 +313,24 @@ export default function TrainerDashboardPage() {
           </TabsContent>
 
           <TabsContent value="requests">
-            {loading ? <Skeleton className="h-48 bg-[#1a1a1a]" /> : requests.length === 0 ? (
-              <p className="text-[#a0a0a0] text-center py-12">No pending requests</p>
+            {loading ? <Skeleton className="h-48 bg-muted" /> : requests.length === 0 ? (
+              <p className="text-muted-foreground text-center py-12">No pending requests</p>
             ) : (
               <div className="space-y-4">
                 {requests.map(req => (
-                  <Card key={req._id} className="bg-[#111] border-[#1a1a1a] text-white">
+                  <Card key={req._id}>
                     <CardContent className="pt-6 flex items-center justify-between flex-wrap gap-4">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full bg-[#1a1a1a] flex items-center justify-center text-[#00ff87] font-bold">
+                        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-primary font-bold">
                           {req.userId?.fullName?.[0] || '?'}
                         </div>
                         <div>
                           <div className="font-bold">{req.userId?.fullName}</div>
-                          <div className="text-[#555] text-sm">{req.userId?.email}</div>
+                          <div className="text-muted-foreground text-sm">{req.userId?.email}</div>
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button onClick={() => handleAccept(req._id)} className="bg-[#00ff87] text-black hover:bg-[#00cc6a]">
+                        <Button onClick={() => handleAccept(req._id)} className="bg-primary text-black hover:brightness-95">
                           Accept
                         </Button>
                         <Button onClick={() => handleDecline(req._id)} variant="destructive">
@@ -301,21 +345,24 @@ export default function TrainerDashboardPage() {
           </TabsContent>
 
           <TabsContent value="clients">
-            {loading ? <Skeleton className="h-48 bg-[#1a1a1a]" /> : clients.length === 0 ? (
-              <p className="text-[#a0a0a0] text-center py-12">No active clients yet</p>
+            {loading ? <Skeleton className="h-48 bg-muted" /> : clients.length === 0 ? (
+              <p className="text-muted-foreground text-center py-12">No active clients yet</p>
             ) : (
               <div className="space-y-4">
                 {clients.map(client => (
-                  <Card key={client._id} className="bg-[#111] border-[#1a1a1a] text-white">
+                  <Card key={client._id}>
                     <CardContent className="pt-6 flex items-center justify-between flex-wrap gap-4">
                       <div>
                         <div className="font-bold">{client.userId?.fullName}</div>
-                        <div className="text-[#555] text-sm">{client.userId?.email}</div>
-                        <Badge className="mt-2 bg-[#00ff87]/10 text-[#00ff87]">{client.status}</Badge>
+                        <div className="text-muted-foreground text-sm">{client.userId?.email}</div>
+                        <Badge className="mt-2 bg-primary/10 text-primary">{client.status}</Badge>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap">
+                        <Button onClick={() => viewClientProgress(client)} variant="outline">
+                          View Progress
+                        </Button>
                         <Button onClick={() => { setSelectedClient(client); setPlanModalOpen(true) }}
-                          className="bg-[#00ff87] text-black hover:bg-[#00cc6a]">
+                          className="bg-primary text-black hover:brightness-95">
                           Create Plan
                         </Button>
                         {client.conversationId && (
@@ -332,22 +379,22 @@ export default function TrainerDashboardPage() {
           </TabsContent>
 
           <TabsContent value="chat">
-            {loading ? <Skeleton className="h-48 bg-[#1a1a1a]" /> : conversations.length === 0 ? (
-              <p className="text-[#a0a0a0] text-center py-12">No conversations yet</p>
+            {loading ? <Skeleton className="h-48 bg-muted" /> : conversations.length === 0 ? (
+              <p className="text-muted-foreground text-center py-12">No conversations yet</p>
             ) : (
               <div className="space-y-2">
                 {conversations.map(c => (
                   <Link key={c._id} href={`/chat/${c._id}`}
-                    className="flex items-center gap-4 p-4 bg-[#111] border border-[#1a1a1a] rounded-xl hover:border-[#00ff87]/30 transition-colors">
-                    <div className="w-10 h-10 rounded-full bg-[#1a1a1a] flex items-center justify-center text-[#00ff87] font-bold">
+                    className="flex items-center gap-4 p-4 bg-card/60 border border-border rounded-xl hover:border-primary/30 transition-colors">
+                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-primary font-bold">
                       {c.otherUser?.fullName?.[0] || '?'}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-medium">{c.otherUser?.fullName}</div>
-                      <div className="text-[#555] text-sm truncate">{c.lastMessage || 'No messages yet'}</div>
+                      <div className="text-muted-foreground text-sm truncate">{c.lastMessage || 'No messages yet'}</div>
                     </div>
                     {c.unreadCount > 0 && (
-                      <Badge className="bg-[#00ff87] text-black">{c.unreadCount}</Badge>
+                      <Badge className="bg-primary text-black">{c.unreadCount}</Badge>
                     )}
                   </Link>
                 ))}
@@ -358,28 +405,28 @@ export default function TrainerDashboardPage() {
       </div>
 
       <Dialog open={planModalOpen} onOpenChange={setPlanModalOpen}>
-        <DialogContent className="bg-[#111] border-[#2a2a2a] text-white sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-card/60 border-border text-white sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create Workout Plan</DialogTitle>
-            <p className="text-[#a0a0a0] text-sm">For {selectedClient?.userId?.fullName}</p>
+            <p className="text-muted-foreground text-sm">For {selectedClient?.userId?.fullName}</p>
           </DialogHeader>
           <form onSubmit={handleCreatePlan} className="space-y-4">
             <div>
               <Label>Plan Title</Label>
               <Input value={planForm.title} onChange={e => setPlanForm(f => ({ ...f, title: e.target.value }))}
-                className="mt-1 bg-[#0a0a0a] border-[#2a2a2a]" placeholder="8-Week Strength Builder" />
+                className="mt-1 bg-background border-border" placeholder="8-Week Strength Builder" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Duration (weeks)</Label>
                 <Input type="number" value={planForm.durationWeeks}
                   onChange={e => setPlanForm(f => ({ ...f, durationWeeks: e.target.value }))}
-                  className="mt-1 bg-[#0a0a0a] border-[#2a2a2a]" />
+                  className="mt-1 bg-background border-border" />
               </div>
               <div>
                 <Label>Difficulty</Label>
                 <select value={planForm.difficulty} onChange={e => setPlanForm(f => ({ ...f, difficulty: e.target.value }))}
-                  className="mt-1 w-full h-8 rounded-lg bg-[#0a0a0a] border border-[#2a2a2a] px-2 text-sm">
+                  className="mt-1 w-full h-8 rounded-lg bg-background border border-border px-2 text-sm">
                   <option value="beginner">Beginner</option>
                   <option value="intermediate">Intermediate</option>
                   <option value="advanced">Advanced</option>
@@ -389,7 +436,7 @@ export default function TrainerDashboardPage() {
             <div>
               <Label>Goal</Label>
               <select value={planForm.goal} onChange={e => setPlanForm(f => ({ ...f, goal: e.target.value }))}
-                className="mt-1 w-full h-8 rounded-lg bg-[#0a0a0a] border border-[#2a2a2a] px-2 text-sm">
+                className="mt-1 w-full h-8 rounded-lg bg-background border border-border px-2 text-sm">
                 <option value="general_fitness">General Fitness</option>
                 <option value="weight_loss">Weight Loss</option>
                 <option value="muscle_gain">Muscle Gain</option>
@@ -400,15 +447,15 @@ export default function TrainerDashboardPage() {
             <div className="space-y-3">
               <Label>Weekly Schedule</Label>
               {planSchedule.map((day, dayIndex) => (
-                <div key={day.day} className="rounded-xl border border-[#2a2a2a] bg-[#0a0a0a] p-3">
+                <div key={day.day} className="rounded-xl border border-border bg-background p-3">
                   <div className="mb-3 flex items-center justify-between">
                     <span className="font-medium">{day.day}</span>
-                    <label className="flex items-center gap-2 text-xs text-[#a0a0a0]">
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
                       <input
                         type="checkbox"
                         checked={day.isRestDay}
                         onChange={(event) => updateDay(dayIndex, { isRestDay: event.target.checked })}
-                        className="accent-[#00ff87]"
+                        className="accent-primary"
                       />
                       Rest day
                     </label>
@@ -422,7 +469,7 @@ export default function TrainerDashboardPage() {
                             placeholder="Exercise"
                             value={exercise.name}
                             onChange={(event) => updateExercise(dayIndex, exerciseIndex, { name: event.target.value })}
-                            className="bg-[#111] border-[#2a2a2a]"
+                           
                           />
                           <Input
                             aria-label="Sets"
@@ -430,14 +477,14 @@ export default function TrainerDashboardPage() {
                             min="1"
                             value={exercise.sets}
                             onChange={(event) => updateExercise(dayIndex, exerciseIndex, { sets: Number(event.target.value) })}
-                            className="bg-[#111] border-[#2a2a2a]"
+                           
                           />
                           <Input
                             aria-label="Repetitions"
                             placeholder="Reps"
                             value={exercise.reps}
                             onChange={(event) => updateExercise(dayIndex, exerciseIndex, { reps: event.target.value })}
-                            className="bg-[#111] border-[#2a2a2a]"
+                           
                           />
                           <Input
                             aria-label="Rest seconds"
@@ -445,7 +492,7 @@ export default function TrainerDashboardPage() {
                             min="0"
                             value={exercise.restSeconds}
                             onChange={(event) => updateExercise(dayIndex, exerciseIndex, { restSeconds: Number(event.target.value) })}
-                            className="bg-[#111] border-[#2a2a2a]"
+                           
                           />
                           <Button
                             type="button"
@@ -465,32 +512,106 @@ export default function TrainerDashboardPage() {
                 </div>
               ))}
             </div>
+            <label className="flex items-center gap-2 text-sm text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={sendPlanViaChat}
+                onChange={(e) => setSendPlanViaChat(e.target.checked)}
+                className="accent-primary"
+                disabled={!selectedClient?.conversationId}
+              />
+              Send plan to client via chat{!selectedClient?.conversationId ? ' (no conversation yet)' : ''}
+            </label>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setPlanModalOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={creating} className="bg-[#00ff87] text-black hover:bg-[#00cc6a]">
+              <Button type="submit" disabled={creating} className="bg-primary text-black hover:brightness-95">
                 {creating ? 'Creating...' : 'Create Plan'}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={Boolean(progressClient)} onOpenChange={(open) => { if (!open) { setProgressClient(null); setClientProgress(null) } }}>
+        <DialogContent className="bg-card/60 border-border text-white sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{progressClient?.userId?.fullName}&apos;s Progress</DialogTitle>
+          </DialogHeader>
+          {loadingProgress ? (
+            <Skeleton className="h-48 bg-muted" />
+          ) : clientProgress ? (
+            <div className="space-y-6">
+              {(clientProgress.permissions as { canViewProgress?: boolean })?.canViewProgress ? (
+                <>
+                  {(clientProgress.activePlan as { title?: string } | null)?.title && (
+                    <div className="rounded-xl border border-border p-4">
+                      <p className="text-xs text-muted-foreground uppercase mb-1">Active Plan</p>
+                      <p className="font-bold text-primary">{(clientProgress.activePlan as { title: string }).title}</p>
+                    </div>
+                  )}
+                  <div>
+                    <h3 className="font-bold mb-2">Recent Workouts</h3>
+                    {Array.isArray(clientProgress.recentWorkouts) && clientProgress.recentWorkouts.length > 0 ? (
+                      <div className="space-y-2">
+                        {(clientProgress.recentWorkouts as Array<{ _id: string; date: string; planTitle?: string }>).map(w => (
+                          <div key={w._id} className="rounded-lg border border-border p-3 text-sm">
+                            <span className="font-medium">{w.planTitle || 'Workout'}</span>
+                            <span className="text-muted-foreground ml-2">{new Date(w.date).toLocaleDateString()}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground text-sm">No workouts logged yet.</p>
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="font-bold mb-2">Body Metrics</h3>
+                    {Array.isArray(clientProgress.progress) && clientProgress.progress.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="text-muted-foreground text-left border-b border-border">
+                              <th className="pb-2 pr-3">Date</th>
+                              <th className="pb-2 pr-3">Weight</th>
+                              <th className="pb-2">Waist</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(clientProgress.progress as Array<{ _id: string; date: string; weight?: number; waist?: number }>).slice(0, 5).map(r => (
+                              <tr key={r._id} className="border-b border-border/50">
+                                <td className="py-2 pr-3">{new Date(r.date).toLocaleDateString()}</td>
+                                <td className="py-2 pr-3">{r.weight ? `${r.weight} kg` : '—'}</td>
+                                <td className="py-2">{r.waist ? `${r.waist} cm` : '—'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground text-sm">No progress records yet.</p>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <p className="text-muted-foreground text-sm">Progress viewing is not enabled for this client.</p>
+              )}
+              {(clientProgress.permissions as { canViewNutrition?: boolean })?.canViewNutrition && (
+                <div>
+                  <h3 className="font-bold mb-2">Today&apos;s Nutrition</h3>
+                  <div className="rounded-xl border border-border p-4">
+                    <p className="text-primary font-bold text-xl">
+                      {(clientProgress.todayNutrition as { totals?: { calories?: number } })?.totals?.calories ?? 0} kcal
+                    </p>
+                    <p className="text-muted-foreground text-sm mt-1">logged today</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
-function StatCard({ label, value }: { label: string; value: number }) {
-  return (
-    <Card className="bg-[#111] border-[#1a1a1a] text-white">
-      <CardHeader><CardTitle className="text-sm text-[#a0a0a0]">{label}</CardTitle></CardHeader>
-      <CardContent><div className="text-3xl font-black text-[#00ff87]">{value}</div></CardContent>
-    </Card>
-  )
-}
 
-function Loader() {
-  return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-[#00ff87] border-t-transparent rounded-full animate-spin" />
-    </div>
-  )
-}

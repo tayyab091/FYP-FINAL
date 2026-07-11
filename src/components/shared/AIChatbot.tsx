@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
+import { Bot, Send, X } from 'lucide-react'
 
 interface Message { role: 'user' | 'assistant'; content: string }
 
@@ -44,19 +45,19 @@ export function AIChatbot() {
   return (
     <>
       <button onClick={() => setOpen(!open)} aria-label="AI Fitness Coach"
-        className="fixed bottom-24 right-5 md:bottom-8 md:right-6 z-50 w-14 h-14 rounded-full bg-[#00ff87] text-black text-2xl flex items-center justify-center shadow-xl shadow-[#00ff87]/20 hover:scale-110 transition-transform">
-        {open ? '✕' : '🤖'}
+        className="fixed bottom-24 right-5 md:bottom-8 md:right-6 z-50 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#55ffb1] to-primary text-primary-foreground shadow-[0_16px_45px_rgba(34,245,154,.26)] transition-transform hover:-translate-y-1">
+        {open ? <X className="size-5" /> : <Bot className="size-6" />}
       </button>
 
       {open && (
-        <div className="fixed bottom-44 right-5 md:bottom-28 md:right-6 z-50 w-80 rounded-2xl border border-[#2a2a2a] bg-[#111] shadow-2xl flex flex-col overflow-hidden"
+        <div className="fixed bottom-44 right-3 md:bottom-28 md:right-6 z-50 flex w-[calc(100vw-1.5rem)] max-w-sm flex-col overflow-hidden rounded-3xl border border-white/[.1] bg-[#0c100d]/96 shadow-[0_30px_100px_rgba(0,0,0,.5)] backdrop-blur-2xl"
           style={{ height: 420 }}>
-          <div className="px-4 py-3 border-b border-[#1a1a1a] flex items-center gap-3 flex-shrink-0">
-            <div className="w-8 h-8 rounded-full bg-[#00ff87]/20 flex items-center justify-center">🤖</div>
+          <div className="px-4 py-3 border-b border-white/[.07] flex items-center gap-3 flex-shrink-0">
+            <div className="flex size-9 items-center justify-center rounded-xl border border-primary/15 bg-primary/[.09] text-primary"><Bot className="size-4" /></div>
             <div>
               <div className="text-sm font-bold">AI Fitness Coach</div>
-              <div className="text-[10px] text-[#00ff87] flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#00ff87] animate-pulse" />
+              <div className="text-[10px] text-primary flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                 Online
               </div>
             </div>
@@ -67,8 +68,8 @@ export function AIChatbot() {
               <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[85%] px-3 py-2.5 rounded-2xl text-sm leading-relaxed ${
                   m.role === 'user'
-                    ? 'bg-[#00ff87] text-black font-medium rounded-br-sm'
-                    : 'bg-[#1a1a1a] text-white rounded-bl-sm'
+                    ? 'bg-primary text-primary-foreground font-semibold rounded-br-sm'
+                    : 'bg-white/[.06] border border-white/[.06] text-white rounded-bl-sm'
                 }`}>
                   {m.content}
                 </div>
@@ -76,9 +77,9 @@ export function AIChatbot() {
             ))}
             {loading && (
               <div className="flex justify-start">
-                <div className="bg-[#1a1a1a] px-4 py-3 rounded-2xl rounded-bl-sm flex gap-1">
+                <div className="bg-muted px-4 py-3 rounded-2xl rounded-bl-sm flex gap-1">
                   {[0,1,2].map(i => (
-                    <div key={i} className="w-2 h-2 rounded-full bg-[#a0a0a0] animate-bounce"
+                    <div key={i} className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce"
                       style={{ animationDelay: `${i * 0.15}s` }} />
                   ))}
                 </div>
@@ -87,14 +88,14 @@ export function AIChatbot() {
             <div ref={bottomRef} />
           </div>
 
-          <div className="px-3 py-3 border-t border-[#1a1a1a] flex gap-2 flex-shrink-0">
+          <div className="px-3 py-3 border-t border-white/[.07] flex gap-2 flex-shrink-0">
             <input value={input} onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && send()}
               placeholder="Ask about fitness, nutrition..."
-              className="flex-1 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2 text-sm text-white placeholder-[#555] outline-none focus:border-[#00ff87] transition-colors" />
+              className="flex-1 bg-black/25 border border-white/[.09] rounded-xl px-3 py-2 text-sm text-white placeholder-[#56615b] outline-none focus:border-primary/40 transition-colors" />
             <button onClick={send} disabled={!input.trim() || loading}
-              className="w-9 h-9 rounded-xl bg-[#00ff87] text-black disabled:opacity-40 text-sm font-bold flex-shrink-0 hover:bg-[#00cc6a] transition-colors">
-              ↑
+              className="flex size-9 flex-shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground disabled:opacity-40">
+              <Send className="size-3.5" />
             </button>
           </div>
         </div>

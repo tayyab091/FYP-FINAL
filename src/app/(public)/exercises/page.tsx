@@ -1,9 +1,15 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import Image from 'next/image'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Dumbbell, Wrench, ChevronDown, ChevronUp, Search, X, Filter } from 'lucide-react'
+import { FitnessBadge } from '@/components/motion/FitnessBadge'
+import { FadeIn } from '@/components/motion'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { easeTransition } from '@/lib/motion'
 
 interface Exercise {
-  id: number
+  id: string
   name: string
   muscle: string
   equipment: string
@@ -12,37 +18,52 @@ interface Exercise {
   instructions: string
   sets: number | string
   reps: string
+  bodyParts?: string[]
+  targetMuscles?: string[]
 }
 
-const FALLBACK_EXERCISES: Exercise[] = [
-  { id: 1, name: 'Push-Up', muscle: 'Chest', equipment: 'Bodyweight', difficulty: 'Beginner', gifUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/Pushup_from_the_side.gif/320px-Pushup_from_the_side.gif', instructions: 'Start in high plank. Lower chest to floor keeping elbows at 45°. Push back up explosively. Keep core braced.', sets: 3, reps: '15' },
-  { id: 2, name: 'Squat', muscle: 'Legs', equipment: 'Bodyweight', difficulty: 'Beginner', gifUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Squat_animation.gif/240px-Squat_animation.gif', instructions: 'Feet shoulder-width. Push hips back and down until thighs parallel. Drive through heels to stand.', sets: 3, reps: '20' },
-  { id: 3, name: 'Plank', muscle: 'Core', equipment: 'Bodyweight', difficulty: 'Beginner', gifUrl: 'https://media1.tenor.com/m/TFUbZgW7RLEAAAAC/plank.gif', instructions: 'Forearms on ground elbows under shoulders. Body straight from head to heels. Breathe steadily.', sets: 3, reps: '45 sec' },
-  { id: 4, name: 'Pull-Up', muscle: 'Back', equipment: 'Pull-up Bar', difficulty: 'Intermediate', gifUrl: 'https://media1.tenor.com/m/K3a7oN5jGW4AAAAd/pull-up.gif', instructions: 'Grip bar overhand shoulder-width. Pull chest to bar squeezing lats. Lower with full control.', sets: 3, reps: '8' },
-  { id: 5, name: 'Deadlift', muscle: 'Back', equipment: 'Barbell', difficulty: 'Intermediate', gifUrl: 'https://media1.tenor.com/m/BIrFBxQxvAIAAAAC/deadlift.gif', instructions: 'Bar over mid-foot. Hinge at hips, grip just outside legs. Drive through floor keeping back straight.', sets: 4, reps: '8' },
-  { id: 6, name: 'Bench Press', muscle: 'Chest', equipment: 'Barbell', difficulty: 'Intermediate', gifUrl: 'https://media1.tenor.com/m/kGGAQJBTZvQAAAAC/bench-press.gif', instructions: 'Lie on bench. Grip slightly wider than shoulders. Lower bar to lower chest. Press up to full extension.', sets: 4, reps: '10' },
-  { id: 7, name: 'Shoulder Press', muscle: 'Shoulders', equipment: 'Dumbbells', difficulty: 'Intermediate', gifUrl: 'https://media1.tenor.com/m/eQqNmNmDXfQAAAAC/shoulder-press.gif', instructions: 'Sit upright. Start with dumbbells at shoulder height. Press overhead until arms fully extended.', sets: 3, reps: '12' },
-  { id: 8, name: 'Bicep Curl', muscle: 'Arms', equipment: 'Dumbbells', difficulty: 'Beginner', gifUrl: 'https://media1.tenor.com/m/uiLJhRXJzMUAAAAC/bicep-curl-dumbbell.gif', instructions: 'Stand holding dumbbells. Keep elbows tucked. Curl to shoulder height. Squeeze at top.', sets: 3, reps: '12' },
-  { id: 9, name: 'Lunge', muscle: 'Legs', equipment: 'Bodyweight', difficulty: 'Beginner', gifUrl: 'https://media1.tenor.com/m/xC4WJNO2CGIAAAAC/lunge-exercise.gif', instructions: 'Step forward into lunge. Lower back knee toward floor. Front knee stays over ankle.', sets: 3, reps: '12 each' },
-  { id: 10, name: 'Mountain Climbers', muscle: 'Cardio', equipment: 'Bodyweight', difficulty: 'Beginner', gifUrl: 'https://media1.tenor.com/m/7mphJSAGvvEAAAAC/mountain-climbers.gif', instructions: 'High plank position. Drive knees to chest alternately. Keep hips level. Move fast.', sets: 3, reps: '30 sec' },
-  { id: 11, name: 'Burpee', muscle: 'Cardio', equipment: 'Bodyweight', difficulty: 'Intermediate', gifUrl: 'https://media1.tenor.com/m/KdYy62HHHbMAAAAC/burpees.gif', instructions: 'From standing: drop to squat, kick feet back to plank, do push-up, jump feet back, explode up.', sets: 3, reps: '10' },
-  { id: 12, name: 'Russian Twist', muscle: 'Core', equipment: 'Bodyweight', difficulty: 'Intermediate', gifUrl: 'https://media1.tenor.com/m/RPzSMZPIiLsAAAAC/russian-twist.gif', instructions: 'Sit at 45 degrees feet off floor. Rotate torso side to side. Keep core braced.', sets: 3, reps: '20 total' },
-]
+interface ExerciseMeta {
+  bodyParts: string[]
+  targetMuscles: string[]
+  equipment: string[]
+  muscles: string[]
+  total: number
+}
 
-const MUSCLE_GROUPS = ['All', 'Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core', 'Cardio']
+interface Filters {
+  muscle: string
+  bodyPart: string
+  target: string
+  equipment: string
+  search: string
+}
+
+const DEFAULT_FILTERS: Filters = {
+  muscle: 'All',
+  bodyPart: 'All',
+  target: 'All',
+  equipment: 'All',
+  search: '',
+}
+
 const DIFFICULTY_COLORS: Record<string, string> = {
   Beginner: 'bg-green-500/20 text-green-400 border-green-500/30',
   Intermediate: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
   Advanced: 'bg-red-500/20 text-red-400 border-red-500/30',
 }
+
 const MUSCLE_COLORS: Record<string, string> = {
   Chest: 'bg-blue-500/20 text-blue-400',
   Back: 'bg-purple-500/20 text-purple-400',
   Legs: 'bg-orange-500/20 text-orange-400',
   Shoulders: 'bg-cyan-500/20 text-cyan-400',
   Arms: 'bg-pink-500/20 text-pink-400',
-  Core: 'bg-[#00ff87]/20 text-[#00ff87]',
+  Core: 'bg-primary/20 text-primary',
   Cardio: 'bg-red-500/20 text-red-400',
+}
+
+function titleCase(value: string) {
+  return value.replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
 function ExerciseCard({ exercise }: { exercise: Exercise }) {
@@ -50,14 +71,28 @@ function ExerciseCard({ exercise }: { exercise: Exercise }) {
   const [imgError, setImgError] = useState(false)
 
   return (
-    <div className="glass rounded-2xl overflow-hidden hover:border-[#2a2a2a] transition-colors">
-      <div className="relative h-48 bg-[#0d0d0d] flex items-center justify-center overflow-hidden">
-        {!imgError ? (
-          <Image src={exercise.gifUrl} alt={exercise.name} fill sizes="(max-width: 768px) 100vw, 33vw"
-            className="object-cover" onError={() => setImgError(true)} />
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.96 }}
+      transition={easeTransition}
+      className="elite-panel interactive-lift card-athletic rounded-2xl overflow-hidden"
+    >
+      <div className="relative h-48 bg-card flex items-center justify-center overflow-hidden">
+        {!imgError && exercise.gifUrl ? (
+          <Image
+            src={exercise.gifUrl}
+            alt={exercise.name}
+            fill
+            sizes="(max-width: 768px) 100vw, 33vw"
+            className="object-cover"
+            loading="lazy"
+            onError={() => setImgError(true)}
+          />
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-[#555]">
-            <div className="text-4xl mb-2">🏋️</div>
+          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+            <Dumbbell className="size-10 mb-2 text-primary/60" />
             <p className="text-xs">{exercise.name}</p>
           </div>
         )}
@@ -69,88 +104,242 @@ function ExerciseCard({ exercise }: { exercise: Exercise }) {
       </div>
 
       <div className="p-4">
-        <div className="flex items-start justify-between mb-2">
-          <h3 className="font-bold text-white">{exercise.name}</h3>
-          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${MUSCLE_COLORS[exercise.muscle] || 'bg-[#1a1a1a] text-[#a0a0a0]'}`}>
+        <div className="flex items-start justify-between mb-2 gap-2">
+          <h3 className="font-bold text-white leading-tight">{exercise.name}</h3>
+          <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${MUSCLE_COLORS[exercise.muscle] || 'bg-muted text-muted-foreground'}`}>
             {exercise.muscle}
           </span>
         </div>
 
-        <div className="flex items-center gap-3 mb-3">
-          <span className="text-xs text-[#a0a0a0]">🔧 {exercise.equipment}</span>
-          <span className="text-xs text-[#a0a0a0]">• {exercise.sets} sets × {exercise.reps}</span>
+        <div className="flex flex-wrap items-center gap-2 mb-2 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <Wrench className="size-3" /> {exercise.equipment}
+          </span>
+          {exercise.targetMuscles?.[0] && (
+            <span className="rounded-full bg-white/5 px-2 py-0.5">{titleCase(exercise.targetMuscles[0])}</span>
+          )}
         </div>
 
-        <button onClick={() => setExpanded(!expanded)}
-          className="w-full text-left text-xs text-[#00ff87] hover:text-[#00cc6a] transition-colors font-medium">
-          {expanded ? '▲ Hide instructions' : '▼ View instructions'}
+        <div className="flex items-center gap-3 mb-3">
+          <FitnessBadge variant="sets">{exercise.sets} sets</FitnessBadge>
+          <FitnessBadge variant="reps">{exercise.reps}</FitnessBadge>
+        </div>
+
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="w-full text-left text-xs text-primary hover:text-primary/80 transition-colors font-medium flex items-center gap-1"
+        >
+          {expanded ? <><ChevronUp className="size-3" /> Hide instructions</> : <><ChevronDown className="size-3" /> View instructions</>}
         </button>
 
         {expanded && (
-          <p className="mt-2 text-xs text-[#a0a0a0] leading-relaxed border-t border-[#1a1a1a] pt-2">
+          <p className="mt-2 text-xs text-muted-foreground leading-relaxed border-t border-border pt-2">
             {exercise.instructions}
           </p>
         )}
       </div>
-    </div>
+    </motion.div>
+  )
+}
+
+function FilterSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string
+  value: string
+  options: string[]
+  onChange: (v: string) => void
+}) {
+  return (
+    <label className="flex flex-col gap-1.5 min-w-[140px] flex-1">
+      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{label}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="rounded-xl border border-white/[.09] bg-black/25 px-3 py-2.5 text-sm text-white outline-none focus:border-primary/40"
+      >
+        <option value="All">All</option>
+        {options.map((opt) => (
+          <option key={opt} value={opt}>{titleCase(opt)}</option>
+        ))}
+      </select>
+    </label>
   )
 }
 
 export default function ExercisesPage() {
-  const [muscle, setMuscle] = useState('All')
-  const [search, setSearch] = useState('')
-  const [exercises, setExercises] = useState<Exercise[]>(FALLBACK_EXERCISES)
+  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [exercises, setExercises] = useState<Exercise[]>([])
+  const [meta, setMeta] = useState<ExerciseMeta | null>(null)
+  const [total, setTotal] = useState(0)
+  const [catalogTotal, setCatalogTotal] = useState(0)
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(filters.search), 300)
+    return () => clearTimeout(t)
+  }, [filters.search])
+
+  const buildQuery = useCallback(
+    (pageNum: number) => {
+      const params = new URLSearchParams({ page: String(pageNum), limit: '24' })
+      if (debouncedSearch) params.set('search', debouncedSearch)
+      if (filters.muscle !== 'All') params.set('muscle', filters.muscle)
+      if (filters.bodyPart !== 'All') params.set('bodyPart', filters.bodyPart)
+      if (filters.target !== 'All') params.set('target', filters.target)
+      if (filters.equipment !== 'All') params.set('equipment', filters.equipment)
+      return params.toString()
+    },
+    [debouncedSearch, filters],
+  )
 
   useEffect(() => {
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 8000)
     setLoading(true)
+    setPage(1)
 
-    fetch('/api/exercises', { signal: controller.signal })
-      .then(r => r.ok ? r.json() : [])
-      .then(data => {
-        if (Array.isArray(data) && data.length > 0) setExercises(data)
+    fetch(`/api/exercises?meta=true&${buildQuery(1)}`, { signal: controller.signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data) return
+        setExercises(data.exercises || [])
+        setTotal(data.total ?? 0)
+        setTotalPages(data.totalPages ?? 1)
+        if (data.meta) {
+          setMeta(data.meta)
+          setCatalogTotal(data.meta.total ?? data.total ?? 0)
+        }
       })
       .catch(() => {})
-      .finally(() => { clearTimeout(timeout); setLoading(false) })
+      .finally(() => setLoading(false))
 
-    return () => { controller.abort(); clearTimeout(timeout) }
-  }, [])
+    return () => controller.abort()
+  }, [buildQuery])
 
-  const filtered = exercises.filter(e => {
-    const matchesMuscle = muscle === 'All' || e.muscle === muscle
-    const matchesSearch = !search || e.name.toLowerCase().includes(search.toLowerCase())
-    return matchesMuscle && matchesSearch
-  })
+  const loadMore = async () => {
+    if (page >= totalPages || loadingMore) return
+    setLoadingMore(true)
+    const nextPage = page + 1
+    try {
+      const res = await fetch(`/api/exercises?${buildQuery(nextPage)}`)
+      if (res.ok) {
+        const data = await res.json()
+        setExercises((prev) => [...prev, ...(data.exercises || [])])
+        setPage(nextPage)
+      }
+    } finally {
+      setLoadingMore(false)
+    }
+  }
+
+  const activeFilters = useMemo(() => {
+    const chips: { key: keyof Filters; label: string; value: string }[] = []
+    if (filters.muscle !== 'All') chips.push({ key: 'muscle', label: 'Muscle', value: filters.muscle })
+    if (filters.bodyPart !== 'All') chips.push({ key: 'bodyPart', label: 'Body part', value: titleCase(filters.bodyPart) })
+    if (filters.target !== 'All') chips.push({ key: 'target', label: 'Target', value: titleCase(filters.target) })
+    if (filters.equipment !== 'All') chips.push({ key: 'equipment', label: 'Equipment', value: filters.equipment })
+    if (debouncedSearch) chips.push({ key: 'search', label: 'Search', value: debouncedSearch })
+    return chips
+  }, [filters, debouncedSearch])
+
+  const clearFilters = () => setFilters(DEFAULT_FILTERS)
+
+  const removeFilter = (key: keyof Filters) => {
+    setFilters((prev) => ({ ...prev, [key]: key === 'search' ? '' : 'All' }))
+  }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pt-24 pb-20">
+    <div className="min-h-screen pt-28 pb-24">
       <div className="max-w-6xl mx-auto px-6">
-        <div className="mb-8">
-          <p className="text-[#00ff87] text-sm font-semibold uppercase tracking-widest mb-2">Exercise Library</p>
-          <h1 className="text-4xl font-black text-white mb-2">Exercises</h1>
-          <p className="text-[#a0a0a0]">Learn proper form for every movement with demonstration GIFs</p>
-        </div>
+        <FadeIn>
+          <div className="page-hero mb-6 px-6 py-10 sm:px-10 md:py-14 gym-floor">
+            <p className="eyebrow mb-3">Exercise Library</p>
+            <h1 className="display-title text-4xl md:text-6xl text-white mb-3">Master Every Movement</h1>
+            <p className="max-w-xl text-muted-foreground">
+              {catalogTotal > 0
+                ? `${catalogTotal.toLocaleString()} exercises with GIF demos — filter by muscle, body part, equipment, and more.`
+                : 'Clear demonstrations and technique cues for safer, stronger training.'}
+            </p>
+            <p className="workout-label mt-3 text-primary/70">SETS · REPS · FORM</p>
+          </div>
+        </FadeIn>
 
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Search exercises..."
-          className="w-full glass rounded-2xl px-5 py-3.5 text-white text-sm placeholder-[#555] outline-none focus:border-[#00ff87] transition-colors mb-6"
-        />
+        <div className="elite-panel mb-6 p-4 sm:p-5 space-y-4">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Filter className="size-4 text-primary" />
+            <span className="font-medium text-white">Filters</span>
+            {!loading && (
+              <span className="ml-auto text-xs">
+                Showing <span className="text-primary font-semibold">{total.toLocaleString()}</span>
+                {catalogTotal > 0 && <> of {catalogTotal.toLocaleString()} exercises</>}
+              </span>
+            )}
+          </div>
 
-        <div className="flex gap-2 flex-wrap mb-8">
-          {MUSCLE_GROUPS.map(g => (
-            <button key={g} onClick={() => setMuscle(g)}
-              className={`px-4 py-2 rounded-full text-xs font-semibold border transition-all ${
-                muscle === g
-                  ? 'bg-[#00ff87] text-black border-[#00ff87]'
-                  : 'bg-transparent text-[#a0a0a0] border-[#2a2a2a] hover:border-[#3a3a3a]'
-              }`}>
-              {g}
-            </button>
-          ))}
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <input
+              value={filters.search}
+              onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
+              placeholder="Search exercises by name..."
+              className="w-full rounded-xl border border-white/[.09] bg-black/25 pl-11 pr-5 py-3.5 text-sm text-white outline-none placeholder:text-muted-foreground focus:border-primary/40 focus:ring-3 focus:ring-primary/10"
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <FilterSelect
+              label="Muscle group"
+              value={filters.muscle}
+              options={meta?.muscles || ['Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core', 'Cardio']}
+              onChange={(v) => setFilters((f) => ({ ...f, muscle: v }))}
+            />
+            <FilterSelect
+              label="Body part"
+              value={filters.bodyPart}
+              options={meta?.bodyParts || []}
+              onChange={(v) => setFilters((f) => ({ ...f, bodyPart: v }))}
+            />
+            <FilterSelect
+              label="Target muscle"
+              value={filters.target}
+              options={meta?.targetMuscles || []}
+              onChange={(v) => setFilters((f) => ({ ...f, target: v }))}
+            />
+            <FilterSelect
+              label="Equipment"
+              value={filters.equipment}
+              options={meta?.equipment || []}
+              onChange={(v) => setFilters((f) => ({ ...f, equipment: v }))}
+            />
+          </div>
+
+          {activeFilters.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              {activeFilters.map((chip) => (
+                <button
+                  key={chip.key}
+                  onClick={() => removeFilter(chip.key)}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary hover:bg-primary/20"
+                >
+                  {chip.label}: {chip.value}
+                  <X className="size-3" />
+                </button>
+              ))}
+              <button
+                onClick={clearFilters}
+                className="text-xs text-muted-foreground hover:text-white underline underline-offset-2"
+              >
+                Clear all
+              </button>
+            </div>
+          )}
         </div>
 
         {loading ? (
@@ -166,16 +355,39 @@ export default function ExercisesPage() {
               </div>
             ))}
           </div>
-        ) : filtered.length > 0 ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map(e => <ExerciseCard key={e.id} exercise={e} />)}
-          </div>
+        ) : exercises.length > 0 ? (
+          <>
+            <AnimatePresence mode="popLayout">
+              <motion.div
+                key={`${filters.muscle}-${filters.bodyPart}-${filters.target}-${filters.equipment}-${debouncedSearch}`}
+                layout
+                className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr"
+              >
+                {exercises.map((e) => (
+                  <ExerciseCard key={e.id} exercise={e} />
+                ))}
+              </motion.div>
+            </AnimatePresence>
+
+            {page < totalPages && (
+              <div className="mt-8 text-center">
+                <button
+                  onClick={() => void loadMore()}
+                  disabled={loadingMore}
+                  className="btn-accent px-8 py-3 text-sm font-bold disabled:opacity-50"
+                >
+                  {loadingMore ? 'Loading...' : `Load more (${exercises.length} of ${total})`}
+                </button>
+              </div>
+            )}
+          </>
         ) : (
-          <div className="text-center py-20 glass rounded-2xl">
-            <div className="text-5xl mb-4">🔍</div>
-            <h3 className="font-bold text-white mb-2">No exercises found</h3>
-            <p className="text-[#a0a0a0] text-sm">Try a different search or filter</p>
-          </div>
+          <EmptyState
+            icon={<Search className="size-7" />}
+            tagline="No matches"
+            title="No exercises found"
+            description="Try a different search or filter combination"
+          />
         )}
       </div>
     </div>

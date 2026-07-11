@@ -2,8 +2,15 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { motion } from 'framer-motion'
 import { useAuth } from '@/hooks/useAuth'
 import { toast } from 'sonner'
+import { AuthField } from '@/components/auth/AuthField'
+import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { FormSelect } from '@/components/ui/form-select'
+import { Eye, EyeOff, Zap } from 'lucide-react'
+import { easeTransition, fadeUp } from '@/lib/motion'
 
 const COUNTRIES = ['Pakistan', 'UAE', 'Saudi Arabia', 'UK', 'USA', 'Canada', 'Australia', 'Germany', 'France', 'India']
 
@@ -65,83 +72,113 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4 py-20">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link href="/" className="text-3xl font-black gradient-text">T.E.S.T.</Link>
-          <h1 className="text-2xl font-bold text-white mt-4 mb-1">Create your account</h1>
-          <p className="text-[#a0a0a0] text-sm">Start your fitness journey today</p>
+    <div className="flex min-h-screen items-center justify-center px-4 py-12 sm:px-8">
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={easeTransition}
+        className="w-full max-w-md"
+      >
+        <div className="mb-8 text-center">
+          <Link href="/" className="font-heading text-2xl font-black tracking-[-.045em] text-white lg:hidden">T.E.S.T.</Link>
+          <div className="mx-auto mt-4 mb-3 flex size-12 items-center justify-center rounded-2xl border border-primary/20 bg-primary/[.08] text-primary">
+            <Zap className="size-6" />
+          </div>
+          <h1 className="mb-1 text-2xl font-bold text-white">Create your account</h1>
+          <p className="text-sm text-muted-foreground">Start your fitness journey today</p>
+          <p className="workout-label mt-2 text-primary/60">Day one · Let&apos;s go</p>
         </div>
 
-        <div className="bg-[#111] border border-[#1a1a1a] rounded-2xl p-8">
+        <motion.div
+          variants={fadeUp}
+          initial="hidden"
+          animate="visible"
+          transition={{ ...easeTransition, delay: 0.15 }}
+          className="elite-panel rounded-3xl p-6 sm:p-8"
+        >
           {errors.general && (
-            <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{errors.general}</div>
+            <div className="mb-4 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-400">{errors.general}</div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {[
-              { label: 'Full Name', field: 'fullName' as const, type: 'text', placeholder: 'Ali Hassan' },
-              { label: 'Email', field: 'email' as const, type: 'email', placeholder: 'you@example.com' },
-            ].map(({ label, field, type, placeholder }) => (
-              <div key={field}>
-                <label className="block text-sm font-medium text-[#a0a0a0] mb-1.5">{label}</label>
-                <input type={type} value={form[field]} onChange={set(field)} placeholder={placeholder} required
-                  className="w-full bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl px-4 py-3 text-white text-sm placeholder-[#555] outline-none focus:border-[#00ff87] transition-colors" />
-                {errors[field] && <p className="text-red-400 text-xs mt-1">{errors[field]}</p>}
-              </div>
-            ))}
+            <AuthField
+              label="Full Name"
+              value={form.fullName}
+              onChange={set('fullName')}
+              placeholder="Ali Hassan"
+              required
+              error={errors.fullName}
+            />
+            <AuthField
+              label="Email"
+              type="email"
+              value={form.email}
+              onChange={set('email')}
+              placeholder="you@example.com"
+              required
+              error={errors.email}
+            />
+            <AuthField
+              label="Password"
+              type={showPassword ? 'text' : 'password'}
+              value={form.password}
+              onChange={set('password')}
+              placeholder="Min. 8 characters"
+              required
+              error={errors.password}
+              trailing={
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              }
+            />
+            <AuthField
+              label="Confirm Password"
+              type="password"
+              value={form.confirmPassword}
+              onChange={set('confirmPassword')}
+              placeholder="Repeat password"
+              required
+              error={errors.confirmPassword}
+            />
 
             <div>
-              <label className="block text-sm font-medium text-[#a0a0a0] mb-1.5">Password</label>
-              <div className="relative">
-                <input type={showPassword ? 'text' : 'password'} value={form.password} onChange={set('password')} placeholder="Min. 8 characters" required
-                  className="w-full bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl px-4 py-3 pr-12 text-white text-sm placeholder-[#555] outline-none focus:border-[#00ff87] transition-colors" />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#555] text-lg">{showPassword ? '🙈' : '👁️'}</button>
-              </div>
-              {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-[#a0a0a0] mb-1.5">Confirm Password</label>
-              <input type="password" value={form.confirmPassword} onChange={set('confirmPassword')} placeholder="Repeat password" required
-                className="w-full bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl px-4 py-3 text-white text-sm placeholder-[#555] outline-none focus:border-[#00ff87] transition-colors" />
-              {errors.confirmPassword && <p className="text-red-400 text-xs mt-1">{errors.confirmPassword}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-[#a0a0a0] mb-1.5">Country</label>
-              <select value={form.country} onChange={set('country')}
-                className="w-full bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-[#00ff87] transition-colors">
+              <Label htmlFor="country" className="mb-1.5 block text-sm font-semibold text-muted-foreground">Country</Label>
+              <FormSelect id="country" value={form.country} onChange={set('country')}>
                 {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+              </FormSelect>
             </div>
 
             <div className="flex items-start gap-3">
               <input type="checkbox" id="terms" checked={agreed} onChange={e => setAgreed(e.target.checked)}
-                className="mt-0.5 w-4 h-4 accent-[#00ff87]" />
-              <label htmlFor="terms" className="text-[#a0a0a0] text-xs leading-relaxed">
+                className="mt-0.5 size-4 accent-primary" />
+              <label htmlFor="terms" className="text-xs leading-relaxed text-muted-foreground">
                 I agree to the Terms of Service and Privacy Policy
               </label>
             </div>
-            {errors.terms && <p className="text-red-400 text-xs">{errors.terms}</p>}
+            {errors.terms && <p className="text-xs text-red-400">{errors.terms}</p>}
 
-            <button type="submit" disabled={loading}
-              className="w-full btn-accent py-3 text-sm font-bold disabled:opacity-50">
+            <Button type="submit" disabled={loading} className="mt-2 w-full py-3 text-sm font-bold">
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
-                  <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                  <span className="size-4 animate-spin rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground" />
                   Creating account...
                 </span>
               ) : 'Create Account'}
-            </button>
+            </Button>
           </form>
 
-          <p className="text-center text-[#555] text-sm mt-6">
+          <p className="mt-6 text-center text-sm text-muted-foreground">
             Already have an account?{' '}
-            <Link href="/login" className="text-[#00ff87] hover:text-[#00cc6a] font-medium">Sign in</Link>
+            <Link href="/login" className="font-medium text-primary hover:text-primary/80">Sign in</Link>
           </p>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </div>
   )
 }

@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/mongodb'
 import { getUser } from '@/lib/auth'
 import WorkoutPlan from '@/models/WorkoutPlan'
 import WorkoutLog from '@/models/WorkoutLog'
+import { syncUserSubscription, getWorkoutWeeklyLimit, normalizePlan } from '@/lib/subscription'
 
 interface CompletedExercise {
   name: string
@@ -41,6 +42,25 @@ export async function POST(
     }).select('_id')
     if (!plan) {
       return NextResponse.json({ message: 'Active plan not found' }, { status: 404 })
+    }
+
+    const subscription = await syncUserSubscription(tokenUser.userId)
+    const planId = normalizePlan(subscription?.plan)
+    const weeklyLimit = getWorkoutWeeklyLimit(planId)
+    if (Number.isFinite(weeklyLimit)) {
+      const weekStart = new Date()
+      weekStart.setDate(weekStart.getDate() - 7)
+      const completedThisWeek = await WorkoutLog.countDocuments({
+        userId: tokenUser.userId,
+        status: 'completed',
+        date: { $gte: weekStart },
+      })
+      if (completedThisWeek >= weeklyLimit) {
+        return NextResponse.json(
+          { message: 'Basic plan allows 3 workouts per week. Upgrade to Pro for unlimited workouts.' },
+          { status: 403 },
+        )
+      }
     }
 
     const log = await WorkoutLog.create({

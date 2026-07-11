@@ -40,6 +40,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     relationship.canCreateWorkouts = true
     await relationship.save()
 
+    await Trainer.updateOne({ _id: trainer._id }, { $inc: { totalClients: 1 } })
+
     return NextResponse.json({ message: 'Client accepted', relationship, conversationId: conversation._id })
   } catch {
     return NextResponse.json({ message: 'Server error' }, { status: 500 })

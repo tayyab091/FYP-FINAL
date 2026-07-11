@@ -4,6 +4,7 @@ import Relationship from '@/models/Relationship'
 import Trainer from '@/models/Trainer'
 import User from '@/models/User'
 import { getUser } from '@/lib/auth'
+import { syncUserSubscription, getTrainerConnectionLimit, normalizePlan } from '@/lib/subscription'
 import mongoose from 'mongoose'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ trainerId: string }> }) {
@@ -24,7 +25,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tra
     const user = await User.findById(tokenUser.userId)
     if (!user) return NextResponse.json({ message: 'User not found' }, { status: 404 })
 
-    if (user.subscription.plan === 'basic' && user.freeChatsUsed >= 5) {
+    const subscription = await syncUserSubscription(tokenUser.userId)
+    const plan = normalizePlan(subscription?.plan)
+    const connectionLimit = getTrainerConnectionLimit(plan)
+    if (Number.isFinite(connectionLimit) && user.freeChatsUsed >= connectionLimit) {
       return NextResponse.json({ message: 'Upgrade your plan to connect with more trainers' }, { status: 403 })
     }
 
@@ -45,7 +49,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tra
       trainerId,
       status: 'pending',
     })
-    if (user.subscription.plan === 'basic') {
+    if (plan === 'basic') {
       await User.updateOne(
         { _id: tokenUser.userId },
         { $inc: { freeChatsUsed: 1 } },

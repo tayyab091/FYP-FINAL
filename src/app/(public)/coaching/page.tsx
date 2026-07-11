@@ -1,9 +1,15 @@
 'use client'
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { Search } from 'lucide-react'
+import { FadeIn } from '@/components/motion'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { easeTransition } from '@/lib/motion'
 
 interface Trainer {
   _id: string
@@ -18,7 +24,21 @@ interface Trainer {
   isFallback?: boolean
 }
 
-function TrainerCard({ trainer, onConnect }: { trainer: Trainer; onConnect: (id: string) => Promise<void> }) {
+interface TrainersMeta {
+  source: 'database' | 'fallback'
+  connectable: boolean
+}
+
+function parseTrainersResponse(data: unknown): { trainers: Trainer[]; meta?: TrainersMeta } {
+  if (Array.isArray(data)) return { trainers: data }
+  if (data && typeof data === 'object' && 'trainers' in data) {
+    const payload = data as { trainers?: Trainer[]; meta?: TrainersMeta }
+    return { trainers: Array.isArray(payload.trainers) ? payload.trainers : [], meta: payload.meta }
+  }
+  return { trainers: [] }
+}
+
+function TrainerCard({ trainer, connectable, onConnect }: { trainer: Trainer; connectable: boolean; onConnect: (id: string) => Promise<void> }) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'sent' | 'pending'>('idle')
   const name = trainer.name || trainer.fullName || 'Trainer'
   const initials = name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
@@ -36,30 +56,40 @@ function TrainerCard({ trainer, onConnect }: { trainer: Trainer; onConnect: (id:
     }
   }
 
+  const isPreview = trainer.isFallback || !connectable
+
   return (
-    <div className="glass rounded-2xl overflow-hidden hover:border-[#00ff87]/30 transition-all duration-200 group flex flex-col">
-      <div className="relative h-40 bg-gradient-to-br from-[#00ff87]/10 to-[#00bfff]/5 flex items-center justify-center">
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={easeTransition}
+      className="elite-panel interactive-lift card-athletic flex flex-col overflow-hidden rounded-2xl"
+    >
+      <Link href={isPreview ? '/coaching' : `/coaching/${trainer._id}`} className="relative h-40 bg-gradient-to-br from-primary/10 to-sky-400/5 flex items-center justify-center">
         {image ? (
           <Image src={image} alt={name} width={80} height={80}
-            className="h-20 w-20 rounded-full object-cover ring-4 ring-[#0a0a0a] shadow-xl" />
+            className="h-20 w-20 rounded-full object-cover ring-4 ring-background shadow-xl" />
         ) : (
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#00ff87] to-[#00bfff] flex items-center justify-center text-black font-black text-2xl ring-4 ring-[#0a0a0a]">
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-sky-400 flex items-center justify-center text-black font-black text-2xl ring-4 ring-background">
             {initials}
           </div>
         )}
-        <div className="absolute top-3 right-3 flex items-center gap-1 bg-[#0a0a0a]/80 px-2 py-1 rounded-full">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#00ff87] animate-pulse" />
-          <span className="text-[10px] text-[#00ff87] font-medium">{trainer.isFallback ? 'Preview' : 'Verified'}</span>
+        <div className="absolute top-3 right-3 flex items-center gap-1 bg-background/80 px-2 py-1 rounded-full">
+          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+          <span className="text-[10px] text-primary font-medium">{isPreview ? 'Preview' : 'Verified'}</span>
         </div>
-      </div>
+      </Link>
 
       <div className="p-5 flex flex-col flex-1">
         <div className="flex items-start justify-between mb-2">
           <div>
-            <h3 className="font-bold text-white text-base">{name}</h3>
-            <p className="text-[#a0a0a0] text-xs mt-0.5">{trainer.country}{trainer.gymName ? ` · ${trainer.gymName}` : ''}</p>
+            <Link href={isPreview ? '/coaching' : `/coaching/${trainer._id}`}>
+              <h3 className="font-bold text-white text-base hover:text-primary transition-colors">{name}</h3>
+            </Link>
+            <p className="text-muted-foreground text-xs mt-0.5">{trainer.country}{trainer.gymName ? ` · ${trainer.gymName}` : ''}</p>
           </div>
-          <div className="flex items-center gap-1 bg-[#1a1a1a] px-2 py-1 rounded-lg">
+          <div className="flex items-center gap-1 bg-muted px-2 py-1 rounded-lg">
             <span className="text-yellow-400 text-xs">★</span>
             <span className="text-white text-xs font-bold">{trainer.rating?.toFixed(1) || '5.0'}</span>
           </div>
@@ -67,40 +97,45 @@ function TrainerCard({ trainer, onConnect }: { trainer: Trainer; onConnect: (id:
 
         <div className="flex flex-wrap gap-1.5 mb-3">
           {specialties.slice(0, 3).map((s: string) => (
-            <span key={s} className="text-xs px-2 py-0.5 rounded-full bg-[#00ff87]/10 text-[#00ff87] border border-[#00ff87]/20 font-medium">
+            <span key={s} className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-medium">
               {s}
             </span>
           ))}
         </div>
 
         {trainer.bio && (
-          <p className="text-[#a0a0a0] text-xs line-clamp-3 leading-relaxed mb-4 flex-1">{trainer.bio}</p>
+          <p className="text-muted-foreground text-xs line-clamp-3 leading-relaxed mb-4 flex-1">{trainer.bio}</p>
         )}
 
         <button
           onClick={handleConnect}
-          disabled={status !== 'idle' || trainer.isFallback}
+          disabled={status !== 'idle' || isPreview}
           className={`w-full py-2.5 rounded-xl text-sm font-bold transition-all ${
-            status === 'sent' ? 'bg-[#00ff87]/20 text-[#00ff87] border border-[#00ff87]/30 cursor-default' :
+            status === 'sent' ? 'bg-primary/20 text-primary border border-primary/30 cursor-default' :
             status === 'pending' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 cursor-default' :
-            status === 'loading' ? 'bg-[#00ff87] text-black opacity-70 cursor-wait' :
-            trainer.isFallback ? 'bg-[#1a1a1a] text-[#777] cursor-not-allowed' :
-            'bg-[#00ff87] text-black hover:bg-[#00cc6a] hover:-translate-y-0.5 active:translate-y-0'
+            status === 'loading' ? 'bg-primary text-black opacity-70 cursor-wait' :
+            isPreview ? 'bg-muted text-muted-foreground cursor-not-allowed' :
+            'bg-primary text-black hover:brightness-95 hover:-translate-y-0.5 active:translate-y-0'
           }`}>
           {status === 'loading' ? 'Sending...' :
            status === 'sent' ? '✓ Request Sent' :
            status === 'pending' ? '⏳ Pending' :
-           trainer.isFallback ? 'Seed database to connect' :
+           isPreview ? 'Seed database to connect' :
            'Connect'}
         </button>
+        {!isPreview && (
+          <Link href={`/coaching/${trainer._id}`} className="mt-2 text-center text-xs text-primary hover:underline">
+            View profile →
+          </Link>
+        )}
       </div>
-    </div>
+    </motion.div>
   )
 }
 
 function TrainerSkeleton() {
   return (
-    <div className="glass rounded-2xl overflow-hidden">
+    <div className="elite-panel overflow-hidden rounded-2xl">
       <div className="h-40 skeleton" />
       <div className="p-5 space-y-3">
         <div className="h-4 skeleton w-3/4" />
@@ -124,6 +159,7 @@ export default function CoachingPage() {
   const { user } = useAuth()
   const router = useRouter()
   const [trainers, setTrainers] = useState<Trainer[]>([])
+  const [meta, setMeta] = useState<TrainersMeta | undefined>()
   const [loading, setLoading] = useState(true)
   const [specialty, setSpecialty] = useState('All')
   const [country, setCountry] = useState('All')
@@ -140,9 +176,13 @@ export default function CoachingPage() {
     if (search.trim()) params.set('search', search.trim())
 
     fetch(`/api/trainers${params.size ? '?' + params : ''}`, { signal: controller.signal })
-      .then(r => r.ok ? r.json() : [])
-      .then(data => setTrainers(Array.isArray(data) ? data : data?.trainers || data?.data || []))
-      .catch(() => setTrainers([]))
+      .then(r => r.ok ? r.json() : { trainers: [] })
+      .then(data => {
+        const parsed = parseTrainersResponse(data)
+        setTrainers(parsed.trainers)
+        setMeta(parsed.meta)
+      })
+      .catch(() => { setTrainers([]); setMeta(undefined) })
       .finally(() => { clearTimeout(timeout); setLoading(false) })
 
     return () => { controller.abort(); clearTimeout(timeout) }
@@ -180,19 +220,22 @@ export default function CoachingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pt-24 pb-20">
-      <div className="max-w-6xl mx-auto px-6 mb-8">
-        <p className="text-[#00ff87] text-sm font-semibold uppercase tracking-widest mb-2">Trainer Marketplace</p>
-        <h1 className="text-4xl md:text-5xl font-black text-white mb-3">Find Your Perfect Trainer</h1>
-        <p className="text-[#a0a0a0]">Browse verified coaches and connect instantly</p>
-      </div>
+    <div className="min-h-screen pt-28 pb-24">
+      <FadeIn>
+        <div className="page-hero max-w-6xl mx-4 px-6 py-10 sm:mx-6 sm:px-10 md:mx-auto md:py-14 gym-floor">
+          <p className="eyebrow mb-3">Trainer Marketplace</p>
+          <h1 className="display-title text-balance text-4xl md:text-6xl text-white mb-4">Find Your Perfect Trainer</h1>
+          <p className="max-w-xl text-muted-foreground">Discover verified coaches matched to your goals, training style, and location.</p>
+          <p className="workout-label mt-3 text-primary/70">Your coach · Your rules · Your gains</p>
+        </div>
+      </FadeIn>
 
-      <div className="max-w-6xl mx-auto px-6 mb-8 space-y-4">
+      <div className="elite-panel max-w-6xl mx-4 mt-6 space-y-4 p-4 sm:mx-6 sm:p-5 md:mx-auto">
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Search by name, specialty, or keyword..."
-          className="w-full glass rounded-2xl px-5 py-3.5 text-white text-sm placeholder-[#555] outline-none focus:border-[#00ff87] transition-colors"
+          className="w-full rounded-xl border border-white/[.09] bg-black/25 px-5 py-3.5 text-sm text-white outline-none transition-all placeholder:text-muted-foreground focus:border-primary/40 focus:ring-3 focus:ring-primary/10"
         />
 
         <div className="flex gap-2 flex-wrap">
@@ -200,8 +243,8 @@ export default function CoachingPage() {
             <button key={s} onClick={() => setSpecialty(s)}
               className={`px-4 py-2 rounded-full text-xs font-semibold border transition-all ${
                 specialty === s
-                  ? 'bg-[#00ff87] text-black border-[#00ff87]'
-                  : 'bg-transparent text-[#a0a0a0] border-[#2a2a2a] hover:border-[#3a3a3a]'
+                  ? 'bg-primary text-black border-primary filter-pill-active'
+                  : 'bg-transparent text-muted-foreground border-border hover:border-white/20'
               }`}>
               {s}
             </button>
@@ -209,14 +252,14 @@ export default function CoachingPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="text-xs text-[#555] font-medium">Country:</span>
+          <span className="text-xs text-muted-foreground font-medium">Country:</span>
           <div className="flex gap-2 flex-wrap">
             {COUNTRIES.map(c => (
               <button key={c} onClick={() => setCountry(c)}
                 className={`px-3 py-1.5 rounded-full text-xs border transition-all ${
                   country === c
-                    ? 'border-[#00bfff] text-[#00bfff] bg-[#00bfff]/10'
-                    : 'border-[#1a1a1a] text-[#555] hover:border-[#2a2a2a]'
+                    ? 'border-sky-400 text-sky-400 bg-sky-400/10'
+                    : 'border-border text-muted-foreground hover:border-border'
                 }`}>
                 {c}
               </button>
@@ -225,9 +268,18 @@ export default function CoachingPage() {
         </div>
       </div>
 
+      {meta?.source === 'fallback' && !loading && (
+        <div className="max-w-6xl mx-auto px-6 mt-4">
+          <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-200">
+            <strong>Preview mode:</strong> Showing sample trainers because the database is empty.
+            Run the seed script (see README) to connect with real coaches.
+          </div>
+        </div>
+      )}
+
       <div className="max-w-6xl mx-auto px-6 mb-6">
         {!loading && (
-          <p className="text-xs text-[#555]">
+          <p className="text-xs text-muted-foreground">
             {trainers.length} trainer{trainers.length !== 1 ? 's' : ''} found
             {specialty !== 'All' && ` in ${specialty}`}
             {country !== 'All' && ` from ${country}`}
@@ -235,25 +287,41 @@ export default function CoachingPage() {
         )}
       </div>
 
-      <div className="max-w-6xl mx-auto px-6">
+      <div className="max-w-6xl mx-auto px-6 mt-8">
         {loading ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[...Array(6)].map((_, i) => <TrainerSkeleton key={i} />)}
           </div>
         ) : trainers.length > 0 ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {trainers.map(t => <TrainerCard key={t._id} trainer={t} onConnect={handleConnect} />)}
-          </div>
+          <AnimatePresence mode="popLayout">
+            <motion.div
+              key={`${specialty}-${country}-${search}`}
+              layout
+              className="grid md:grid-cols-2 lg:grid-cols-3 gap-4"
+            >
+              {trainers.map(t => (
+                <TrainerCard
+                  key={t._id}
+                  trainer={t}
+                  connectable={meta?.connectable !== false && !t.isFallback}
+                  onConnect={handleConnect}
+                />
+              ))}
+            </motion.div>
+          </AnimatePresence>
         ) : (
-          <div className="text-center py-20 glass rounded-2xl">
-            <div className="text-5xl mb-4">🔍</div>
-            <h3 className="text-lg font-bold text-white mb-2">No trainers found</h3>
-            <p className="text-[#a0a0a0] text-sm mb-6">Try adjusting your filters or search term</p>
-            <button onClick={() => { setSpecialty('All'); setCountry('All'); setSearch('') }}
-              className="bg-[#00ff87] text-black px-6 py-2.5 rounded-full text-sm font-bold">
-              Clear Filters
-            </button>
-          </div>
+          <EmptyState
+            icon={<Search className="size-7" />}
+            tagline="No coaches match"
+            title="No trainers found"
+            description="Try adjusting your filters or search term"
+            action={
+              <button onClick={() => { setSpecialty('All'); setCountry('All'); setSearch('') }}
+                className="bg-primary text-black px-6 py-2.5 rounded-full text-sm font-bold">
+                Clear Filters
+              </button>
+            }
+          />
         )}
       </div>
     </div>

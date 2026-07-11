@@ -4,38 +4,9 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { toast } from 'sonner'
-
-type PlanId = 'basic' | 'pro' | 'elite'
-
-const PLANS = [
-  {
-    id: 'basic' as const,
-    name: 'Basic',
-    price: 'Free',
-    period: '',
-    features: ['3 workouts/week', 'Basic nutrition guides', 'Community access', '5 free trainer chats'],
-    highlighted: false,
-    cta: 'Get Started Free',
-  },
-  {
-    id: 'pro' as const,
-    name: 'Pro',
-    price: '$19',
-    period: '/mo',
-    features: ['Unlimited workouts', 'Personalised meal plans', '1-on-1 trainer chat', 'Advanced analytics', 'AI form checker'],
-    highlighted: true,
-    cta: 'Upgrade to Pro',
-  },
-  {
-    id: 'elite' as const,
-    name: 'Elite',
-    price: '$39',
-    period: '/mo',
-    features: ['Everything in Pro', 'Live training sessions', 'Priority support', 'Custom meal plans', 'Unlimited trainer connections'],
-    highlighted: false,
-    cta: 'Get Elite',
-  },
-]
+import { PLANS, type PlanId } from '@/lib/plans'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 
 export default function SubscriptionPage() {
   const { user, isLoading: authLoading, refreshUser } = useAuth()
@@ -89,17 +60,17 @@ export default function SubscriptionPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pt-24 pb-20 px-6">
+    <div className="min-h-screen pt-28 pb-24 px-6">
       <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-12">
-          <p className="text-[#00ff87] text-sm font-semibold uppercase tracking-widest mb-2">Pricing</p>
-          <h1 className="text-4xl md:text-5xl font-black text-white mb-4">Choose Your Plan</h1>
-          <p className="text-[#a0a0a0] max-w-2xl mx-auto">
+        <div className="page-hero text-center mb-12 px-6 py-12 sm:px-10 md:py-16">
+          <p className="eyebrow mb-3">Invest in your strongest self</p>
+          <h1 className="display-title text-balance text-4xl md:text-6xl text-white mb-5">A Plan for Every Ambition</h1>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
             Unlock personalized workouts, meal plans, and expert coaching.
           </p>
           {user && !authLoading && (
-            <p className="mt-4 text-sm text-[#a0a0a0]">
-              Current plan: <span className="text-[#00ff87] font-bold capitalize">{currentPlan}</span>
+            <p className="mt-4 text-sm text-muted-foreground">
+              Current plan: <span className="text-primary font-bold capitalize">{currentPlan}</span>
             </p>
           )}
         </div>
@@ -109,14 +80,14 @@ export default function SubscriptionPage() {
             const isCurrent = !authLoading && user && plan.id === currentPlan
             return (
               <div key={plan.id}
-                className={`relative rounded-2xl p-8 flex flex-col transition-all ${
+                className={`interactive-lift relative rounded-2xl p-8 flex flex-col transition-all ${
                   plan.highlighted
-                    ? 'border-2 border-[#00ff87] glass shadow-lg shadow-[#00ff87]/10 md:scale-105'
-                    : 'glass hover:border-white/15'
+                    ? 'border border-primary/45 bg-primary/[.055] shadow-[0_24px_80px_rgba(34,245,154,.1)] md:-translate-y-3'
+                    : 'elite-panel'
                 }`}>
                 {plan.highlighted && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="bg-[#00ff87] text-black text-xs font-bold px-3 py-1 rounded-full uppercase">
+                    <span className="bg-primary text-black text-xs font-bold px-3 py-1 rounded-full uppercase">
                       Most Popular
                     </span>
                   </div>
@@ -124,7 +95,7 @@ export default function SubscriptionPage() {
 
                 {isCurrent && (
                   <div className="absolute top-4 right-4">
-                    <span className="text-xs bg-white/10 text-[#00ff87] border border-[#00ff87]/30 px-2 py-1 rounded-full">
+                    <span className="text-xs bg-white/10 text-primary border border-primary/30 px-2 py-1 rounded-full">
                       Current Plan
                     </span>
                   </div>
@@ -132,16 +103,16 @@ export default function SubscriptionPage() {
 
                 <h2 className="text-2xl font-bold text-white mb-2">{plan.name}</h2>
                 <div className="mb-6">
-                  <span className={`text-5xl font-black ${plan.highlighted ? 'text-[#00ff87]' : 'text-white'}`}>
+                  <span className={`text-5xl font-black ${plan.highlighted ? 'text-primary' : 'text-white'}`}>
                     {plan.price}
                   </span>
-                  {plan.period && <span className="text-[#a0a0a0] text-lg">{plan.period}</span>}
+                  {plan.period && <span className="text-muted-foreground text-lg">{plan.period}</span>}
                 </div>
 
                 <ul className="space-y-3 flex-1 mb-8">
                   {plan.features.map(feature => (
-                    <li key={feature} className="flex items-center gap-3 text-sm text-[#c0c0c0]">
-                      <span className="text-[#00ff87]">✓</span>
+                    <li key={feature} className="flex items-center gap-3 text-sm text-muted-foreground">
+                      <span className="text-primary">✓</span>
                       {feature}
                     </li>
                   ))}
@@ -154,7 +125,7 @@ export default function SubscriptionPage() {
                     plan.highlighted && !isCurrent
                       ? 'btn-accent'
                       : isCurrent
-                        ? 'bg-white/5 text-[#a0a0a0] border border-white/10 cursor-default'
+                        ? 'bg-white/5 text-muted-foreground border border-white/10 cursor-default'
                         : 'bg-white/10 text-white hover:bg-white/15 border border-white/10'
                   }`}>
                   {authLoading ? 'Loading...' : getButtonLabel(plan)}
@@ -165,52 +136,46 @@ export default function SubscriptionPage() {
         </div>
 
         {!user && !authLoading && (
-          <p className="text-center text-[#555] text-sm mt-8">
-            <Link href="/login" className="text-[#00ff87] hover:underline">Sign in</Link>
+          <p className="text-center text-muted-foreground text-sm mt-8">
+            <Link href="/login" className="text-primary hover:underline">Sign in</Link>
             {' '}to see your current plan
           </p>
         )}
       </div>
 
-      {modalOpen && selectedPlan && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => !processing && setModalOpen(false)} />
-          <div className="relative glass rounded-2xl p-6 w-full max-w-md border border-white/10 shadow-2xl">
-            <button type="button" className="absolute top-4 right-4 text-[#a0a0a0] hover:text-white"
-              onClick={() => !processing && setModalOpen(false)} disabled={processing}>✕</button>
-
-            <h3 className="text-xl font-bold text-white mb-2">Payment Simulation</h3>
-            <p className="text-[#a0a0a0] mb-6 text-sm">
+      <Dialog open={modalOpen} onOpenChange={(open) => !processing && setModalOpen(open)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Payment Simulation</DialogTitle>
+            <DialogDescription>
               This is a demo payment. Click confirm to activate your plan instantly.
-            </p>
+            </DialogDescription>
+          </DialogHeader>
 
-            <div className="glass rounded-xl p-4 mb-6 border border-white/5 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-[#a0a0a0]">Plan</span>
-                <span className="text-white font-medium capitalize">{selectedPlan}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-[#a0a0a0]">Amount</span>
-                <span className="text-[#00ff87] font-semibold">
-                  {PLANS.find(p => p.id === selectedPlan)?.price}
-                  {PLANS.find(p => p.id === selectedPlan)?.period}
-                </span>
-              </div>
+          <div className="elite-panel space-y-2 rounded-xl p-4">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Plan</span>
+              <span className="font-medium capitalize text-white">{selectedPlan}</span>
             </div>
-
-            <div className="flex gap-3">
-              <button onClick={() => setModalOpen(false)} disabled={processing}
-                className="flex-1 py-3 rounded-full border border-white/10 text-[#a0a0a0] hover:bg-white/5 text-sm font-medium">
-                Cancel
-              </button>
-              <button onClick={handleConfirmPayment} disabled={processing}
-                className="flex-1 btn-accent py-3 text-sm font-bold disabled:opacity-50">
-                {processing ? 'Processing...' : 'Confirm Payment'}
-              </button>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Amount</span>
+              <span className="font-semibold text-primary">
+                {PLANS.find(p => p.id === selectedPlan)?.price}
+                {PLANS.find(p => p.id === selectedPlan)?.period}
+              </span>
             </div>
           </div>
-        </div>
-      )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModalOpen(false)} disabled={processing}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmPayment} disabled={processing}>
+              {processing ? 'Processing...' : 'Confirm Payment'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
