@@ -1,12 +1,13 @@
 'use client'
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Dumbbell, Wrench, ChevronDown, ChevronUp, Search, X, Filter } from 'lucide-react'
 import { FitnessBadge } from '@/components/motion/FitnessBadge'
 import { FadeIn } from '@/components/motion'
 import { EmptyState } from '@/components/shared/EmptyState'
+import { CatalogImageFrame } from '@/components/shared/CatalogImageFrame'
+import { ExpandableCardPanel } from '@/components/shared/ExpandableCardPanel'
 import { easeTransition } from '@/lib/motion'
 
 interface Exercise {
@@ -78,35 +79,33 @@ function ExerciseCard({ exercise }: { exercise: Exercise }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.96 }}
       transition={easeTransition}
-      className="elite-panel interactive-lift card-athletic rounded-2xl overflow-hidden"
+      className="elite-panel interactive-lift card-athletic flex h-full flex-col rounded-2xl overflow-hidden"
     >
       <Link href={`/exercises/${exercise.id}`} className="block">
-        <div className="relative h-48 bg-card flex items-center justify-center overflow-hidden">
-          {!imgError && exercise.gifUrl ? (
-            <Image
-              src={exercise.gifUrl}
-              alt={exercise.name}
-              fill
-              sizes="(max-width: 768px) 100vw, 33vw"
-              className="object-cover"
-              loading="lazy"
-              onError={() => setImgError(true)}
-            />
-          ) : (
+        <CatalogImageFrame
+          src={exercise.gifUrl}
+          alt={exercise.name}
+          variant="card"
+          fit="contain"
+          hasError={imgError}
+          onError={() => setImgError(true)}
+          fallback={
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
               <Dumbbell className="size-10 mb-2 text-primary/60" />
               <p className="text-xs">{exercise.name}</p>
             </div>
-          )}
-          <div className="absolute top-2 right-2">
-            <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${DIFFICULTY_COLORS[exercise.difficulty] || ''}`}>
-              {exercise.difficulty}
-            </span>
-          </div>
-        </div>
+          }
+          badge={
+            <div className="absolute top-2 right-2">
+              <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${DIFFICULTY_COLORS[exercise.difficulty] || ''}`}>
+                {exercise.difficulty}
+              </span>
+            </div>
+          }
+        />
       </Link>
 
-      <div className="p-4">
+      <div className="flex flex-1 flex-col p-4">
         <div className="flex items-start justify-between mb-2 gap-2">
           <Link href={`/exercises/${exercise.id}`} className="font-bold text-white leading-tight hover:text-primary transition-colors">
             {exercise.name}
@@ -145,9 +144,10 @@ function ExerciseCard({ exercise }: { exercise: Exercise }) {
         </button>
 
         {expanded && (
-          <p className="mt-2 text-xs text-muted-foreground leading-relaxed border-t border-border pt-2">
-            {exercise.instructions}
-          </p>
+          <ExpandableCardPanel>
+            <p className="workout-label text-muted-foreground mb-1.5">Instructions</p>
+            <p>{exercise.instructions}</p>
+          </ExpandableCardPanel>
         )}
       </div>
     </motion.div>

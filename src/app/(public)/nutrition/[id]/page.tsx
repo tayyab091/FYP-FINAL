@@ -1,11 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { ArrowLeft, Globe, UtensilsCrossed, Play } from 'lucide-react'
 import { PageLoader } from '@/components/shared/PageLoader'
+import { CatalogImageFrame } from '@/components/shared/CatalogImageFrame'
 import { FadeIn } from '@/components/motion'
 
 interface MealDetail {
@@ -56,25 +56,23 @@ export default function MealDetailPage() {
 
         <FadeIn>
           <div className="elite-panel rounded-2xl overflow-hidden">
-            <div className="relative h-56 sm:h-72 bg-card">
-              {meal.thumb ? (
-                <Image
-                  src={meal.thumb}
-                  alt={meal.name}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 896px"
-                  className="object-cover"
-                  priority
-                />
-              ) : (
+            <CatalogImageFrame
+              src={meal.thumb}
+              alt={meal.name}
+              variant="detail"
+              fit="contain"
+              priority
+              fallback={
                 <div className="flex h-full items-center justify-center text-primary/50">
                   <UtensilsCrossed className="size-12" />
                 </div>
-              )}
-              <span className="absolute left-4 top-4 rounded-full border border-primary/20 bg-black/60 px-3 py-1 text-xs font-bold text-primary backdrop-blur">
-                {meal.category}
-              </span>
-            </div>
+              }
+              badge={
+                <span className="absolute left-4 top-4 rounded-full border border-primary/20 bg-black/60 px-3 py-1 text-xs font-bold text-primary backdrop-blur">
+                  {meal.category}
+                </span>
+              }
+            />
 
             <div className="p-6 sm:p-8 space-y-6">
               <div>

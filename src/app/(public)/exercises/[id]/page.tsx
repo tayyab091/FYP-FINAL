@@ -1,11 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { Dumbbell, Wrench, ArrowLeft } from 'lucide-react'
 import { PageLoader } from '@/components/shared/PageLoader'
+import { CatalogImageFrame } from '@/components/shared/CatalogImageFrame'
 import { FadeIn } from '@/components/motion'
 import { FitnessBadge } from '@/components/motion/FitnessBadge'
 
@@ -71,27 +71,26 @@ export default function ExerciseDetailPage() {
 
         <FadeIn>
           <div className="elite-panel rounded-2xl overflow-hidden">
-            <div className="relative h-64 sm:h-80 bg-card flex items-center justify-center">
-              {!imgError && exercise.gifUrl ? (
-                <Image
-                  src={exercise.gifUrl}
-                  alt={exercise.name}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 896px"
-                  className="object-contain"
-                  priority
-                  onError={() => setImgError(true)}
-                />
-              ) : (
+            <CatalogImageFrame
+              src={exercise.gifUrl}
+              alt={exercise.name}
+              variant="detail"
+              fit="contain"
+              priority
+              hasError={imgError}
+              onError={() => setImgError(true)}
+              fallback={
                 <div className="flex flex-col items-center text-muted-foreground">
                   <Dumbbell className="size-12 mb-2 text-primary/60" />
                   <p className="text-sm">Demo unavailable</p>
                 </div>
-              )}
-              <span className={`absolute top-4 right-4 text-xs px-2.5 py-1 rounded-full border font-medium ${DIFFICULTY_COLORS[exercise.difficulty] || ''}`}>
-                {exercise.difficulty}
-              </span>
-            </div>
+              }
+              badge={
+                <span className={`absolute top-4 right-4 text-xs px-2.5 py-1 rounded-full border font-medium ${DIFFICULTY_COLORS[exercise.difficulty] || ''}`}>
+                  {exercise.difficulty}
+                </span>
+              }
+            />
 
             <div className="p-6 sm:p-8 space-y-6">
               <div>

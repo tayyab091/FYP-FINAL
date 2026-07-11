@@ -1,11 +1,12 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
 import { Salad, ClipboardList, UtensilsCrossed, ChevronDown, ChevronUp, Globe } from 'lucide-react'
 import { SectionHeading } from '@/components/shared/SectionHeading'
+import { CatalogImageFrame } from '@/components/shared/CatalogImageFrame'
+import { ExpandableCardPanel } from '@/components/shared/ExpandableCardPanel'
 import { FadeIn, CountUp } from '@/components/motion'
 import { calculateDailyCalories } from '@/lib/nutrition'
 
@@ -617,15 +618,23 @@ export default function NutritionPage() {
                   const isOpen = expandedMeal === recipe.id
                   return (
                     <div key={recipe.id} className="glass interactive-lift card-athletic flex h-full flex-col overflow-hidden rounded-2xl">
-                      <Link href={`/nutrition/${recipe.id}`} className="relative block h-44 bg-card">
-                        {recipe.thumb ? (
-                          <Image src={recipe.thumb} alt={recipe.name} fill sizes="(max-width:768px) 100vw, 33vw" className="object-cover" loading="lazy" />
-                        ) : (
-                          <div className="flex h-full items-center justify-center text-primary/50"><UtensilsCrossed className="size-8" /></div>
-                        )}
-                        <span className="absolute left-3 top-3 rounded-full border border-primary/20 bg-black/60 px-2 py-0.5 text-[10px] font-bold text-primary backdrop-blur">
-                          {recipe.category}
-                        </span>
+                      <Link href={`/nutrition/${recipe.id}`} className="block">
+                        <CatalogImageFrame
+                          src={recipe.thumb}
+                          alt={recipe.name}
+                          variant="card"
+                          fit="contain"
+                          fallback={
+                            <div className="flex h-full items-center justify-center text-primary/50">
+                              <UtensilsCrossed className="size-8" />
+                            </div>
+                          }
+                          badge={
+                            <span className="absolute left-3 top-3 rounded-full border border-primary/20 bg-black/60 px-2 py-0.5 text-[10px] font-bold text-primary backdrop-blur">
+                              {recipe.category}
+                            </span>
+                          }
+                        />
                       </Link>
                       <div className="flex flex-1 flex-col p-5">
                         <Link href={`/nutrition/${recipe.id}`} className="text-white font-semibold leading-tight hover:text-primary transition-colors">
@@ -646,20 +655,22 @@ export default function NutritionPage() {
                         >
                           {isOpen ? <><ChevronUp className="size-3" /> Hide preview</> : <><ChevronDown className="size-3" /> Quick preview</>}
                         </button>
-                        {isOpen && detail && (
-                          <div className="mt-3 space-y-3 border-t border-border pt-3 text-xs">
-                            <div>
-                              <p className="workout-label text-muted-foreground mb-1">Ingredients</p>
-                              <ul className="space-y-0.5 text-muted-foreground">
-                                {detail.ingredients.slice(0, 5).map((ing) => (
-                                  <li key={ing.name}>· {ing.measure} {ing.name}</li>
-                                ))}
-                                {detail.ingredients.length > 5 && (
-                                  <li className="text-primary">+ {detail.ingredients.length - 5} more on detail page</li>
-                                )}
-                              </ul>
-                            </div>
-                          </div>
+                        {isOpen && (
+                          <ExpandableCardPanel loading={!detail}>
+                            {detail && (
+                              <div>
+                                <p className="workout-label text-muted-foreground mb-1.5">Ingredients</p>
+                                <ul className="space-y-0.5">
+                                  {detail.ingredients.slice(0, 5).map((ing) => (
+                                    <li key={ing.name}>· {ing.measure} {ing.name}</li>
+                                  ))}
+                                  {detail.ingredients.length > 5 && (
+                                    <li className="text-primary">+ {detail.ingredients.length - 5} more on detail page</li>
+                                  )}
+                                </ul>
+                              </div>
+                            )}
+                          </ExpandableCardPanel>
                         )}
                       </div>
                     </div>
