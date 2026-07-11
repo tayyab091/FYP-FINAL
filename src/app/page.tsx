@@ -10,9 +10,9 @@ import { Progress, ProgressTrack, ProgressIndicator } from '@/components/ui/prog
 import { Skeleton } from '@/components/ui/skeleton'
 
 const STATS = [
-  { value: '500+', label: 'Verified Trainers' },
-  { value: '10K+', label: 'Active Users' },
-  { value: '95%', label: 'Goal Success Rate' },
+  { value: '12', label: 'Guided Exercises' },
+  { value: '4', label: 'AI Form Modes' },
+  { value: '3', label: 'Membership Plans' },
   { value: '24/7', label: 'AI Coach Access' },
 ]
 
@@ -42,11 +42,22 @@ function GuestPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/trainers?limit=6&featured=true')
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 8000)
+
+    fetch('/api/trainers?limit=6', { signal: controller.signal })
       .then(r => r.json())
       .then(data => setTrainers(Array.isArray(data) ? data : []))
       .catch(() => setTrainers([]))
-      .finally(() => setLoading(false))
+      .finally(() => {
+        clearTimeout(timeout)
+        setLoading(false)
+      })
+
+    return () => {
+      clearTimeout(timeout)
+      controller.abort()
+    }
   }, [])
 
   return (
@@ -134,7 +145,7 @@ function GuestPage() {
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {trainers.map(t => (
-                <Link key={t._id} href={`/coaching/${t._id}`} className="group bg-[#111] border border-[#1a1a1a] rounded-2xl p-6 hover:border-[#00ff87]/40 transition-all">
+                <div key={t._id} className="group bg-[#111] border border-[#1a1a1a] rounded-2xl p-6 hover:border-[#00ff87]/40 transition-all">
                   <div className="flex items-start gap-4">
                     <div className="w-14 h-14 rounded-full bg-[#1a1a1a] overflow-hidden flex-shrink-0">
                       {t.profileImage ? (
@@ -154,7 +165,7 @@ function GuestPage() {
                       <div className="text-[#00ff87] text-sm mt-2">★ {t.rating?.toFixed(1) || '5.0'}</div>
                     </div>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           )}
@@ -221,15 +232,29 @@ function LoggedInDashboard() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 8000)
+
     Promise.all([
-      fetch('/api/tracking/plans/my-plan').then(r => r.ok ? r.json() : null),
-      fetch('/api/tracking/meal-logs/today').then(r => r.ok ? r.json() : { totals: { calories: 0, protein: 0, carbs: 0, fat: 0 } }),
+      fetch('/api/tracking/plans/my-plan', { signal: controller.signal }).then(r => r.ok ? r.json() : null),
+      fetch('/api/tracking/meal-logs/today', { signal: controller.signal }).then(r => r.ok ? r.json() : { totals: { calories: 0, protein: 0, carbs: 0, fat: 0 } }),
     ]).then(([planData, mealData]) => {
       if (planData?.plan === null) setPlan(null)
       else if (planData?._id) setPlan(planData)
       else if (planData?.plan) setPlan(planData.plan)
       setCalories(mealData?.totals || { calories: 0, protein: 0, carbs: 0, fat: 0 })
-    }).finally(() => setLoading(false))
+    }).catch(() => {
+      setPlan(null)
+      setCalories({ calories: 0, protein: 0, carbs: 0, fat: 0 })
+    }).finally(() => {
+      clearTimeout(timeout)
+      setLoading(false)
+    })
+
+    return () => {
+      clearTimeout(timeout)
+      controller.abort()
+    }
   }, [])
 
   const calorieGoal = 2000

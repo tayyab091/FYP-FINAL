@@ -128,7 +128,19 @@ export default function ChatConversationPage() {
                   {!isMine && (
                     <div className="text-[#00ff87] text-xs font-medium mb-1">{msg.senderName}</div>
                   )}
-                  <p className="break-words">{msg.content}</p>
+                  {msg.type === 'workout_plan' ? (
+                    <div className={`rounded-xl border p-3 ${isMine ? 'border-black/20 bg-black/10' : 'border-[#00ff87]/20 bg-[#00ff87]/5'}`}>
+                      <div className="mb-1 text-xs font-bold uppercase tracking-wide">🏋️ Workout Plan</div>
+                      <p className="break-words font-medium">{msg.attachedPlan?.title || msg.content}</p>
+                      {msg.attachedPlan && (
+                        <p className="mt-1 text-xs opacity-70">
+                          {msg.attachedPlan.durationWeeks} weeks · {msg.attachedPlan.difficulty}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="break-words">{msg.content}</p>
+                  )}
                   <div className={`text-[10px] mt-1 ${isMine ? 'text-black/50' : 'text-[#555]'}`}>
                     {formatTime(msg.createdAt)}
                     {isOptimistic && ' · sending...'}

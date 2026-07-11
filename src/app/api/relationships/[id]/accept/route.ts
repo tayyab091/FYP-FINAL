@@ -9,17 +9,25 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     const tokenUser = await getUser(req)
     if (!tokenUser) return NextResponse.json({ message: 'Not authenticated' }, { status: 401 })
+    if (tokenUser.role !== 'trainer') {
+      return NextResponse.json({ message: 'Trainers only' }, { status: 403 })
+    }
 
     const { id } = await params
     await connectDB()
 
-    const relationship = await Relationship.findById(id)
+    const trainer = await Trainer.findOne({ userId: tokenUser.userId })
+    if (!trainer) return NextResponse.json({ message: 'Trainer profile not found' }, { status: 404 })
+
+    const relationship = await Relationship.findOne({
+      _id: id,
+      trainerId: trainer._id,
+      status: 'pending',
+    })
     if (!relationship) return NextResponse.json({ message: 'Request not found' }, { status: 404 })
 
-    // Create conversation
-    const trainer = await Trainer.findById(relationship.trainerId)
     const conversation = await Conversation.create({
-      participants: [relationship.userId, trainer?.userId],
+      participants: [relationship.userId, trainer.userId],
       relationshipId: relationship._id,
     })
 

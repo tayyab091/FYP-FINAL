@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
@@ -14,8 +14,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  // If already logged in redirect
-  if (!authLoading && user) {
+  useEffect(() => {
+    if (authLoading || !user) return
     const redirect = searchParams.get('redirect')
     switch(user.role) {
       case 'admin': case 'super_admin': router.replace('/admin'); break
@@ -23,8 +23,7 @@ export default function LoginPage() {
       case 'gym_owner': router.replace('/gym-owner'); break
       default: router.replace(redirect || '/my-fitness')
     }
-    return null
-  }
+  }, [authLoading, router, searchParams, user])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -41,6 +40,8 @@ export default function LoginPage() {
     // Redirect will happen via useAuth + effect above
     setLoading(false)
   }
+
+  if (!authLoading && user) return null
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4 py-20">
@@ -93,7 +94,7 @@ export default function LoginPage() {
 
           <div className="mt-6 space-y-3 text-center">
             <p className="text-[#555] text-sm">
-              Don't have an account?{' '}
+              Don&apos;t have an account?{' '}
               <Link href="/signup" className="text-[#00ff87] hover:text-[#00cc6a] font-medium">Sign up</Link>
             </p>
             <div className="flex items-center gap-4 justify-center text-xs text-[#555]">

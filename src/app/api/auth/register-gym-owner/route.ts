@@ -8,10 +8,13 @@ import { createToken, cookieOptions } from '@/lib/auth'
 export async function POST(req: NextRequest) {
   try {
     await connectDB()
-    const { fullName, email, password, country, gymName, gymAddress } = await req.json()
+    const { fullName, email, password, country, gymName, gymAddress, gymDescription } = await req.json()
 
     if (!fullName || !email || !password || !gymName) {
       return NextResponse.json({ message: 'All fields including gym name are required' }, { status: 400 })
+    }
+    if (typeof password !== 'string' || password.length < 8) {
+      return NextResponse.json({ message: 'Password must be at least 8 characters' }, { status: 400 })
     }
 
     const existing = await User.findOne({ email: email.toLowerCase() })
@@ -29,6 +32,7 @@ export async function POST(req: NextRequest) {
       name: gymName, address: gymAddress || 'Pakistan',
       country: country || 'Pakistan', ownerId: user._id,
       verificationStatus: 'pending',
+      description: typeof gymDescription === 'string' ? gymDescription.trim() : '',
     })
 
     const token = createToken({ userId: user._id.toString(), role: 'gym_owner', email: user.email })

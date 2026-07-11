@@ -18,6 +18,7 @@ export default function RegisterGymOwnerPage() {
     country: 'Pakistan',
     gymName: '',
     gymAddress: '',
+    gymDescription: '',
   })
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -59,6 +60,7 @@ export default function RegisterGymOwnerPage() {
           country: form.country,
           gymName: form.gymName,
           gymAddress: form.gymAddress,
+          gymDescription: form.gymDescription,
         }),
         signal: controller.signal,
       })
@@ -142,6 +144,12 @@ export default function RegisterGymOwnerPage() {
               <textarea value={form.gymAddress} onChange={set('gymAddress')} rows={3} placeholder="Street, City, Country" required
                 className="w-full bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl px-4 py-3 text-white text-sm placeholder-[#555] outline-none focus:border-[#00ff87] transition-colors resize-none" />
               {errors.gymAddress && <p className="text-red-400 text-xs mt-1">{errors.gymAddress}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[#a0a0a0] mb-1.5">Gym Description</label>
+              <textarea value={form.gymDescription} onChange={set('gymDescription')} rows={3} placeholder="Facilities, training areas, and member experience"
+                className="w-full bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl px-4 py-3 text-white text-sm placeholder-[#555] outline-none focus:border-[#00ff87] transition-colors resize-none" />
             </div>
 
             <button type="submit" disabled={loading}

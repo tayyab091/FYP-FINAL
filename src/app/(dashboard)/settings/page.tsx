@@ -16,6 +16,7 @@ interface ProfileData {
   country: string
   bio: string
   fitnessGoal: string
+  activityLevel: string
   currentWeight: string
   targetWeight: string
   profileImage: string
@@ -24,7 +25,7 @@ interface ProfileData {
 export default function SettingsPage() {
   const { user, isLoading: authLoading, logout, refreshUser } = useAuth()
   const [profile, setProfile] = useState<ProfileData>({
-    fullName: '', email: '', country: '', bio: '', fitnessGoal: '',
+    fullName: '', email: '', country: '', bio: '', fitnessGoal: '', activityLevel: 'moderate',
     currentWeight: '', targetWeight: '', profileImage: '',
   })
   const [passwords, setPasswords] = useState({ current: '', newPass: '', confirm: '' })
@@ -45,6 +46,7 @@ export default function SettingsPage() {
             country: u.country || 'Pakistan',
             bio: u.bio || '',
             fitnessGoal: u.fitnessGoal || '',
+            activityLevel: u.activityLevel || 'moderate',
             currentWeight: u.currentWeight?.toString() || '',
             targetWeight: u.targetWeight?.toString() || '',
             profileImage: u.profileImage || '',
@@ -67,6 +69,7 @@ export default function SettingsPage() {
           bio: profile.bio,
           profileImage: profile.profileImage,
           fitnessGoal: profile.fitnessGoal,
+          activityLevel: profile.activityLevel,
           currentWeight: profile.currentWeight ? parseFloat(profile.currentWeight) : undefined,
           targetWeight: profile.targetWeight ? parseFloat(profile.targetWeight) : undefined,
         }),
@@ -84,7 +87,7 @@ export default function SettingsPage() {
   const changePassword = async (e: React.FormEvent) => {
     e.preventDefault()
     if (passwords.newPass !== passwords.confirm) return toast.error('Passwords do not match')
-    if (passwords.newPass.length < 6) return toast.error('Password must be at least 6 characters')
+    if (passwords.newPass.length < 8) return toast.error('Password must be at least 8 characters')
     setChangingPass(true)
     try {
       const res = await fetch('/api/user/change-password', {
@@ -186,6 +189,17 @@ export default function SettingsPage() {
                         <option value="endurance">Endurance</option>
                         <option value="flexibility">Flexibility</option>
                         <option value="general_fitness">General Fitness</option>
+                      </select>
+                    </div>
+                    <div>
+                      <Label htmlFor="activityLevel">Activity Level</Label>
+                      <select id="activityLevel" value={profile.activityLevel}
+                        onChange={e => setProfile(p => ({ ...p, activityLevel: e.target.value }))}
+                        className="mt-1 w-full h-8 rounded-lg bg-[#0a0a0a] border border-[#2a2a2a] px-2 text-sm">
+                        <option value="sedentary">Sedentary</option>
+                        <option value="light">Lightly Active</option>
+                        <option value="moderate">Moderately Active</option>
+                        <option value="very_active">Very Active</option>
                       </select>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
