@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
@@ -41,27 +41,98 @@ interface TrainerDetail {
   createdAt?: string
 }
 
-const REVIEW_PLACEHOLDERS = [
-  { author: 'Ahmed K.', text: 'Incredible attention to form. My squat depth improved in two weeks.', rating: 5 },
-  { author: 'Sana M.', text: 'Responsive, motivating, and builds plans that actually fit my schedule.', rating: 5 },
-  { author: 'Bilal R.', text: 'Professional coaching with real accountability. Highly recommend.', rating: 4 },
-]
+interface ReviewItem {
+  _id: string
+  rating: number
+  comment: string
+  createdAt: string
+  authorName: string
+}
+
+interface ReviewsData {
+  reviews: ReviewItem[]
+  averageRating: number
+  reviewCount: number
+  currentUserReview: Pick<ReviewItem, '_id' | 'rating' | 'comment' | 'createdAt'> | null
+}
+
+function StarRating({ rating, size = 'sm' }: { rating: number; size?: 'sm' | 'md' }) {
+  const className = size === 'md' ? 'text-yellow-400 text-sm' : 'text-yellow-400 text-xs'
+  return <p className={className}>{'★'.repeat(rating)}{'☆'.repeat(5 - rating)}</p>
+}
+
+function InteractiveStarRating({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: number
+  onChange: (rating: number) => void
+  disabled?: boolean
+}) {
+  const [hover, setHover] = useState(0)
+
+  return (
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map(star => {
+        const active = star <= (hover || value)
+        return (
+          <button
+            key={star}
+            type="button"
+            disabled={disabled}
+            onClick={() => onChange(star)}
+            onMouseEnter={() => setHover(star)}
+            onMouseLeave={() => setHover(0)}
+            className={`text-xl transition-colors ${active ? 'text-yellow-400' : 'text-muted-foreground/40'} ${disabled ? 'cursor-not-allowed opacity-60' : 'hover:text-yellow-300'}`}
+            aria-label={`Rate ${star} stars`}
+          >
+            ★
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function formatReviewDate(date: string) {
+  return new Date(date).toLocaleDateString('en-PK', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
 
 export default function TrainerDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
   const router = useRouter()
   const [trainer, setTrainer] = useState<TrainerDetail | null>(null)
+  const [reviewsData, setReviewsData] = useState<ReviewsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [connecting, setConnecting] = useState(false)
+  const [submittingReview, setSubmittingReview] = useState(false)
+  const [reviewRating, setReviewRating] = useState(5)
+  const [reviewComment, setReviewComment] = useState('')
+
+  const loadReviews = useCallback(async (trainerId: string) => {
+    const res = await fetch(`/api/trainers/${trainerId}/reviews`, { credentials: 'include' })
+    if (!res.ok) return null
+    return res.json() as Promise<ReviewsData>
+  }, [])
 
   useEffect(() => {
     if (!id) return
-    fetch(`/api/trainers/${id}`)
-      .then(r => r.ok ? r.json() : null)
-      .then(data => setTrainer(data))
+    Promise.all([
+      fetch(`/api/trainers/${id}`).then(r => r.ok ? r.json() : null),
+      loadReviews(id),
+    ])
+      .then(([trainerData, reviews]) => {
+        setTrainer(trainerData)
+        setReviewsData(reviews)
+      })
       .finally(() => setLoading(false))
-  }, [id])
+  }, [id, loadReviews])
 
   const handleConnect = async () => {
     if (!user) {
@@ -85,6 +156,45 @@ export default function TrainerDetailPage() {
     }
   }
 
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user) {
+      toast.error('Please sign in to leave a review')
+      router.push('/login')
+      return
+    }
+    if (!reviewComment.trim()) {
+      toast.error('Please write a comment')
+      return
+    }
+
+    setSubmittingReview(true)
+    try {
+      const res = await fetch(`/api/trainers/${id}/reviews`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating: reviewRating, comment: reviewComment.trim() }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data.message || 'Failed to submit review')
+        return
+      }
+
+      toast.success('Review submitted!')
+      setReviewComment('')
+      setReviewRating(5)
+      const refreshed = await loadReviews(id)
+      if (refreshed) setReviewsData(refreshed)
+      if (typeof data.averageRating === 'number') {
+        setTrainer(prev => prev ? { ...prev, rating: data.averageRating } : prev)
+      }
+    } finally {
+      setSubmittingReview(false)
+    }
+  }
+
   if (loading) return <PageLoader />
 
   if (!trainer) {
@@ -101,6 +211,10 @@ export default function TrainerDetailPage() {
   const initials = trainer.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
   const experienceYears = trainer.experience?.match(/\d+/)?.[0]
   const acceptingClients = trainer.isActive !== false
+  const averageRating = reviewsData?.averageRating ?? trainer.rating ?? 0
+  const reviewCount = reviewsData?.reviewCount ?? 0
+  const reviews = reviewsData?.reviews ?? []
+  const hasUserReview = Boolean(reviewsData?.currentUserReview)
 
   return (
     <div className="min-h-screen pt-28 pb-24 px-4 sm:px-6">
@@ -178,20 +292,69 @@ export default function TrainerDetailPage() {
                 )}
 
                 <div>
-                  <h2 className="font-bold text-white mb-3 flex items-center gap-2">
-                    <Star className="size-4 text-yellow-400" /> Client reviews
-                  </h2>
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <h2 className="font-bold text-white flex items-center gap-2">
+                      <Star className="size-4 text-yellow-400" /> Client reviews
+                    </h2>
+                    <p className="text-xs text-muted-foreground">
+                      {reviewCount > 0
+                        ? `${averageRating.toFixed(1)} average · ${reviewCount} review${reviewCount === 1 ? '' : 's'}`
+                        : 'No reviews yet'}
+                    </p>
+                  </div>
+
+                  {user && !hasUserReview && (
+                    <form onSubmit={handleSubmitReview} className="mb-4 rounded-xl border border-border p-4 space-y-3">
+                      <p className="text-sm font-medium text-white">Share your experience</p>
+                      <InteractiveStarRating value={reviewRating} onChange={setReviewRating} disabled={submittingReview} />
+                      <textarea
+                        value={reviewComment}
+                        onChange={e => setReviewComment(e.target.value)}
+                        rows={3}
+                        maxLength={1000}
+                        disabled={submittingReview}
+                        placeholder="What was coaching like? Mention results, communication, or programming quality..."
+                        className="w-full bg-background border border-border rounded-xl px-4 py-3 text-white text-sm placeholder:text-muted-foreground outline-none focus:border-primary transition-colors resize-none disabled:opacity-60"
+                      />
+                      <Button
+                        type="submit"
+                        disabled={submittingReview || !reviewComment.trim()}
+                        className="bg-primary text-black hover:brightness-95 font-semibold"
+                      >
+                        {submittingReview ? 'Submitting...' : 'Submit review'}
+                      </Button>
+                    </form>
+                  )}
+
+                  {!user && (
+                    <div className="mb-4 rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
+                      <Link href="/login" className="text-primary hover:underline">Sign in</Link> to leave a review.
+                    </div>
+                  )}
+
+                  {hasUserReview && reviewsData?.currentUserReview && (
+                    <p className="mb-3 text-xs text-primary">You reviewed this trainer on {formatReviewDate(reviewsData.currentUserReview.createdAt)}.</p>
+                  )}
+
                   <div className="space-y-3">
-                    {REVIEW_PLACEHOLDERS.map((review) => (
-                      <div key={review.author} className="rounded-xl border border-border p-4">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="font-medium text-white text-sm">{review.author}</p>
-                          <p className="text-yellow-400 text-xs">{'★'.repeat(review.rating)}</p>
-                        </div>
-                        <p className="mt-2 text-sm text-muted-foreground">{review.text}</p>
+                    {reviews.length === 0 ? (
+                      <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                        Be the first to review {trainer.name.split(' ')[0]}.
                       </div>
-                    ))}
-                    <p className="text-xs text-muted-foreground">Sample reviews — live review system coming soon.</p>
+                    ) : (
+                      reviews.map(review => (
+                        <div key={review._id} className="rounded-xl border border-border p-4">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-medium text-white text-sm">{review.authorName}</p>
+                            <div className="flex items-center gap-2">
+                              <StarRating rating={review.rating} />
+                              <span className="text-[10px] text-muted-foreground">{formatReviewDate(review.createdAt)}</span>
+                            </div>
+                          </div>
+                          <p className="mt-2 text-sm text-muted-foreground">{review.comment}</p>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               </div>
@@ -204,9 +367,13 @@ export default function TrainerDetailPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Star className="size-5 text-yellow-400" />
-                    <span className="text-2xl font-black text-white">{trainer.rating?.toFixed(1) || '5.0'}</span>
+                    <span className="text-2xl font-black text-white">
+                      {reviewCount > 0 ? averageRating.toFixed(1) : (trainer.rating?.toFixed(1) || '—')}
+                    </span>
                   </div>
-                  <span className="text-xs text-muted-foreground">Average rating</span>
+                  <span className="text-xs text-muted-foreground">
+                    {reviewCount > 0 ? `${reviewCount} review${reviewCount === 1 ? '' : 's'}` : 'Average rating'}
+                  </span>
                 </div>
 
                 <StaggerChildren className="dashboard-grid">
