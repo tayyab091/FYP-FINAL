@@ -8,6 +8,7 @@ import { FadeIn } from '@/components/motion'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { CatalogImageFrame } from '@/components/shared/CatalogImageFrame'
 import { ExpandableCardPanel } from '@/components/shared/ExpandableCardPanel'
+import { ExerciseMoreInfoPanel } from '@/components/exercise/ExerciseMoreInfoPanel'
 import { easeTransition } from '@/lib/motion'
 
 interface Exercise {
@@ -138,15 +139,18 @@ function ExerciseCard({ exercise }: { exercise: Exercise }) {
 
         <button
           onClick={() => setExpanded(!expanded)}
-          className="w-full text-left text-xs text-primary hover:text-primary/80 transition-colors font-medium flex items-center gap-1 mt-2"
+          className={`mt-2 flex w-full items-center gap-1 text-left text-xs font-medium transition-colors ${
+            expanded
+              ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.35)]'
+              : 'text-primary hover:text-primary/80'
+          }`}
         >
           {expanded ? <><ChevronUp className="size-3" /> Hide instructions</> : <><ChevronDown className="size-3" /> View instructions</>}
         </button>
 
         {expanded && (
-          <ExpandableCardPanel>
-            <p className="workout-label text-muted-foreground mb-1.5">Instructions</p>
-            <p>{exercise.instructions}</p>
+          <ExpandableCardPanel variant="exercise">
+            <ExerciseMoreInfoPanel exercise={exercise} />
           </ExpandableCardPanel>
         )}
       </div>

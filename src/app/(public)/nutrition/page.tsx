@@ -7,6 +7,7 @@ import { Salad, ClipboardList, UtensilsCrossed, ChevronDown, ChevronUp, Globe } 
 import { SectionHeading } from '@/components/shared/SectionHeading'
 import { CatalogImageFrame } from '@/components/shared/CatalogImageFrame'
 import { ExpandableCardPanel } from '@/components/shared/ExpandableCardPanel'
+import { DishMoreInfoPanel } from '@/components/nutrition/DishMoreInfoPanel'
 import { FadeIn, CountUp } from '@/components/motion'
 import { calculateDailyCalories } from '@/lib/nutrition'
 
@@ -651,24 +652,28 @@ export default function NutritionPage() {
                         </Link>
                         <button
                           onClick={() => void toggleMeal(recipe.id)}
-                          className="mt-3 flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80"
+                          className={`mt-3 flex items-center gap-1 text-xs font-medium transition-colors ${
+                            isOpen
+                              ? 'text-primary drop-shadow-[0_0_8px_rgba(34,245,154,0.35)]'
+                              : 'text-primary hover:text-primary/80'
+                          }`}
                         >
                           {isOpen ? <><ChevronUp className="size-3" /> Hide preview</> : <><ChevronDown className="size-3" /> Quick preview</>}
                         </button>
                         {isOpen && (
-                          <ExpandableCardPanel loading={!detail}>
+                          <ExpandableCardPanel loading={!detail} variant="nutrition">
                             {detail && (
-                              <div>
-                                <p className="workout-label text-muted-foreground mb-1.5">Ingredients</p>
-                                <ul className="space-y-0.5">
-                                  {detail.ingredients.slice(0, 5).map((ing) => (
-                                    <li key={ing.name}>· {ing.measure} {ing.name}</li>
-                                  ))}
-                                  {detail.ingredients.length > 5 && (
-                                    <li className="text-primary">+ {detail.ingredients.length - 5} more on detail page</li>
-                                  )}
-                                </ul>
-                              </div>
+                              <DishMoreInfoPanel
+                                dish={{
+                                  id: detail.id,
+                                  name: detail.name,
+                                  category: detail.category,
+                                  area: detail.area,
+                                  thumb: detail.thumb,
+                                  ingredients: detail.ingredients,
+                                  instructions: detail.instructions,
+                                }}
+                              />
                             )}
                           </ExpandableCardPanel>
                         )}
