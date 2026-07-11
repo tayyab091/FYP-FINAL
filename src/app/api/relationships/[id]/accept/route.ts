@@ -4,6 +4,7 @@ import Relationship from '@/models/Relationship'
 import Conversation from '@/models/Conversation'
 import Trainer from '@/models/Trainer'
 import { getUser } from '@/lib/auth'
+import { awardXp, XP_REWARDS } from '@/lib/gamification'
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -42,7 +43,18 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     await Trainer.updateOne({ _id: trainer._id }, { $inc: { totalClients: 1 } })
 
-    return NextResponse.json({ message: 'Client accepted', relationship, conversationId: conversation._id })
+    const gamification = await awardXp(
+      relationship.userId.toString(),
+      XP_REWARDS.trainer_connected,
+    )
+
+    return NextResponse.json({
+      message: 'Client accepted',
+      relationship,
+      conversationId: conversation._id,
+      clientXpAwarded: XP_REWARDS.trainer_connected,
+      gamification,
+    })
   } catch {
     return NextResponse.json({ message: 'Server error' }, { status: 500 })
   }

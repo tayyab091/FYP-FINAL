@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Camera, Square, CheckCircle2, AlertCircle } from 'lucide-react'
+import { toast } from 'sonner'
 import { RepCounter } from '@/components/motion/RepCounter'
 import { FitnessBadge } from '@/components/motion/FitnessBadge'
 
@@ -58,6 +59,7 @@ export function PoseDetector() {
   const [isActive, setIsActive] = useState(false)
   const [cameraError, setCameraError] = useState('')
   const repStateRef = useRef<'up' | 'down'>('up')
+  const sessionRepsRef = useRef(0)
   const poseRef = useRef<InstanceType<typeof import('@mediapipe/pose').Pose> | null>(null)
   const cameraRef = useRef<{ stop: () => void; start: () => Promise<void> } | null>(null)
 
@@ -106,7 +108,11 @@ export function PoseDetector() {
         repStateRef.current = 'down'
       } else if (currentAngle >= ex.repAngle && repStateRef.current === 'down') {
         repStateRef.current = 'up'
-        setRepCount(c => c + 1)
+        setRepCount(c => {
+          const next = c + 1
+          sessionRepsRef.current = next
+          return next
+        })
       }
     }
 
@@ -168,20 +174,46 @@ export function PoseDetector() {
       cameraRef.current = camera
       setIsActive(true)
       setCameraError('')
+      sessionRepsRef.current = 0
     } catch {
       setCameraError('Camera access denied or not available. Allow camera permissions and refresh.')
     }
   }, [onResults])
 
   const stopCamera = useCallback(() => {
+    const reps = sessionRepsRef.current
+    const exercise = EXERCISES[selectedExercise].name
+
     cameraRef.current?.stop()
     cameraRef.current = null
     void poseRef.current?.close()
     poseRef.current = null
     setIsActive(false)
     setRepCount(0)
+    sessionRepsRef.current = 0
     setFeedback('Get in position to start')
-  }, [])
+
+    if (reps > 0) {
+      fetch('/api/gamification/form-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ exercise, reps }),
+      })
+        .then(async (res) => {
+          const data = await res.json()
+          if (!res.ok) return
+          toast.success(`+${data.xpAwarded} XP for form check session`)
+          if (Array.isArray(data.gamification?.achievements)) {
+            const unlocked = data.gamification.achievements.filter(
+              (a: { unlocked: boolean; unlockedAt?: string }) => a.unlocked && a.unlockedAt,
+            )
+            const latest = unlocked[unlocked.length - 1]
+            if (latest?.label) toast.success(`Achievement unlocked: ${latest.label}`)
+          }
+        })
+        .catch(() => {})
+    }
+  }, [selectedExercise])
 
   useEffect(() => {
     return () => {
