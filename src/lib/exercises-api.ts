@@ -4,6 +4,21 @@ const EXERCISEDB_BASE = 'https://oss.exercisedb.dev/api/v1'
 const CACHE_TTL = 60 * 60 * 1000 // 1 hour
 const PAGE_SIZE = 25
 const PAGE_DELAY_MS = 350
+const GIF_HEAD_BATCH = 12
+const GIF_HEAD_TIMEOUT_MS = 4000
+
+const VALID_GIF_HOSTS = [
+  'static.exercisedb.dev',
+  'upload.wikimedia.org',
+  'media1.tenor.com',
+  'res.cloudinary.com',
+]
+
+let lastFilteredRemovedCount = 0
+
+export function getLastFilteredRemovedCount(): number {
+  return lastFilteredRemovedCount
+}
 
 export interface LibraryExercise {
   id: string
@@ -113,6 +128,73 @@ function uniqueSorted(values: string[]): string[] {
   return [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b))
 }
 
+function looksLikeValidGifUrl(url: string): boolean {
+  if (!url?.trim()) return false
+  try {
+    const parsed = new URL(url.trim())
+    if (parsed.protocol !== 'https:') return false
+    const hostOk = VALID_GIF_HOSTS.some(
+      (h) => parsed.hostname === h || parsed.hostname.endsWith(`.${h}`),
+    )
+    if (!hostOk) return false
+    return (
+      /\.(gif|webp|png|jpg|jpeg)$/i.test(parsed.pathname) ||
+      parsed.pathname.includes('/media/')
+    )
+  } catch {
+    return false
+  }
+}
+
+async function gifUrlLoads(url: string): Promise<boolean> {
+  try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), GIF_HEAD_TIMEOUT_MS)
+    const res = await fetch(url, {
+      method: 'HEAD',
+      signal: controller.signal,
+      next: { revalidate: 86400 },
+    })
+    clearTimeout(timeout)
+    if (res.ok) return true
+    if (res.status === 405 || res.status === 403) {
+      const getRes = await fetch(url, {
+        method: 'GET',
+        headers: { Range: 'bytes=0-0' },
+        signal: controller.signal,
+        next: { revalidate: 86400 },
+      })
+      return getRes.ok
+    }
+    return false
+  } catch {
+    return false
+  }
+}
+
+async function filterExercisesWithValidGifs(
+  exercises: LibraryExercise[],
+): Promise<LibraryExercise[]> {
+  const patternValid = exercises.filter((e) => looksLikeValidGifUrl(e.gifUrl))
+  const valid: LibraryExercise[] = []
+
+  for (let i = 0; i < patternValid.length; i += GIF_HEAD_BATCH) {
+    const batch = patternValid.slice(i, i + GIF_HEAD_BATCH)
+    const results = await Promise.all(
+      batch.map(async (exercise) => ({
+        exercise,
+        ok: await gifUrlLoads(exercise.gifUrl),
+      })),
+    )
+    for (const { exercise, ok } of results) {
+      if (ok) valid.push(exercise)
+    }
+  }
+
+  lastFilteredRemovedCount = exercises.length - valid.length
+  return valid.length > 0 ? valid : FALLBACK_EXERCISES
+}
+
 function buildMeta(exercises: LibraryExercise[]): ExerciseCatalogMeta {
   return {
     bodyParts: uniqueSorted(exercises.flatMap((e) => e.bodyParts)),
@@ -195,9 +277,10 @@ async function fetchFilterLists(): Promise<{ bodyParts: string[]; equipment: str
 }
 
 export async function getExerciseCatalog(): Promise<ExerciseCatalog> {
-  return getOrFetch('exercise-catalog-v3', CACHE_TTL, async () => {
+  return getOrFetch('exercise-catalog-v4', CACHE_TTL, async () => {
     try {
-      const exercises = await fetchAllExercisesFromApi()
+      const raw = await fetchAllExercisesFromApi()
+      const exercises = await filterExercisesWithValidGifs(raw)
       const lists = await fetchFilterLists()
       const meta = buildMeta(exercises)
       if (lists.bodyParts.length) meta.bodyParts = uniqueSorted(lists.bodyParts)
@@ -283,7 +366,10 @@ export async function fetchExerciseById(id: string): Promise<LibraryExercise | n
       `${EXERCISEDB_BASE}/exercises/${encodeURIComponent(id)}`,
     )
     if (!json.data) return null
-    return mapExercise(json.data)
+    const exercise = mapExercise(json.data)
+    if (!looksLikeValidGifUrl(exercise.gifUrl)) return null
+    if (!(await gifUrlLoads(exercise.gifUrl))) return null
+    return exercise
   } catch {
     return null
   }

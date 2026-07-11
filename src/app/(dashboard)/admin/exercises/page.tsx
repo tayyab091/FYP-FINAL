@@ -178,7 +178,11 @@ export default function AdminExercisesPage() {
           <>
             <div className="dashboard-grid cols-3">
               {exercises.map((exercise) => (
-                <div key={exercise.id} className="elite-panel card-athletic flex h-full flex-col overflow-hidden rounded-2xl">
+                <Link
+                  key={exercise.id}
+                  href={`/exercises/${exercise.id}`}
+                  className="elite-panel card-athletic flex h-full flex-col overflow-hidden rounded-2xl hover:border-primary/30 transition-colors"
+                >
                   <div className="relative h-40 bg-card">
                     {exercise.gifUrl ? (
                       <Image src={exercise.gifUrl} alt={exercise.name} fill sizes="(max-width:768px) 100vw, 33vw" className="object-cover" loading="lazy" />
@@ -199,7 +203,7 @@ export default function AdminExercisesPage() {
                     </div>
                     <p className="mt-auto pt-3 text-xs text-muted-foreground">ID: {exercise.id}</p>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
 

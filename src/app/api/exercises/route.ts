@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { fetchExerciseById, getExerciseCatalog, queryExercises } from '@/lib/exercises-api'
+import { fetchExerciseById, getExerciseCatalog, getLastFilteredRemovedCount, queryExercises } from '@/lib/exercises-api'
 
 export async function GET(req: NextRequest) {
   try {
@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
         limit: Math.min(limit, 24),
       })
       return NextResponse.json({
-        meta,
+        meta: { ...meta, filteredRemoved: getLastFilteredRemovedCount() },
         exercises: preview.exercises,
         total: preview.total,
         page: preview.page,

@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Dumbbell, Wrench, ChevronDown, ChevronUp, Search, X, Filter } from 'lucide-react'
 import { FitnessBadge } from '@/components/motion/FitnessBadge'
@@ -79,33 +80,37 @@ function ExerciseCard({ exercise }: { exercise: Exercise }) {
       transition={easeTransition}
       className="elite-panel interactive-lift card-athletic rounded-2xl overflow-hidden"
     >
-      <div className="relative h-48 bg-card flex items-center justify-center overflow-hidden">
-        {!imgError && exercise.gifUrl ? (
-          <Image
-            src={exercise.gifUrl}
-            alt={exercise.name}
-            fill
-            sizes="(max-width: 768px) 100vw, 33vw"
-            className="object-cover"
-            loading="lazy"
-            onError={() => setImgError(true)}
-          />
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-            <Dumbbell className="size-10 mb-2 text-primary/60" />
-            <p className="text-xs">{exercise.name}</p>
+      <Link href={`/exercises/${exercise.id}`} className="block">
+        <div className="relative h-48 bg-card flex items-center justify-center overflow-hidden">
+          {!imgError && exercise.gifUrl ? (
+            <Image
+              src={exercise.gifUrl}
+              alt={exercise.name}
+              fill
+              sizes="(max-width: 768px) 100vw, 33vw"
+              className="object-cover"
+              loading="lazy"
+              onError={() => setImgError(true)}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+              <Dumbbell className="size-10 mb-2 text-primary/60" />
+              <p className="text-xs">{exercise.name}</p>
+            </div>
+          )}
+          <div className="absolute top-2 right-2">
+            <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${DIFFICULTY_COLORS[exercise.difficulty] || ''}`}>
+              {exercise.difficulty}
+            </span>
           </div>
-        )}
-        <div className="absolute top-2 right-2">
-          <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${DIFFICULTY_COLORS[exercise.difficulty] || ''}`}>
-            {exercise.difficulty}
-          </span>
         </div>
-      </div>
+      </Link>
 
       <div className="p-4">
         <div className="flex items-start justify-between mb-2 gap-2">
-          <h3 className="font-bold text-white leading-tight">{exercise.name}</h3>
+          <Link href={`/exercises/${exercise.id}`} className="font-bold text-white leading-tight hover:text-primary transition-colors">
+            {exercise.name}
+          </Link>
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${MUSCLE_COLORS[exercise.muscle] || 'bg-muted text-muted-foreground'}`}>
             {exercise.muscle}
           </span>
@@ -125,9 +130,16 @@ function ExerciseCard({ exercise }: { exercise: Exercise }) {
           <FitnessBadge variant="reps">{exercise.reps}</FitnessBadge>
         </div>
 
+        <Link
+          href={`/exercises/${exercise.id}`}
+          className="mt-2 inline-block text-xs text-primary hover:text-primary/80 font-medium"
+        >
+          View full details →
+        </Link>
+
         <button
           onClick={() => setExpanded(!expanded)}
-          className="w-full text-left text-xs text-primary hover:text-primary/80 transition-colors font-medium flex items-center gap-1"
+          className="w-full text-left text-xs text-primary hover:text-primary/80 transition-colors font-medium flex items-center gap-1 mt-2"
         >
           {expanded ? <><ChevronUp className="size-3" /> Hide instructions</> : <><ChevronDown className="size-3" /> View instructions</>}
         </button>
