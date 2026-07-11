@@ -3,18 +3,27 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
+import { motion } from 'framer-motion'
 import { useAuth } from '@/hooks/useAuth'
 import { Trainer, WorkoutPlan } from '@/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress, ProgressTrack, ProgressIndicator } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { FadeIn, StaggerChildren, CountUp, FitnessBadge, ScrollProgress, ParallaxSection } from '@/components/motion'
+import { MARKETING_PLANS } from '@/lib/plans'
+import { calculateDailyCalories } from '@/lib/nutrition'
+import { getRoleHomePath } from '@/lib/access'
+import { Bot, BadgeCheck, Apple, BarChart3, MessageCircle, Building2, LayoutDashboard, Users, Dumbbell, Flame, Search, Zap, Trophy, Target, Medal } from 'lucide-react'
+import { easeTransition } from '@/lib/motion'
 
 const STATS = [
-  { value: '12', label: 'Guided Exercises' },
-  { value: '4', label: 'AI Form Modes' },
-  { value: '3', label: 'Membership Plans' },
-  { value: '24/7', label: 'AI Coach Access' },
+  { value: 1500, label: 'Exercise GIFs', suffix: '+' },
+  { value: 4, label: 'AI Form Modes', suffix: '' },
+  { value: 3, label: 'Membership Plans', suffix: '' },
+  { value: 24, label: 'AI Coach Access', suffix: '/7' },
 ]
 
 const STEPS = [
@@ -23,19 +32,27 @@ const STEPS = [
   { step: '03', title: 'Train & Track', desc: 'Follow personalized plans, log meals, and track progress.' },
 ]
 
-const FEATURES = [
-  { icon: '🤖', title: 'AI Coaching', desc: 'Get instant workout and nutrition advice powered by AI.' },
-  { icon: '🏋️', title: 'Verified Trainers', desc: 'Connect with certified professionals across Pakistan.' },
-  { icon: '🥗', title: 'Nutrition Tracking', desc: 'Log meals, analyze macros, and hit your calorie targets.' },
-  { icon: '📊', title: 'Progress Analytics', desc: 'Visualize weight, body fat, and workout consistency.' },
-  { icon: '💬', title: 'Direct Chat', desc: 'Message your trainer in real-time for guidance.' },
-  { icon: '🏢', title: 'Gym Partnerships', desc: 'Find trainers at verified gyms near you.' },
+const ACHIEVEMENTS = [
+  { icon: Trophy, label: 'First Workout', desc: 'Show up. That\'s half the battle.' },
+  { icon: Target, label: 'Macro Master', desc: 'Hit your protein target 5 days straight.' },
+  { icon: Medal, label: 'Consistency King', desc: '7-day training streak unlocked.' },
+  { icon: Flame, label: 'Calorie Crusher', desc: 'Stay within 100 cal of your goal.' },
 ]
 
-const PLANS = [
-  { name: 'Basic', price: 'Free', features: ['AI chatbot', 'Exercise library', 'Basic tracking'], highlight: false },
-  { name: 'Pro', price: '$19/mo', features: ['Everything in Basic', '1 trainer connection', 'Meal analysis', 'Progress charts'], highlight: true },
-  { name: 'Elite', price: '$39/mo', features: ['Everything in Pro', 'Unlimited trainers', 'Priority support', 'Custom plans'], highlight: false },
+const JOURNEY_LEVELS = [
+  { level: 1, title: 'Rookie', xp: 0, desc: 'Building the habit' },
+  { level: 2, title: 'Regular', xp: 250, desc: 'Showing up weekly' },
+  { level: 3, title: 'Committed', xp: 750, desc: 'Training with purpose' },
+  { level: 4, title: 'Elite', xp: 1500, desc: 'Living the lifestyle' },
+]
+
+const FEATURES = [
+  { icon: Bot, title: 'AI Coaching', desc: 'Get instant workout and nutrition advice powered by AI.' },
+  { icon: BadgeCheck, title: 'Verified Trainers', desc: 'Connect with certified professionals across Pakistan.' },
+  { icon: Apple, title: 'Nutrition Tracking', desc: 'Log meals, analyze macros, and hit your calorie targets.' },
+  { icon: BarChart3, title: 'Progress Analytics', desc: 'Visualize weight, body fat, and workout consistency.' },
+  { icon: MessageCircle, title: 'Direct Chat', desc: 'Message your trainer in real-time for guidance.' },
+  { icon: Building2, title: 'Gym Partnerships', desc: 'Find trainers at verified gyms near you.' },
 ]
 
 function GuestPage() {
@@ -48,7 +65,10 @@ function GuestPage() {
 
     fetch('/api/trainers?limit=6', { signal: controller.signal })
       .then(r => r.json())
-      .then(data => setTrainers(Array.isArray(data) ? data : []))
+      .then(data => {
+        const list = Array.isArray(data) ? data : data?.trainers
+        setTrainers(Array.isArray(list) ? list : [])
+      })
       .catch(() => setTrainers([]))
       .finally(() => {
         clearTimeout(timeout)
@@ -62,70 +82,163 @@ function GuestPage() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white pb-24">
+    <div className="min-h-screen text-white pb-24">
+      <ScrollProgress />
       {/* Hero */}
-      <section className="relative pt-32 pb-20 px-6 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#00ff87]/5 via-transparent to-[#00bfff]/5" />
-        <div className="max-w-6xl mx-auto relative text-center">
-          <Badge className="mb-6 bg-[#00ff87]/10 text-[#00ff87] border-[#00ff87]/20">Pakistan&apos;s #1 Fitness Platform</Badge>
-          <h1 className="text-5xl md:text-7xl font-black mb-6 leading-tight">
+      <section className="relative pt-28 pb-14 px-4 sm:px-6 overflow-hidden">
+        <div className="page-hero max-w-6xl mx-auto relative px-6 py-20 text-center sm:px-10 md:py-28 gym-floor">
+          <div className="absolute -top-24 left-1/2 h-52 w-52 -translate-x-1/2 rounded-full bg-primary/15 blur-3xl animate-energy-pulse" />
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ...easeTransition, delay: 0.1 }}
+          >
+            <Badge className="relative mb-7 border-primary/20 bg-primary/10 text-primary">
+              <Zap className="mr-1 inline size-3" /> Pakistan&apos;s #1 Fitness Platform
+            </Badge>
+          </motion.div>
+          <motion.h1
+            initial={{ opacity: 0, y: 28 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ...easeTransition, delay: 0.2 }}
+            className="display-title text-balance relative text-5xl md:text-7xl lg:text-8xl mb-7"
+          >
             Train. Eat. Sleep.<br />
             <span className="gradient-text">Thrive.</span>
-          </h1>
-          <p className="text-[#a0a0a0] text-lg md:text-xl max-w-2xl mx-auto mb-10">
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ...easeTransition, delay: 0.35 }}
+            className="text-balance text-muted-foreground text-base md:text-xl max-w-2xl mx-auto mb-4 leading-relaxed"
+          >
             Connect with verified trainers, track nutrition with AI, and achieve your fitness goals — all in one platform.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          </motion.p>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.45 }}
+            className="workout-label relative mb-10 text-primary/70"
+          >
+            No excuses · Just reps
+          </motion.p>
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ...easeTransition, delay: 0.5 }}
+            className="flex flex-col sm:flex-row gap-4 justify-center"
+          >
             <Link href="/signup" className="btn-accent px-8 py-4 text-base font-bold">Get Started Free</Link>
-            <Link href="/coaching" className="px-8 py-4 rounded-full border border-[#2a2a2a] text-white hover:border-[#00ff87]/50 transition-colors font-medium">
+            <Link href="/coaching" className="px-8 py-4 rounded-full border border-white/10 bg-white/[.025] text-white hover:border-primary/40 hover:bg-primary/[.05] transition-all font-bold">
               Browse Trainers
             </Link>
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* Stats */}
-      <section className="py-16 px-6 border-y border-[#1a1a1a]">
-        <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
+      <ParallaxSection className="pb-10 px-6">
+        <StaggerChildren className="max-w-6xl mx-auto dashboard-grid cols-4">
           {STATS.map(s => (
-            <div key={s.label} className="text-center">
-              <div className="text-3xl md:text-4xl font-black text-[#00ff87] mb-2">{s.value}</div>
-              <div className="text-[#a0a0a0] text-sm">{s.label}</div>
+            <div key={s.label} className="elite-panel metric-glow card-athletic p-5 text-center interactive-lift">
+              <div className="font-heading text-3xl md:text-4xl font-black text-primary mb-1">
+                <CountUp value={s.value} suffix={s.suffix} />
+              </div>
+              <div className="workout-label text-muted-foreground">{s.label}</div>
             </div>
           ))}
+        </StaggerChildren>
+      </ParallaxSection>
+
+      {/* Journey / Level up */}
+      <section className="py-16 px-6 border-y border-white/[.05] bg-white/[.012]">
+        <div className="max-w-6xl mx-auto">
+          <FadeIn className="text-center mb-10">
+            <p className="eyebrow mb-3">Your fitness RPG</p>
+            <h2 className="display-title text-3xl md:text-5xl mb-3">Level Up Your Journey</h2>
+            <p className="text-muted-foreground max-w-xl mx-auto">Every rep, meal, and check-in earns XP. Stay consistent and climb the ranks.</p>
+          </FadeIn>
+          <div className="relative">
+            <div className="absolute left-0 right-0 top-1/2 hidden h-1 -translate-y-1/2 bg-gradient-to-r from-transparent via-primary/30 to-transparent md:block" />
+            <StaggerChildren className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {JOURNEY_LEVELS.map((lvl) => (
+                <div key={lvl.level} className="elite-panel interactive-lift card-athletic rounded-2xl p-6 text-center relative">
+                  <FitnessBadge variant="pr" className="mb-3">LVL {lvl.level}</FitnessBadge>
+                  <h3 className="text-lg font-bold text-white">{lvl.title}</h3>
+                  <p className="text-primary text-sm font-bold mt-1">{lvl.xp} XP</p>
+                  <p className="text-muted-foreground text-xs mt-2">{lvl.desc}</p>
+                </div>
+              ))}
+            </StaggerChildren>
+          </div>
         </div>
       </section>
+
+      {/* Achievements */}
+      <ParallaxSection className="py-16 px-6">
+        <div className="max-w-6xl mx-auto">
+          <FadeIn className="mb-8">
+            <p className="eyebrow mb-2">Earn your badges</p>
+            <h2 className="display-title text-3xl md:text-4xl">Achievement Unlocks</h2>
+          </FadeIn>
+          <StaggerChildren className="dashboard-grid cols-4">
+            {ACHIEVEMENTS.map((a) => {
+              const Icon = a.icon
+              return (
+                <div key={a.label} className="glass interactive-lift card-athletic rounded-2xl p-5">
+                  <div className="mb-3 flex size-11 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+                    <Icon className="size-5" />
+                  </div>
+                  <h3 className="font-bold text-white">{a.label}</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">{a.desc}</p>
+                </div>
+              )
+            })}
+          </StaggerChildren>
+        </div>
+      </ParallaxSection>
 
       {/* How it works */}
       <section className="py-20 px-6">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-black text-center mb-4">How It Works</h2>
-          <p className="text-[#a0a0a0] text-center mb-12 max-w-xl mx-auto">Three simple steps to transform your fitness journey</p>
-          <div className="grid md:grid-cols-3 gap-8">
+          <FadeIn className="text-center mb-12">
+            <p className="eyebrow mb-3">Your path, simplified</p>
+            <h2 className="display-title text-3xl md:text-5xl mb-4">How It Works</h2>
+            <p className="text-muted-foreground max-w-xl mx-auto">Three simple steps to transform your fitness journey</p>
+            <p className="workout-label mt-3 text-primary/60">SETS · REPS · RESULTS</p>
+          </FadeIn>
+          <StaggerChildren className="grid md:grid-cols-3 gap-8">
             {STEPS.map(s => (
-              <div key={s.step} className="glass rounded-2xl p-8 text-center">
-                <div className="text-[#00ff87] font-black text-4xl mb-4">{s.step}</div>
+              <div key={s.step} className="glass interactive-lift card-athletic rounded-2xl p-8 text-center">
+                <FitnessBadge variant="pr" className="mb-4">{s.step}</FitnessBadge>
                 <h3 className="text-xl font-bold mb-3">{s.title}</h3>
-                <p className="text-[#a0a0a0] text-sm">{s.desc}</p>
+                <p className="text-muted-foreground text-sm">{s.desc}</p>
               </div>
             ))}
-          </div>
+          </StaggerChildren>
         </div>
       </section>
 
       {/* Features */}
-      <section className="py-20 px-6 bg-[#111]/50">
+      <section className="py-20 px-6 border-y border-white/[.05] bg-white/[.012]">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-black text-center mb-12">Everything You Need</h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {FEATURES.map(f => (
-              <div key={f.title} className="bg-[#111] border border-[#1a1a1a] rounded-2xl p-6 hover:border-[#00ff87]/30 transition-colors">
-                <div className="text-3xl mb-4">{f.icon}</div>
+          <FadeIn className="text-center mb-12">
+            <p className="eyebrow mb-3">One connected ecosystem</p>
+            <h2 className="display-title text-3xl md:text-5xl">Everything You Need</h2>
+          </FadeIn>
+          <StaggerChildren className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {FEATURES.map(f => {
+              const Icon = f.icon
+              return (
+              <div key={f.title} className="elite-panel interactive-lift card-athletic rounded-2xl p-6">
+                <div className="mb-4 flex size-11 items-center justify-center rounded-xl border border-primary/15 bg-primary/[.08] text-primary">
+                  <Icon className="size-5" strokeWidth={2.2} />
+                </div>
                 <h3 className="font-bold text-lg mb-2">{f.title}</h3>
-                <p className="text-[#a0a0a0] text-sm">{f.desc}</p>
+                <p className="text-muted-foreground text-sm">{f.desc}</p>
               </div>
-            ))}
-          </div>
+            )})}
+          </StaggerChildren>
         </div>
       </section>
 
@@ -135,93 +248,95 @@ function GuestPage() {
           <div className="flex items-center justify-between mb-10">
             <div>
               <h2 className="text-3xl font-black">Featured Trainers</h2>
-              <p className="text-[#a0a0a0] mt-2">Verified professionals ready to coach you</p>
+              <p className="text-muted-foreground mt-2">Verified professionals ready to coach you</p>
             </div>
-            <Link href="/coaching" className="text-[#00ff87] text-sm font-medium hover:underline">View all →</Link>
+            <Link href="/coaching" className="text-primary text-sm font-medium hover:underline">View all →</Link>
           </div>
           {loading ? (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3].map(i => <Skeleton key={i} className="h-48 rounded-2xl bg-[#1a1a1a]" />)}
+              {[1, 2, 3].map(i => <Skeleton key={i} className="h-48 rounded-2xl bg-muted" />)}
             </div>
+          ) : trainers.length === 0 ? (
+            <EmptyState
+              icon={<Search className="size-7" />}
+              tagline="Coaches loading"
+              title="No featured trainers yet"
+              description="Browse the marketplace to find verified coaches near you."
+              action={
+                <Link href="/coaching" className="btn-accent px-6 py-2.5 text-sm">
+                  Find trainers
+                </Link>
+              }
+            />
           ) : (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <StaggerChildren className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {trainers.map(t => (
-                <div key={t._id} className="group bg-[#111] border border-[#1a1a1a] rounded-2xl p-6 hover:border-[#00ff87]/40 transition-all">
+                <div key={t._id} className="group elite-panel interactive-lift card-athletic rounded-2xl p-6">
                   <div className="flex items-start gap-4">
-                    <div className="relative w-14 h-14 rounded-full bg-[#1a1a1a] overflow-hidden flex-shrink-0">
+                    <div className="relative w-14 h-14 rounded-full bg-muted overflow-hidden flex-shrink-0">
                       {t.profileImage ? (
                         <Image src={t.profileImage} alt={t.name} fill sizes="56px" className="object-cover" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[#00ff87] font-bold">{t.name[0]}</div>
+                        <div className="w-full h-full flex items-center justify-center text-primary font-bold">{t.name[0]}</div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-bold group-hover:text-[#00ff87] transition-colors">{t.name}</h3>
-                      <p className="text-[#555] text-xs mt-0.5">{t.gymName || t.country}</p>
+                      <h3 className="font-bold group-hover:text-primary transition-colors">{t.name}</h3>
+                      <p className="text-muted-foreground text-xs mt-0.5">{t.gymName || t.country}</p>
                       <div className="flex flex-wrap gap-1 mt-2">
                         {t.specialty?.slice(0, 2).map(s => (
-                          <span key={s} className="text-[10px] bg-[#00ff87]/10 text-[#00ff87] px-2 py-0.5 rounded-full">{s}</span>
+                          <span key={s} className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full">{s}</span>
                         ))}
                       </div>
-                      <div className="text-[#00ff87] text-sm mt-2">★ {t.rating?.toFixed(1) || '5.0'}</div>
+                      <div className="text-primary text-sm mt-2">★ {t.rating?.toFixed(1) || '5.0'}</div>
                     </div>
                   </div>
                 </div>
               ))}
-            </div>
+            </StaggerChildren>
           )}
         </div>
       </section>
 
       {/* Pricing */}
-      <section className="py-20 px-6 bg-[#111]/50">
+      <section className="py-20 px-6 border-y border-white/[.05] bg-white/[.012]">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-black text-center mb-4">Simple Pricing</h2>
-          <p className="text-[#a0a0a0] text-center mb-12">Start free, upgrade when you&apos;re ready</p>
-          <div className="grid md:grid-cols-3 gap-6">
-            {PLANS.map(p => (
-              <div key={p.name} className={`rounded-2xl p-8 border ${p.highlight ? 'border-[#00ff87] bg-[#00ff87]/5' : 'border-[#1a1a1a] bg-[#111]'}`}>
-                {p.highlight && <Badge className="mb-4 bg-[#00ff87] text-black">Most Popular</Badge>}
+          <p className="text-muted-foreground text-center mb-12">Start free, upgrade when you&apos;re ready</p>
+          <StaggerChildren className="grid md:grid-cols-3 gap-6">
+            {MARKETING_PLANS.map(p => (
+              <div key={p.name} className={`interactive-lift card-athletic rounded-2xl p-8 border ${p.highlight ? 'border-primary/50 bg-primary/[.055] shadow-[0_20px_70px_rgba(34,245,154,.08)]' : 'elite-panel'}`}>
+                {p.highlight && <Badge className="mb-4 bg-primary text-black">Most Popular</Badge>}
                 <h3 className="text-xl font-bold">{p.name}</h3>
                 <div className="text-3xl font-black mt-2 mb-6">{p.price}</div>
                 <ul className="space-y-3 mb-8">
                   {p.features.map(f => (
-                    <li key={f} className="text-[#a0a0a0] text-sm flex items-center gap-2">
-                      <span className="text-[#00ff87]">✓</span> {f}
+                    <li key={f} className="text-muted-foreground text-sm flex items-center gap-2">
+                      <span className="text-primary">✓</span> {f}
                     </li>
                   ))}
                 </ul>
-                <Link href="/subscription" className={`block text-center py-3 rounded-full font-bold transition-colors ${p.highlight ? 'btn-accent' : 'border border-[#2a2a2a] hover:border-[#00ff87]/50'}`}>
+                <Link href="/subscription" className={`block text-center py-3 rounded-full font-bold transition-colors ${p.highlight ? 'btn-accent' : 'border border-border hover:border-primary/50'}`}>
                   Choose {p.name}
                 </Link>
               </div>
             ))}
-          </div>
+          </StaggerChildren>
         </div>
       </section>
 
       {/* CTA */}
       <section className="py-20 px-6">
-        <div className="max-w-4xl mx-auto text-center glass rounded-3xl p-12">
-          <h2 className="text-3xl md:text-4xl font-black mb-4">Ready to Transform?</h2>
-          <p className="text-[#a0a0a0] mb-8">Join thousands of Pakistanis achieving their fitness goals with T.E.S.T.</p>
-          <Link href="/signup" className="btn-accent px-10 py-4 text-base font-bold inline-block">Start Your Journey</Link>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t border-[#1a1a1a] py-12 px-6">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="font-black text-xl gradient-text">T.E.S.T.</div>
-          <div className="flex gap-6 text-[#a0a0a0] text-sm">
-            <Link href="/coaching" className="hover:text-white">Trainers</Link>
-            <Link href="/exercises" className="hover:text-white">Exercises</Link>
-            <Link href="/nutrition" className="hover:text-white">Nutrition</Link>
-            <Link href="/subscription" className="hover:text-white">Pricing</Link>
+        <FadeIn>
+          <div className="page-hero max-w-4xl mx-auto text-center p-12 md:p-16">
+            <p className="eyebrow mb-3">Your strongest chapter starts now</p>
+            <h2 className="display-title text-3xl md:text-5xl mb-4">Ready to Transform?</h2>
+            <p className="text-muted-foreground mb-2">Join thousands of Pakistanis achieving their fitness goals with T.E.S.T.</p>
+            <p className="workout-label mb-8 text-primary/70">Show up · Stack wins · Repeat</p>
+            <Link href="/signup" className="btn-accent px-10 py-4 text-base font-bold inline-block">Start Your Journey</Link>
           </div>
-          <p className="text-[#555] text-sm">© 2026 T.E.S.T. All rights reserved.</p>
-        </div>
-      </footer>
+        </FadeIn>
+      </section>
     </div>
   )
 }
@@ -230,6 +345,7 @@ function LoggedInDashboard() {
   const { user } = useAuth()
   const [plan, setPlan] = useState<WorkoutPlan | null>(null)
   const [calories, setCalories] = useState({ calories: 0, protein: 0, carbs: 0, fat: 0 })
+  const [calorieGoal, setCalorieGoal] = useState(2000)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -239,11 +355,22 @@ function LoggedInDashboard() {
     Promise.all([
       fetch('/api/tracking/plans/my-plan', { signal: controller.signal }).then(r => r.ok ? r.json() : null),
       fetch('/api/tracking/meal-logs/today', { signal: controller.signal }).then(r => r.ok ? r.json() : { totals: { calories: 0, protein: 0, carbs: 0, fat: 0 } }),
-    ]).then(([planData, mealData]) => {
+      fetch('/api/auth/me', { signal: controller.signal }).then(r => r.ok ? r.json() : null),
+    ]).then(([planData, mealData, meData]) => {
       if (planData?.plan === null) setPlan(null)
       else if (planData?._id) setPlan(planData)
       else if (planData?.plan) setPlan(planData.plan)
       setCalories(mealData?.totals || { calories: 0, protein: 0, carbs: 0, fat: 0 })
+      const u = meData?.user
+      if (u?.calorieGoal) setCalorieGoal(u.calorieGoal)
+      else if (u) {
+        setCalorieGoal(calculateDailyCalories({
+          currentWeight: u.currentWeight,
+          targetWeight: u.targetWeight,
+          fitnessGoal: u.fitnessGoal,
+          activityLevel: u.activityLevel,
+        }))
+      }
     }).catch(() => {
       setPlan(null)
       setCalories({ calories: 0, protein: 0, carbs: 0, fat: 0 })
@@ -258,63 +385,69 @@ function LoggedInDashboard() {
     }
   }, [])
 
-  const calorieGoal = 2000
   const caloriePct = Math.min(100, Math.round((calories.calories / calorieGoal) * 100))
 
   const quickActions = [
-    { href: '/my-fitness', icon: '📊', label: 'My Fitness' },
-    { href: '/nutrition', icon: '🥗', label: 'Log Meal' },
-    { href: '/coaching', icon: '🏋️', label: 'Find Trainer' },
-    { href: '/chat', icon: '💬', label: 'Messages' },
+    { href: '/my-fitness', icon: LayoutDashboard, label: 'My Fitness' },
+    { href: '/nutrition', icon: Apple, label: 'Log Meal' },
+    { href: '/coaching', icon: Users, label: 'Find Trainer' },
+    { href: '/chat', icon: MessageCircle, label: 'Messages' },
   ]
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pt-24 pb-28 px-6">
+    <div className="min-h-screen pt-28 pb-28 px-6">
       <div className="max-w-6xl mx-auto space-y-8">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-black">
-            Welcome back, <span className="gradient-text">{user?.fullName?.split(' ')[0] || 'Athlete'}</span> 👋
-          </h1>
-          <p className="text-[#a0a0a0] mt-2">Here&apos;s your fitness snapshot for today</p>
-        </div>
+        <FadeIn>
+          <div className="page-hero px-6 py-10 sm:px-10">
+            <p className="eyebrow mb-3">Today&apos;s Command Center</p>
+            <h1 className="display-title text-3xl md:text-5xl">
+              Welcome back, <span className="gradient-text">{user?.fullName?.split(' ')[0] || 'Athlete'}</span>
+            </h1>
+            <p className="text-muted-foreground mt-2">Here&apos;s your fitness snapshot for today</p>
+            <p className="workout-label mt-2 text-primary/70">Time to move · Own the session</p>
+          </div>
+        </FadeIn>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {quickActions.map(a => (
-            <Link key={a.href} href={a.href} className="bg-[#111] border border-[#1a1a1a] rounded-2xl p-5 hover:border-[#00ff87]/40 transition-all text-center">
-              <div className="text-3xl mb-2">{a.icon}</div>
+        <StaggerChildren className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {quickActions.map(a => {
+            const Icon = a.icon
+            return (
+            <Link key={a.href} href={a.href} className="elite-panel interactive-lift card-athletic rounded-2xl p-5 text-center">
+              <div className="mx-auto mb-2 flex size-10 items-center justify-center rounded-xl bg-primary/[.1] text-primary">
+                <Icon className="size-5" strokeWidth={2.2} />
+              </div>
               <div className="font-medium text-sm">{a.label}</div>
             </Link>
-          ))}
-        </div>
+          )})}
+        </StaggerChildren>
 
-        <div className="grid md:grid-cols-2 gap-6">
+        <StaggerChildren className="dashboard-grid cols-2">
           {/* Active Plan */}
-          <Card className="bg-[#111] border-[#1a1a1a] text-white">
+          <Card className="card-athletic interactive-lift">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <span>🏋️</span> Active Workout Plan
+                <Dumbbell className="size-5 text-primary" /> Active Workout Plan
               </CardTitle>
             </CardHeader>
             <CardContent>
               {loading ? (
-                <Skeleton className="h-24 bg-[#1a1a1a]" />
+                <Skeleton className="h-24 bg-muted" />
               ) : plan ? (
                 <div>
-                  <h3 className="font-bold text-lg text-[#00ff87]">{plan.title}</h3>
-                  <p className="text-[#a0a0a0] text-sm mt-1 capitalize">{plan.goal?.replace('_', ' ')} · {plan.difficulty} · {plan.durationWeeks} weeks</p>
+                  <h3 className="font-bold text-lg text-primary">{plan.title}</h3>
+                  <p className="text-muted-foreground text-sm mt-1 capitalize">{plan.goal?.replace('_', ' ')} · {plan.difficulty} · {plan.durationWeeks} weeks</p>
                   <div className="mt-4 flex gap-2 flex-wrap">
                     {plan.weeklySchedule?.slice(0, 4).map(d => (
-                      <Badge key={d.day} variant="outline" className="border-[#2a2a2a] text-[#a0a0a0]">
+                      <Badge key={d.day} variant="outline" className="border-border text-muted-foreground">
                         {d.day}: {d.isRestDay ? 'Rest' : `${d.exercises?.length || 0} exercises`}
                       </Badge>
                     ))}
                   </div>
-                  <Link href="/my-fitness" className="inline-block mt-4 text-[#00ff87] text-sm font-medium hover:underline">View full plan →</Link>
+                  <Link href="/my-fitness" className="inline-block mt-4 text-primary text-sm font-medium hover:underline">View full plan →</Link>
                 </div>
               ) : (
                 <div className="text-center py-6">
-                  <p className="text-[#a0a0a0] mb-4">No active workout plan yet</p>
+                  <p className="text-muted-foreground mb-4">No active workout plan yet</p>
                   <Link href="/coaching" className="btn-accent px-6 py-2 text-sm">Find a Trainer</Link>
                 </div>
               )}
@@ -322,46 +455,48 @@ function LoggedInDashboard() {
           </Card>
 
           {/* Today's Calories */}
-          <Card className="bg-[#111] border-[#1a1a1a] text-white">
+          <Card className="card-athletic interactive-lift">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <span>🔥</span> Today&apos;s Calories
+                <Flame className="size-5 text-primary" /> Today&apos;s Calories
               </CardTitle>
             </CardHeader>
             <CardContent>
               {loading ? (
-                <Skeleton className="h-24 bg-[#1a1a1a]" />
+                <Skeleton className="h-24 bg-muted" />
               ) : (
                 <div>
                   <div className="flex items-end justify-between mb-3">
-                    <span className="text-4xl font-black text-[#00ff87]">{calories.calories}</span>
-                    <span className="text-[#a0a0a0] text-sm">/ {calorieGoal} kcal goal</span>
+                    <span className="text-4xl font-black text-primary">
+                      <CountUp value={calories.calories} />
+                    </span>
+                    <span className="text-muted-foreground text-sm">/ {calorieGoal} kcal goal</span>
                   </div>
                   <Progress value={caloriePct} className="mb-4">
-                    <ProgressTrack className="bg-[#1a1a1a] h-2">
-                      <ProgressIndicator className="bg-[#00ff87]" />
+                    <ProgressTrack className="bg-muted h-2">
+                      <ProgressIndicator className="bg-primary" />
                     </ProgressTrack>
                   </Progress>
                   <div className="grid grid-cols-3 gap-4 text-center">
                     <div>
-                      <div className="text-[#00ff87] font-bold">{Math.round(calories.protein)}g</div>
-                      <div className="text-[#555] text-xs">Protein</div>
+                      <div className="text-primary font-bold">{Math.round(calories.protein)}g</div>
+                      <div className="text-muted-foreground text-xs">Protein</div>
                     </div>
                     <div>
-                      <div className="text-[#00bfff] font-bold">{Math.round(calories.carbs)}g</div>
-                      <div className="text-[#555] text-xs">Carbs</div>
+                      <div className="font-bold text-sky-400">{Math.round(calories.carbs)}g</div>
+                      <div className="text-muted-foreground text-xs">Carbs</div>
                     </div>
                     <div>
-                      <div className="text-[#ff6b6b] font-bold">{Math.round(calories.fat)}g</div>
-                      <div className="text-[#555] text-xs">Fat</div>
+                      <div className="font-bold text-destructive">{Math.round(calories.fat)}g</div>
+                      <div className="text-muted-foreground text-xs">Fat</div>
                     </div>
                   </div>
-                  <Link href="/nutrition" className="inline-block mt-4 text-[#00ff87] text-sm font-medium hover:underline">Log a meal →</Link>
+                  <Link href="/nutrition" className="inline-block mt-4 text-primary text-sm font-medium hover:underline">Log a meal →</Link>
                 </div>
               )}
             </CardContent>
           </Card>
-        </div>
+        </StaggerChildren>
       </div>
     </div>
   )
@@ -369,31 +504,26 @@ function LoggedInDashboard() {
 
 export default function HomePage() {
   const { user, isLoading } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (isLoading || !user || user.role === 'user') return
+    router.replace(getRoleHomePath(user.role))
+  }, [isLoading, user, router])
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-[#00ff87] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
 
   if (user && user.role === 'user') return <LoggedInDashboard />
   if (user && user.role !== 'user') {
-    const dashMap: Record<string, string> = {
-      trainer: '/trainer-dashboard',
-      gym_owner: '/gym-owner',
-      admin: '/admin',
-      super_admin: '/admin',
-    }
-    const href = dashMap[user.role] || '/my-fitness'
     return (
-      <div className="min-h-screen bg-[#0a0a0a] pt-24 pb-28 px-6 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-3xl font-black mb-4">Welcome, {user.fullName}</h1>
-          <p className="text-[#a0a0a0] mb-6">Go to your dashboard to manage your account</p>
-          <Link href={href} className="btn-accent px-8 py-3">Open Dashboard</Link>
-        </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }

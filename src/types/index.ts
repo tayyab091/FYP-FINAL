@@ -110,6 +110,9 @@ export interface ProgressRecord {
   date: string
   weight?: number
   bodyFat?: number
+  chest?: number
+  waist?: number
+  hips?: number
   notes?: string
 }
 

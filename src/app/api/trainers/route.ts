@@ -45,13 +45,21 @@ export async function GET(req: NextRequest) {
       if (country) fallback = fallback.filter(t => t.country.toLowerCase().includes(country.toLowerCase()))
       if (search) fallback = fallback.filter(t => t.name.toLowerCase().includes(search.toLowerCase()) || t.bio.toLowerCase().includes(search.toLowerCase()))
       if (featured) fallback = fallback.filter(t => t.isFeatured)
-      return NextResponse.json(fallback.slice(0, limit))
+      return NextResponse.json({
+        trainers: fallback.slice(0, limit),
+        meta: { source: 'fallback', connectable: false },
+      })
     }
 
-    return NextResponse.json(trainers)
+    return NextResponse.json({
+      trainers,
+      meta: { source: 'database', connectable: true },
+    })
   } catch (error) {
     console.error('Trainers error:', error)
-    // Even on DB error, return fallback data so page is never empty
-    return NextResponse.json(FALLBACK_TRAINERS)
+    return NextResponse.json({
+      trainers: FALLBACK_TRAINERS,
+      meta: { source: 'fallback', connectable: false },
+    })
   }
 }

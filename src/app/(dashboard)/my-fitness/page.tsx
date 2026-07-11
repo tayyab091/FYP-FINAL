@@ -13,6 +13,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { chartTheme } from '@/lib/chart-theme'
+import { PageLoader } from '@/components/shared/PageLoader'
+import { SignInGate } from '@/components/shared/AccessGate'
+import { FadeIn, StaggerChildren, CountUp } from '@/components/motion'
+import { DataTable, DataTableBody, DataTableCell, DataTableHead, DataTableHeaderCell, DataTableRow } from '@/components/shared/DataTable'
 
 interface FoodResult {
   name: string
@@ -29,7 +34,12 @@ export default function MyFitnessPage() {
   const [progress, setProgress] = useState<ProgressRecord[]>([])
   const [meals, setMeals] = useState<{ meals: MealLog[]; totals: { calories: number; protein: number; carbs: number; fat: number } } | null>(null)
   const [loading, setLoading] = useState(true)
-  const [weightForm, setWeightForm] = useState({ weight: '', bodyFat: '', notes: '' })
+  const [weightForm, setWeightForm] = useState({ weight: '', bodyFat: '', chest: '', waist: '', hips: '', notes: '' })
+  const [workoutHistory, setWorkoutHistory] = useState<{
+    logs: Array<{ _id: string; date: string; durationMinutes?: number; exercises?: Array<{ name: string }>; plan?: { title?: string } }>
+    streak: number
+    totalCompleted: number
+  } | null>(null)
   const [saving, setSaving] = useState(false)
   const [workoutStarted, setWorkoutStarted] = useState(false)
   const [completedExercises, setCompletedExercises] = useState<number[]>([])
@@ -48,11 +58,13 @@ export default function MyFitnessPage() {
       fetch('/api/tracking/plans/my-plan').then(r => r.ok ? r.json() : null),
       fetch('/api/tracking/progress').then(r => r.ok ? r.json() : []),
       fetch('/api/tracking/meal-logs/today').then(r => r.ok ? r.json() : { meals: [], totals: { calories: 0, protein: 0, carbs: 0, fat: 0 } }),
-    ]).then(([planData, progressData, mealData]) => {
+      fetch('/api/tracking/logs?limit=10').then(r => r.ok ? r.json() : { logs: [], streak: 0, totalCompleted: 0 }),
+    ]).then(([planData, progressData, mealData, historyData]) => {
       if (planData?.plan === null) setPlan(null)
       else if (planData?._id) setPlan(planData)
       setProgress(Array.isArray(progressData) ? progressData : [])
       setMeals(mealData)
+      setWorkoutHistory(historyData)
     }).finally(() => setLoading(false))
   }
 
@@ -78,13 +90,16 @@ export default function MyFitnessPage() {
         body: JSON.stringify({
           weight: parseFloat(weightForm.weight),
           bodyFat: weightForm.bodyFat ? parseFloat(weightForm.bodyFat) : undefined,
+          chest: weightForm.chest ? parseFloat(weightForm.chest) : undefined,
+          waist: weightForm.waist ? parseFloat(weightForm.waist) : undefined,
+          hips: weightForm.hips ? parseFloat(weightForm.hips) : undefined,
           notes: weightForm.notes,
           date: new Date(),
         }),
       })
       if (!res.ok) throw new Error()
       toast.success('Progress logged!')
-      setWeightForm({ weight: '', bodyFat: '', notes: '' })
+      setWeightForm({ weight: '', bodyFat: '', chest: '', waist: '', hips: '', notes: '' })
       loadData()
     } catch {
       toast.error('Failed to save progress')
@@ -120,6 +135,7 @@ export default function MyFitnessPage() {
       toast.success('Workout completed! Great work.')
       setWorkoutStarted(false)
       setCompletedExercises([])
+      loadData()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to complete workout')
     } finally {
@@ -191,77 +207,81 @@ export default function MyFitnessPage() {
   }
 
   if (authLoading) return <PageLoader />
-  if (!user) return (
-    <div className="min-h-screen bg-[#0a0a0a] pt-24 flex items-center justify-center">
-      <Link href="/login" className="btn-accent px-8 py-3">Sign in to view fitness</Link>
-    </div>
-  )
+  if (!user) return <SignInGate redirectLabel="Sign in to view fitness" />
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pt-8 pb-28 px-6">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-black mb-2">My Fitness</h1>
-        <p className="text-[#a0a0a0] mb-8">Track workouts, nutrition, and progress</p>
+    <div className="min-h-screen pt-6 pb-28 px-4 sm:px-6">
+      <div className="max-w-7xl mx-auto">
+        <FadeIn>
+          <div className="page-hero mb-6 px-6 py-8 sm:px-8 gym-floor">
+            <p className="eyebrow mb-2">Performance Hub</p>
+            <h1 className="display-title text-3xl md:text-4xl">Your Fitness, Fully Connected</h1>
+            <p className="mt-2 text-muted-foreground">Train with intent, fuel intelligently, and measure every win.</p>
+            <p className="workout-label mt-2 text-primary/70">Track · Train · Dominate</p>
+          </div>
+        </FadeIn>
 
         <Tabs defaultValue="overview">
-          <TabsList className="bg-[#111] border border-[#1a1a1a] mb-8 w-full justify-start overflow-x-auto">
-            {['overview', 'workout', 'nutrition', 'progress'].map(t => (
-              <TabsTrigger key={t} value={t} className="capitalize data-active:bg-[#00ff87]/10 data-active:text-[#00ff87]">
+          <TabsList className="mb-8 w-full justify-start overflow-x-auto">
+            {['overview', 'workout', 'history', 'nutrition', 'progress'].map(t => (
+              <TabsTrigger key={t} value={t} className="capitalize">
                 {t}
               </TabsTrigger>
             ))}
           </TabsList>
 
           <TabsContent value="overview">
-            {loading ? <Skeleton className="h-48 bg-[#1a1a1a]" /> : (
-              <div className="grid md:grid-cols-3 gap-6">
-                <Card className="bg-[#111] border-[#1a1a1a] text-white">
-                  <CardHeader><CardTitle className="text-sm text-[#a0a0a0]">Active Plan</CardTitle></CardHeader>
+            {loading ? <Skeleton className="h-48 bg-muted" /> : (
+              <StaggerChildren className="dashboard-grid cols-3">
+                <Card className="card-athletic interactive-lift">
+                  <CardHeader><CardTitle className="workout-label text-muted-foreground">Active Plan</CardTitle></CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-black text-[#00ff87]">{plan?.title || 'None'}</div>
-                    {plan && <p className="text-[#555] text-sm mt-1 capitalize">{plan.difficulty} · {plan.durationWeeks}w</p>}
+                    <div className="text-2xl font-black text-primary">{plan?.title || 'None'}</div>
+                    {plan && <p className="text-muted-foreground text-sm mt-1 capitalize">{plan.difficulty} · {plan.durationWeeks}w</p>}
                   </CardContent>
                 </Card>
-                <Card className="bg-[#111] border-[#1a1a1a] text-white">
-                  <CardHeader><CardTitle className="text-sm text-[#a0a0a0]">Today&apos;s Calories</CardTitle></CardHeader>
+                <Card className="card-athletic interactive-lift">
+                  <CardHeader><CardTitle className="workout-label text-muted-foreground">Today&apos;s Calories</CardTitle></CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-black text-[#00ff87]">{meals?.totals.calories || 0}</div>
-                    <p className="text-[#555] text-sm mt-1">kcal logged today</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-[#111] border-[#1a1a1a] text-white">
-                  <CardHeader><CardTitle className="text-sm text-[#a0a0a0]">Latest Weight</CardTitle></CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-black text-[#00ff87]">
-                      {progress.length ? `${progress[progress.length - 1].weight} kg` : '—'}
+                    <div className="text-2xl font-black text-primary">
+                      <CountUp value={meals?.totals.calories || 0} />
                     </div>
-                    <p className="text-[#555] text-sm mt-1">{progress.length} records</p>
+                    <p className="text-muted-foreground text-sm mt-1">kcal logged today</p>
                   </CardContent>
                 </Card>
-              </div>
+                <Card className="card-athletic interactive-lift">
+                  <CardHeader><CardTitle className="workout-label text-muted-foreground">Workout Streak</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-black text-primary">
+                      <CountUp value={workoutHistory?.streak ?? 0} suffix=" days" />
+                    </div>
+                    <p className="text-muted-foreground text-sm mt-1">{workoutHistory?.totalCompleted ?? 0} total sessions</p>
+                  </CardContent>
+                </Card>
+              </StaggerChildren>
             )}
           </TabsContent>
 
           <TabsContent value="workout">
-            {loading ? <Skeleton className="h-64 bg-[#1a1a1a]" /> : plan ? (
+            {loading ? <Skeleton className="h-64 bg-muted" /> : plan ? (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-xl font-bold">{plan.title}</h2>
-                    <p className="text-[#a0a0a0] text-sm capitalize">{plan.goal?.replace('_', ' ')} · {plan.difficulty}</p>
+                    <p className="text-muted-foreground text-sm capitalize">{plan.goal?.replace('_', ' ')} · {plan.difficulty}</p>
                   </div>
-                  <Badge className="bg-[#00ff87]/10 text-[#00ff87]">{plan.status}</Badge>
+                  <Badge className="bg-primary/10 text-primary">{plan.status}</Badge>
                 </div>
                 {todaySchedule && (
-                  <Card className="bg-[#111] border-[#1a1a1a] text-white">
+                  <Card>
                     <CardHeader><CardTitle>Today — {today}</CardTitle></CardHeader>
                     <CardContent>
                       {todaySchedule.isRestDay ? (
-                        <p className="text-[#a0a0a0]">Rest day — recover and recharge 💤</p>
+                        <p className="text-muted-foreground">Rest day — recover and recharge 💤</p>
                       ) : (
                         <div className="space-y-3">
                           {todaySchedule.exercises?.map((ex, i) => (
-                            <div key={i} className="flex items-center justify-between gap-4 p-3 bg-[#0a0a0a] rounded-xl">
+                            <div key={i} className="flex items-center justify-between gap-4 p-3 bg-background rounded-xl">
                               <label className="flex items-center gap-3">
                                 <input
                                   type="checkbox"
@@ -272,20 +292,20 @@ export default function MyFitnessPage() {
                                       ? [...current, i]
                                       : current.filter((index) => index !== i),
                                   )}
-                                  className="h-4 w-4 accent-[#00ff87]"
+                                  className="h-4 w-4 accent-primary"
                                 />
-                                <span className={completedExercises.includes(i) ? 'font-medium line-through text-[#555]' : 'font-medium'}>
+                                <span className={completedExercises.includes(i) ? 'font-medium line-through text-muted-foreground' : 'font-medium'}>
                                   {ex.name}
                                 </span>
                               </label>
-                              <span className="text-[#a0a0a0] text-sm">{ex.sets}×{ex.reps} · {ex.restSeconds}s rest</span>
+                              <span className="text-muted-foreground text-sm">{ex.sets}×{ex.reps} · {ex.restSeconds}s rest</span>
                             </div>
                           ))}
                           <div className="flex gap-3 pt-3">
                             {!workoutStarted ? (
                               <Button
                                 onClick={() => setWorkoutStarted(true)}
-                                className="bg-[#00ff87] text-black hover:bg-[#00cc6a]"
+                                className="bg-primary text-black hover:brightness-95"
                               >
                                 Start Workout
                               </Button>
@@ -294,7 +314,7 @@ export default function MyFitnessPage() {
                                 <Button
                                   onClick={handleCompleteWorkout}
                                   disabled={completingWorkout}
-                                  className="bg-[#00ff87] text-black hover:bg-[#00cc6a]"
+                                  className="bg-primary text-black hover:brightness-95"
                                 >
                                   {completingWorkout ? 'Completing...' : 'Complete Workout'}
                                 </Button>
@@ -317,15 +337,15 @@ export default function MyFitnessPage() {
                 )}
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {plan.weeklySchedule?.map(day => (
-                    <Card key={day.day} className="bg-[#111] border-[#1a1a1a] text-white">
+                    <Card key={day.day}>
                       <CardHeader><CardTitle className="text-base">{day.day}</CardTitle></CardHeader>
                       <CardContent>
                         {day.isRestDay ? (
-                          <p className="text-[#555] text-sm">Rest Day</p>
+                          <p className="text-muted-foreground text-sm">Rest Day</p>
                         ) : (
                           <ul className="space-y-1">
                             {day.exercises?.map((ex, i) => (
-                              <li key={i} className="text-[#a0a0a0] text-sm">{ex.name} — {ex.sets}×{ex.reps}</li>
+                              <li key={i} className="text-muted-foreground text-sm">{ex.name} — {ex.sets}×{ex.reps}</li>
                             ))}
                           </ul>
                         )}
@@ -336,31 +356,76 @@ export default function MyFitnessPage() {
               </div>
             ) : (
               <div className="text-center py-16">
-                <p className="text-[#a0a0a0] mb-4">No workout plan assigned yet</p>
+                <p className="text-muted-foreground mb-4">No workout plan assigned yet</p>
                 <Link href="/coaching" className="btn-accent px-6 py-2">Find a Trainer</Link>
               </div>
             )}
           </TabsContent>
 
+          <TabsContent value="history">
+            {loading ? <Skeleton className="h-48 bg-muted" /> : (
+              <div className="space-y-6">
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="text-3xl font-black text-primary">{workoutHistory?.streak ?? 0}</div>
+                      <p className="text-muted-foreground text-sm">Day streak</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="text-3xl font-black text-primary">{workoutHistory?.totalCompleted ?? 0}</div>
+                      <p className="text-muted-foreground text-sm">Total completed workouts</p>
+                    </CardContent>
+                  </Card>
+                </div>
+                {workoutHistory?.logs?.length ? (
+                  <div className="space-y-3">
+                    {workoutHistory.logs.map(log => (
+                      <Card key={log._id}>
+                        <CardContent className="pt-4 flex justify-between items-start gap-4">
+                          <div>
+                            <div className="font-medium">{log.plan?.title || 'Workout Session'}</div>
+                            <p className="text-muted-foreground text-sm mt-1">
+                              {log.exercises?.map(e => e.name).join(', ') || 'Exercises logged'}
+                            </p>
+                            {log.durationMinutes ? (
+                              <p className="text-xs text-muted-foreground mt-1">{log.durationMinutes} min</p>
+                            ) : null}
+                          </div>
+                          <span className="text-primary text-sm font-medium whitespace-nowrap">
+                            {new Date(log.date).toLocaleDateString()}
+                          </span>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-center py-12">No completed workouts yet. Finish a session in the Workout tab.</p>
+                )}
+              </div>
+            )}
+          </TabsContent>
+
           <TabsContent value="nutrition">
-            {loading ? <Skeleton className="h-48 bg-[#1a1a1a]" /> : (
+            {loading ? <Skeleton className="h-48 bg-muted" /> : (
               <div className="space-y-6">
                 <div className="grid grid-cols-4 gap-4">
                   {[
-                    { label: 'Calories', value: meals?.totals.calories, color: '#00ff87' },
-                    { label: 'Protein', value: `${Math.round(meals?.totals.protein || 0)}g`, color: '#00ff87' },
-                    { label: 'Carbs', value: `${Math.round(meals?.totals.carbs || 0)}g`, color: '#00bfff' },
-                    { label: 'Fat', value: `${Math.round(meals?.totals.fat || 0)}g`, color: '#ff6b6b' },
+                    { label: 'Calories', value: meals?.totals.calories, color: 'var(--primary)' },
+                    { label: 'Protein', value: `${Math.round(meals?.totals.protein || 0)}g`, color: 'var(--primary)' },
+                    { label: 'Carbs', value: `${Math.round(meals?.totals.carbs || 0)}g`, color: chartTheme.secondary },
+                    { label: 'Fat', value: `${Math.round(meals?.totals.fat || 0)}g`, color: 'var(--destructive)' },
                   ].map(m => (
-                    <Card key={m.label} className="bg-[#111] border-[#1a1a1a] text-white text-center">
+                    <Card key={m.label} className="bg-card/60 border-border text-white text-center">
                       <CardContent className="pt-6">
                         <div className="text-2xl font-black" style={{ color: m.color }}>{m.value}</div>
-                        <div className="text-[#555] text-xs mt-1">{m.label}</div>
+                        <div className="text-muted-foreground text-xs mt-1">{m.label}</div>
                       </CardContent>
                     </Card>
                   ))}
                 </div>
-                <Card className="bg-[#111] border-[#1a1a1a] text-white">
+                <Card>
                   <CardHeader><CardTitle>Search & Log Food</CardTitle></CardHeader>
                   <CardContent className="space-y-4">
                     <form onSubmit={searchFood} className="flex gap-2">
@@ -368,9 +433,9 @@ export default function MyFitnessPage() {
                         value={foodSearch}
                         onChange={(event) => setFoodSearch(event.target.value)}
                         placeholder="Search chicken, daal, roti..."
-                        className="bg-[#0a0a0a] border-[#2a2a2a]"
+                        className="bg-background border-border"
                       />
-                      <Button type="submit" disabled={searchingFood} className="bg-[#00ff87] text-black hover:bg-[#00cc6a]">
+                      <Button type="submit" disabled={searchingFood} className="bg-primary text-black hover:brightness-95">
                         {searchingFood ? 'Searching...' : 'Search'}
                       </Button>
                     </form>
@@ -381,10 +446,10 @@ export default function MyFitnessPage() {
                             key={`${food.name}-${food.per}`}
                             type="button"
                             onClick={() => setSelectedFood(food)}
-                            className="rounded-xl border border-[#2a2a2a] bg-[#0a0a0a] p-3 text-left hover:border-[#00ff87]/50"
+                            className="rounded-xl border border-border bg-background p-3 text-left hover:border-primary/50"
                           >
                             <div className="font-medium">{food.name}</div>
-                            <div className="text-xs text-[#a0a0a0]">
+                            <div className="text-xs text-muted-foreground">
                               {food.calories} kcal · {food.protein}g protein · {food.per}
                             </div>
                           </button>
@@ -392,14 +457,14 @@ export default function MyFitnessPage() {
                       </div>
                     )}
                     {selectedFood && (
-                      <div className="grid gap-3 rounded-xl border border-[#00ff87]/20 bg-[#00ff87]/5 p-4 sm:grid-cols-3">
+                      <div className="grid gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4 sm:grid-cols-3">
                         <div>
                           <Label htmlFor="meal-type">Meal</Label>
                           <select
                             id="meal-type"
                             value={mealType}
                             onChange={(event) => setMealType(event.target.value)}
-                            className="mt-1 h-9 w-full rounded-lg border border-[#2a2a2a] bg-[#0a0a0a] px-2 text-sm"
+                            className="mt-1 h-9 w-full rounded-lg border border-border bg-background px-2 text-sm"
                           >
                             {['breakfast', 'lunch', 'dinner', 'snack'].map((type) => (
                               <option key={type} value={type}>{type}</option>
@@ -414,7 +479,7 @@ export default function MyFitnessPage() {
                             min="1"
                             value={foodQuantity}
                             onChange={(event) => setFoodQuantity(event.target.value)}
-                            className="mt-1 bg-[#0a0a0a] border-[#2a2a2a]"
+                            className="mt-1 bg-background border-border"
                           />
                         </div>
                         <div className="flex items-end">
@@ -422,7 +487,7 @@ export default function MyFitnessPage() {
                             type="button"
                             onClick={logFood}
                             disabled={loggingMeal}
-                            className="w-full bg-[#00ff87] text-black hover:bg-[#00cc6a]"
+                            className="w-full bg-primary text-black hover:brightness-95"
                           >
                             {loggingMeal ? 'Logging...' : `Log ${selectedFood.name}`}
                           </Button>
@@ -434,48 +499,48 @@ export default function MyFitnessPage() {
                 {meals?.meals?.length ? (
                   <div className="space-y-3">
                     {meals.meals.map(m => (
-                      <Card key={m._id} className="bg-[#111] border-[#1a1a1a] text-white">
+                      <Card key={m._id}>
                         <CardContent className="pt-4 flex justify-between items-center">
                           <div>
                             <span className="font-medium capitalize">{m.mealType}</span>
-                            <p className="text-[#555] text-sm">{m.foods?.map(f => f.name).join(', ')}</p>
+                            <p className="text-muted-foreground text-sm">{m.foods?.map(f => f.name).join(', ')}</p>
                           </div>
-                          <span className="text-[#00ff87] font-bold">{m.totalCalories} kcal</span>
+                          <span className="text-primary font-bold">{m.totalCalories} kcal</span>
                         </CardContent>
                       </Card>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-[#a0a0a0] text-center py-8">No meals logged today</p>
+                  <p className="text-muted-foreground text-center py-8">No meals logged today</p>
                 )}
-                <Link href="/nutrition" className="text-[#00ff87] text-sm hover:underline">Browse recipes and full nutrition tools →</Link>
+                <Link href="/nutrition" className="text-primary text-sm hover:underline">Browse recipes and full nutrition tools →</Link>
               </div>
             )}
           </TabsContent>
 
           <TabsContent value="progress">
             <div className="grid lg:grid-cols-2 gap-8">
-              <Card className="bg-[#111] border-[#1a1a1a] text-white">
+              <Card>
                 <CardHeader><CardTitle>Weight Trend</CardTitle></CardHeader>
                 <CardContent>
                   {chartData.length > 0 ? (
                     <ResponsiveContainer width="100%" height={250}>
                       <LineChart data={chartData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
-                        <XAxis dataKey="date" stroke="#555" fontSize={12} />
-                        <YAxis stroke="#555" fontSize={12} />
-                        <Tooltip contentStyle={{ background: '#111', border: '1px solid #2a2a2a', borderRadius: 8 }} />
-                        <Line type="monotone" dataKey="weight" stroke="#00ff87" strokeWidth={2} dot={{ fill: '#00ff87' }} />
-                        <Line type="monotone" dataKey="bodyFat" stroke="#00bfff" strokeWidth={2} dot={{ fill: '#00bfff' }} />
+                        <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+                        <XAxis dataKey="date" stroke={chartTheme.axis} fontSize={12} />
+                        <YAxis stroke={chartTheme.axis} fontSize={12} />
+                        <Tooltip contentStyle={{ background: chartTheme.tooltip.background, border: `1px solid ${chartTheme.tooltip.border}`, borderRadius: chartTheme.tooltip.borderRadius }} />
+                        <Line type="monotone" dataKey="weight" stroke={chartTheme.primary} strokeWidth={2} dot={{ fill: chartTheme.primary }} />
+                        <Line type="monotone" dataKey="bodyFat" stroke={chartTheme.secondary} strokeWidth={2} dot={{ fill: chartTheme.secondary }} />
                       </LineChart>
                     </ResponsiveContainer>
                   ) : (
-                    <p className="text-[#a0a0a0] text-center py-12">No progress data yet. Log your first entry below.</p>
+                    <p className="text-muted-foreground text-center py-12">No progress data yet. Log your first entry below.</p>
                   )}
                 </CardContent>
               </Card>
 
-              <Card className="bg-[#111] border-[#1a1a1a] text-white">
+              <Card>
                 <CardHeader><CardTitle>Log Progress</CardTitle></CardHeader>
                 <CardContent>
                   <form onSubmit={handleAddProgress} className="space-y-4">
@@ -483,55 +548,77 @@ export default function MyFitnessPage() {
                       <Label htmlFor="weight">Weight (kg)</Label>
                       <Input id="weight" type="number" step="0.1" value={weightForm.weight}
                         onChange={e => setWeightForm(f => ({ ...f, weight: e.target.value }))}
-                        className="mt-1 bg-[#0a0a0a] border-[#2a2a2a]" />
+                        className="mt-1 bg-background border-border" />
                     </div>
                     <div>
                       <Label htmlFor="bodyFat">Body Fat % (optional)</Label>
                       <Input id="bodyFat" type="number" step="0.1" value={weightForm.bodyFat}
                         onChange={e => setWeightForm(f => ({ ...f, bodyFat: e.target.value }))}
-                        className="mt-1 bg-[#0a0a0a] border-[#2a2a2a]" />
+                        className="mt-1 bg-background border-border" />
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <Label htmlFor="chest">Chest (cm)</Label>
+                        <Input id="chest" type="number" step="0.1" value={weightForm.chest}
+                          onChange={e => setWeightForm(f => ({ ...f, chest: e.target.value }))}
+                          className="mt-1 bg-background border-border" />
+                      </div>
+                      <div>
+                        <Label htmlFor="waist">Waist (cm)</Label>
+                        <Input id="waist" type="number" step="0.1" value={weightForm.waist}
+                          onChange={e => setWeightForm(f => ({ ...f, waist: e.target.value }))}
+                          className="mt-1 bg-background border-border" />
+                      </div>
+                      <div>
+                        <Label htmlFor="hips">Hips (cm)</Label>
+                        <Input id="hips" type="number" step="0.1" value={weightForm.hips}
+                          onChange={e => setWeightForm(f => ({ ...f, hips: e.target.value }))}
+                          className="mt-1 bg-background border-border" />
+                      </div>
                     </div>
                     <div>
                       <Label htmlFor="notes">Notes</Label>
                       <Input id="notes" value={weightForm.notes}
                         onChange={e => setWeightForm(f => ({ ...f, notes: e.target.value }))}
-                        className="mt-1 bg-[#0a0a0a] border-[#2a2a2a]" />
+                        className="mt-1 bg-background border-border" />
                     </div>
-                    <Button type="submit" disabled={saving} className="bg-[#00ff87] text-black hover:bg-[#00cc6a] w-full">
+                    <Button type="submit" disabled={saving} className="bg-primary text-black hover:brightness-95 w-full">
                       {saving ? 'Saving...' : 'Save Progress'}
                     </Button>
                   </form>
                 </CardContent>
               </Card>
             </div>
-            <Card className="mt-8 bg-[#111] border-[#1a1a1a] text-white">
+            <Card className="mt-8 bg-card/60 border-border text-white">
               <CardHeader><CardTitle>Recent Entries</CardTitle></CardHeader>
               <CardContent>
                 {progress.length === 0 ? (
-                  <p className="text-sm text-[#a0a0a0]">No entries yet.</p>
+                  <p className="text-sm text-muted-foreground">No entries yet.</p>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-[#2a2a2a] text-left text-[#a0a0a0]">
-                          <th className="pb-2">Date</th>
-                          <th className="pb-2">Weight</th>
-                          <th className="pb-2">Body Fat</th>
-                          <th className="pb-2">Notes</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {[...progress].slice(-5).reverse().map((record) => (
-                          <tr key={record._id} className="border-b border-[#1a1a1a]">
-                            <td className="py-3">{new Date(record.date).toLocaleDateString()}</td>
-                            <td className="py-3">{record.weight ? `${record.weight} kg` : '—'}</td>
-                            <td className="py-3">{record.bodyFat ? `${record.bodyFat}%` : '—'}</td>
-                            <td className="py-3 text-[#a0a0a0]">{record.notes || '—'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <DataTable>
+                    <DataTableHead>
+                      <DataTableHeaderCell>Date</DataTableHeaderCell>
+                      <DataTableHeaderCell>Weight</DataTableHeaderCell>
+                      <DataTableHeaderCell>Body Fat</DataTableHeaderCell>
+                      <DataTableHeaderCell>Chest</DataTableHeaderCell>
+                      <DataTableHeaderCell>Waist</DataTableHeaderCell>
+                      <DataTableHeaderCell>Hips</DataTableHeaderCell>
+                      <DataTableHeaderCell>Notes</DataTableHeaderCell>
+                    </DataTableHead>
+                    <DataTableBody>
+                      {[...progress].slice(-5).reverse().map((record) => (
+                        <DataTableRow key={record._id}>
+                          <DataTableCell>{new Date(record.date).toLocaleDateString()}</DataTableCell>
+                          <DataTableCell>{record.weight ? `${record.weight} kg` : '—'}</DataTableCell>
+                          <DataTableCell>{record.bodyFat ? `${record.bodyFat}%` : '—'}</DataTableCell>
+                          <DataTableCell>{record.chest ? `${record.chest} cm` : '—'}</DataTableCell>
+                          <DataTableCell>{record.waist ? `${record.waist} cm` : '—'}</DataTableCell>
+                          <DataTableCell>{record.hips ? `${record.hips} cm` : '—'}</DataTableCell>
+                          <DataTableCell className="text-muted-foreground">{record.notes || '—'}</DataTableCell>
+                        </DataTableRow>
+                      ))}
+                    </DataTableBody>
+                  </DataTable>
                 )}
               </CardContent>
             </Card>
@@ -542,10 +629,3 @@ export default function MyFitnessPage() {
   )
 }
 
-function PageLoader() {
-  return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-[#00ff87] border-t-transparent rounded-full animate-spin" />
-    </div>
-  )
-}

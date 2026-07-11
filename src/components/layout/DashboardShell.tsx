@@ -1,12 +1,14 @@
 'use client'
 
 import type { ComponentType, ReactNode } from 'react'
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import {
+  Activity,
   Apple,
   Building2,
+  ClipboardList,
   Dumbbell,
   Home,
   LayoutDashboard,
@@ -15,11 +17,11 @@ import {
   MessageCircle,
   ScanLine,
   Settings,
-  Shield,
   Users,
   X,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
+import { getRoleHomePath } from '@/lib/access'
 
 type UserRole = 'user' | 'trainer' | 'gym_owner' | 'admin' | 'super_admin'
 
@@ -30,8 +32,7 @@ interface NavItem {
   exact?: boolean
 }
 
-const sharedItems: NavItem[] = [
-  { label: 'Home', href: '/', icon: Home, exact: true },
+const consumerExtras: NavItem[] = [
   { label: 'Find Trainers', href: '/coaching', icon: Users },
   { label: 'Exercise Library', href: '/exercises', icon: Dumbbell },
   { label: 'AI Form Checker', href: '/exercise-check', icon: ScanLine },
@@ -39,87 +40,125 @@ const sharedItems: NavItem[] = [
 
 const roleNavigation: Record<UserRole, NavItem[]> = {
   user: [
+    { label: 'Home', href: '/', icon: Home, exact: true },
     { label: 'My Fitness', href: '/my-fitness', icon: LayoutDashboard },
     { label: 'Nutrition', href: '/nutrition', icon: Apple },
     { label: 'Messages', href: '/chat', icon: MessageCircle },
     { label: 'Settings', href: '/settings', icon: Settings },
-    ...sharedItems,
+    ...consumerExtras,
   ],
   trainer: [
-    { label: 'Trainer Dashboard', href: '/trainer-dashboard', icon: LayoutDashboard },
+    { label: 'Home', href: '/trainer-dashboard', icon: Home, exact: true },
     { label: 'Messages', href: '/chat', icon: MessageCircle },
+    { label: 'Exercise Library', href: '/exercises', icon: Dumbbell },
+    { label: 'AI Form Checker', href: '/exercise-check', icon: ScanLine },
+    { label: 'Nutrition', href: '/nutrition', icon: Apple },
     { label: 'Settings', href: '/settings', icon: Settings },
-    ...sharedItems,
   ],
   gym_owner: [
-    { label: 'Gym Dashboard', href: '/gym-owner', icon: Building2 },
+    { label: 'Home', href: '/gym-owner', icon: Home, exact: true },
     { label: 'Messages', href: '/chat', icon: MessageCircle },
+    { label: 'Exercise Library', href: '/exercises', icon: Dumbbell },
+    { label: 'AI Form Checker', href: '/exercise-check', icon: ScanLine },
     { label: 'Settings', href: '/settings', icon: Settings },
-    ...sharedItems,
   ],
   admin: [
-    { label: 'Admin Console', href: '/admin', icon: Shield },
+    { label: 'Home', href: '/admin', icon: Home, exact: true },
+    { label: 'Users', href: '/admin?tab=users', icon: Users },
+    { label: 'Trainers', href: '/admin?tab=trainers', icon: ClipboardList },
+    { label: 'Gyms', href: '/admin?tab=gyms', icon: Building2 },
+    { label: 'Exercise Library', href: '/admin/exercises', icon: Dumbbell },
+    { label: 'AI Form Checker', href: '/exercise-check', icon: ScanLine },
+    { label: 'Audit Logs', href: '/admin?tab=audit', icon: Activity },
     { label: 'Settings', href: '/settings', icon: Settings },
-    ...sharedItems,
   ],
   super_admin: [
-    { label: 'Admin Console', href: '/admin', icon: Shield },
+    { label: 'Home', href: '/admin', icon: Home, exact: true },
+    { label: 'Users', href: '/admin?tab=users', icon: Users },
+    { label: 'Trainers', href: '/admin?tab=trainers', icon: ClipboardList },
+    { label: 'Gyms', href: '/admin?tab=gyms', icon: Building2 },
+    { label: 'Exercise Library', href: '/admin/exercises', icon: Dumbbell },
+    { label: 'AI Form Checker', href: '/exercise-check', icon: ScanLine },
+    { label: 'Audit Logs', href: '/admin?tab=audit', icon: Activity },
     { label: 'Settings', href: '/settings', icon: Settings },
-    ...sharedItems,
   ],
 }
 
 const pageTitles: Record<string, string> = {
+  '/': 'Home',
   '/my-fitness': 'My Fitness',
   '/trainer-dashboard': 'Trainer Dashboard',
   '/gym-owner': 'Gym Management',
   '/admin': 'Admin Console',
+  '/admin/exercises': 'Exercise Library',
+  '/nutrition': 'Nutrition',
+  '/exercises': 'Exercise Library',
+  '/exercise-check': 'AI Form Checker',
+  '/coaching': 'Find Trainers',
   '/chat': 'Messages',
   '/settings': 'Settings',
 }
 
 function getPageTitle(pathname: string) {
   if (pathname.startsWith('/chat/')) return 'Conversation'
-  return Object.entries(pageTitles).find(([path]) => pathname.startsWith(path))?.[1] || 'Dashboard'
+  if (pathname.startsWith('/coaching/')) return 'Trainer Profile'
+  return Object.entries(pageTitles).find(([path]) => pathname === path || pathname.startsWith(`${path}/`))?.[1] || 'Dashboard'
+}
+
+function isNavActive(pathname: string, item: NavItem, currentTab: string | null) {
+  if (item.href.includes('?tab=')) {
+    const tab = item.href.split('tab=')[1]
+    return pathname === '/admin' && currentTab === tab
+  }
+  if (item.href === '/admin' && item.label === 'Home') {
+    return pathname === '/admin' && !currentTab
+  }
+  if (item.exact) return pathname === item.href
+  return pathname === item.href || pathname.startsWith(`${item.href}/`)
 }
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { user, logout } = useAuth()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const currentTab = searchParams.get('tab')
   const role = user?.role || 'user'
   const items = roleNavigation[role]
+  const homePath = getRoleHomePath(role)
 
   return (
-    <div className="flex h-full flex-col bg-[#0d0d0d]">
-      <div className="flex h-20 items-center border-b border-white/5 px-6">
-        <Link href="/" onClick={onNavigate} className="text-xl font-black gradient-text">
-          T.E.S.T.
+    <div className="flex h-full flex-col bg-[#090c0a]/96 backdrop-blur-2xl">
+      <div className="flex h-20 items-center border-b border-white/[.06] px-5">
+        <Link href={homePath} onClick={onNavigate} className="flex items-center gap-2.5">
+          <span className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[0_0_30px_rgba(34,245,154,.2)]">
+            <Activity className="size-4.5" strokeWidth={2.7} />
+          </span>
+          <span className="font-heading text-lg font-black tracking-[-.045em] text-white">T.E.S.T.</span>
         </Link>
       </div>
 
       <div className="px-4 pt-5">
-        <p className="px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#555]">
+        <p className="px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
           Workspace
         </p>
       </div>
       <nav className="mt-3 flex-1 space-y-1 overflow-y-auto px-3">
         {items.map((item) => {
-          const active = item.exact
-            ? pathname === item.href
-            : pathname === item.href || pathname.startsWith(`${item.href}/`)
+          const active = isNavActive(pathname, item, currentTab)
           const Icon = item.icon
           return (
             <Link
               key={`${item.href}-${item.label}`}
               href={item.href}
               onClick={onNavigate}
-              className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
+              className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold transition-all ${
                 active
-                  ? 'bg-[#00ff87]/12 text-[#00ff87]'
-                  : 'text-[#888] hover:bg-white/[0.04] hover:text-white'
+                  ? 'bg-primary/[.1] text-primary shadow-[inset_0_0_0_1px_rgba(34,245,154,.08)]'
+                  : 'text-muted-foreground hover:bg-white/[0.04] hover:text-white'
               }`}
             >
-              <Icon className={`h-4 w-4 ${active ? 'text-[#00ff87]' : 'text-[#555] group-hover:text-white'}`} />
+              {active && <span className="absolute left-0 h-5 w-0.5 rounded-full bg-primary shadow-[0_0_12px_rgba(34,245,154,.7)]" />}
+              <Icon className={`h-4 w-4 ${active ? 'text-primary' : 'text-[#536059] group-hover:text-white'}`} />
               <span>{item.label}</span>
             </Link>
           )
@@ -127,13 +166,13 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       {user?.role === 'user' && user.subscription?.plan === 'basic' && (
-        <div className="mx-3 mb-3 rounded-2xl border border-[#00ff87]/15 bg-[#00ff87]/5 p-4">
+        <div className="mx-3 mb-3 overflow-hidden rounded-2xl border border-primary/15 bg-[radial-gradient(circle_at_top_right,rgba(34,245,154,.14),transparent_65%),rgba(34,245,154,.035)] p-4">
           <p className="text-sm font-bold text-white">Unlock Pro</p>
-          <p className="mt-1 text-xs leading-relaxed text-[#777]">Advanced analytics and trainer coaching.</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Advanced analytics and trainer coaching.</p>
           <Link
             href="/subscription"
             onClick={onNavigate}
-            className="mt-3 inline-flex text-xs font-bold text-[#00ff87] hover:underline"
+            className="mt-3 inline-flex text-xs font-bold text-primary hover:underline"
           >
             View plans →
           </Link>
@@ -142,7 +181,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
       <div className="border-t border-white/5 p-3">
         <div className="mb-2 flex items-center gap-3 rounded-xl px-3 py-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#00ff87] to-[#00bfff] text-sm font-black text-black">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#55ffb1] to-[#3dbdff] text-sm font-black text-[#03130b] shadow-[0_8px_25px_rgba(34,245,154,.14)]">
             {user?.fullName?.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase() || 'U'}
           </div>
           <div className="min-w-0 flex-1">
@@ -153,7 +192,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <button
           type="button"
           onClick={() => void logout()}
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[#777] transition-colors hover:bg-red-500/10 hover:text-red-400"
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-red-500/10 hover:text-red-400"
         >
           <LogOut className="h-4 w-4" />
           Sign out
@@ -173,8 +212,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a]">
-        <div className="h-9 w-9 animate-spin rounded-full border-2 border-[#00ff87] border-t-transparent" />
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-9 w-9 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
     )
   }
@@ -182,28 +221,30 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   if (!user) return <>{children}</>
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 border-r border-white/5 lg:block">
-        <SidebarContent />
+    <div className="min-h-screen bg-background text-white">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 border-r border-white/[.06] lg:block">
+        <Suspense fallback={<div className="h-full animate-pulse bg-[#090c0a]/96" />}>
+          <SidebarContent />
+        </Suspense>
       </aside>
 
-      <header className="fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between border-b border-white/5 bg-[#0a0a0a]/95 px-4 backdrop-blur-xl lg:left-72 lg:px-8">
+      <header className="fixed inset-x-0 top-0 z-40 flex h-[4.5rem] items-center justify-between border-b border-white/[.06] bg-[#080b09]/82 px-4 backdrop-blur-2xl lg:left-72 lg:px-8">
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
-            className="rounded-xl border border-white/10 p-2 text-[#aaa] hover:text-white lg:hidden"
+            className="rounded-xl border border-white/[.09] bg-white/[.03] p-2 text-[#aaa] hover:text-white lg:hidden"
             aria-label="Open dashboard navigation"
           >
             <Menu className="h-5 w-5" />
           </button>
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#555]">T.E.S.T. Workspace</p>
-            <h1 className="text-base font-bold text-white">{pageTitle}</h1>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary/65">T.E.S.T. Workspace</p>
+            <h1 className="font-heading text-base font-bold tracking-tight text-white">{pageTitle}</h1>
           </div>
         </div>
         <div className="hidden items-center gap-2 text-xs text-[#666] sm:flex">
-          <span className="h-2 w-2 rounded-full bg-[#00ff87] shadow-[0_0_10px_rgba(0,255,135,0.7)]" />
+          <span className="h-2 w-2 animate-pulse rounded-full bg-primary shadow-[0_0_10px_rgba(34,245,154,.7)]" />
           Secure session
         </div>
       </header>
@@ -220,17 +261,19 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             <button
               type="button"
               onClick={() => setMobileOpen(false)}
-              className="absolute right-4 top-5 z-10 rounded-lg p-2 text-[#777] hover:bg-white/5 hover:text-white"
+              className="absolute right-4 top-5 z-10 rounded-lg p-2 text-muted-foreground hover:bg-white/5 hover:text-white"
               aria-label="Close menu"
             >
               <X className="h-5 w-5" />
             </button>
-            <SidebarContent onNavigate={() => setMobileOpen(false)} />
+            <Suspense fallback={<div className="h-full animate-pulse bg-[#090c0a]/96" />}>
+              <SidebarContent onNavigate={() => setMobileOpen(false)} />
+            </Suspense>
           </aside>
         </div>
       )}
 
-      <div className="min-h-screen pt-16 lg:pl-72">
+      <div className="min-h-screen bg-[radial-gradient(circle_at_70%_-10%,rgba(34,245,154,.055),transparent_32rem)] pt-[4.5rem] lg:pl-72">
         {children}
       </div>
     </div>

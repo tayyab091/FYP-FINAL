@@ -1,5 +1,9 @@
 'use client'
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Camera, Square, CheckCircle2, AlertCircle } from 'lucide-react'
+import { RepCounter } from '@/components/motion/RepCounter'
+import { FitnessBadge } from '@/components/motion/FitnessBadge'
 
 function calculateAngle(a: { x: number; y: number }, b: { x: number; y: number }, c: { x: number; y: number }): number {
   const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x)
@@ -14,32 +18,32 @@ const EXERCISES = {
     joints: [23, 25, 27],
     goodAngle: 100,
     repAngle: 160,
-    goodFeedback: '✅ Great squat depth!',
-    badFeedback: '⬇️ Go lower — bend knees more',
+    goodFeedback: 'Great squat depth!',
+    badFeedback: 'Go lower — bend knees more',
   },
   pushup: {
     name: 'Push-Up',
     joints: [11, 13, 15],
     goodAngle: 90,
     repAngle: 160,
-    goodFeedback: '✅ Full range of motion!',
-    badFeedback: '⬇️ Lower your chest more',
+    goodFeedback: 'Full range of motion!',
+    badFeedback: 'Lower your chest more',
   },
   lunge: {
     name: 'Lunge',
     joints: [23, 25, 27],
     goodAngle: 100,
     repAngle: 160,
-    goodFeedback: '✅ Perfect lunge depth!',
-    badFeedback: '⬇️ Lower your back knee',
+    goodFeedback: 'Perfect lunge depth!',
+    badFeedback: 'Lower your back knee',
   },
   plank: {
     name: 'Plank',
     joints: [11, 23, 27],
     goodAngle: 160,
     repAngle: 0,
-    goodFeedback: '✅ Perfect plank form!',
-    badFeedback: '⬆️ Raise your hips — keep body straight',
+    goodFeedback: 'Perfect plank form!',
+    badFeedback: 'Raise your hips — keep body straight',
   },
 }
 
@@ -108,7 +112,7 @@ export function PoseDetector() {
 
     const POSE_CONNECTIONS = (window as Window & { POSE_CONNECTIONS?: [number, number][] }).POSE_CONNECTIONS
     if (POSE_CONNECTIONS) {
-      ctx.strokeStyle = '#00ff87'
+      ctx.strokeStyle = '#22f59a'
       ctx.lineWidth = 2
       POSE_CONNECTIONS.forEach(([s, e]) => {
         const start = lm[s], end = lm[e]
@@ -123,7 +127,7 @@ export function PoseDetector() {
 
     lm.forEach((point) => {
       if ((point.visibility ?? 0) > 0.5) {
-        ctx.fillStyle = '#00ff87'
+        ctx.fillStyle = '#22f59a'
         ctx.beginPath()
         ctx.arc(point.x * canvas.width, point.y * canvas.height, 4, 0, 2 * Math.PI)
         ctx.fill()
@@ -188,28 +192,30 @@ export function PoseDetector() {
 
   return (
     <div className="space-y-6">
-      <div className="flex gap-3 flex-wrap justify-center">
+      <div className="elite-panel flex flex-wrap justify-center gap-2 p-3">
         {Object.entries(EXERCISES).map(([key, ex]) => (
           <button key={key}
             onClick={() => { setSelectedExercise(key as keyof typeof EXERCISES); setRepCount(0) }}
-            className={`px-4 py-2 rounded-xl text-sm font-medium border transition-all ${
+            className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all ${
               selectedExercise === key
-                ? 'bg-[#00ff87] text-black border-[#00ff87]'
-                : 'bg-transparent text-[#a0a0a0] border-[#2a2a2a] hover:border-[#3a3a3a]'
+                ? 'bg-primary text-primary-foreground border-primary shadow-[0_8px_24px_rgba(34,245,154,.16)]'
+                : 'bg-white/[.02] text-[#8f9a94] border-white/[.08] hover:border-white/[.16] hover:text-white'
             }`}>
             {ex.name}
           </button>
         ))}
       </div>
 
-      <div className="relative rounded-2xl overflow-hidden bg-[#111] aspect-video max-w-2xl mx-auto">
+      <div className="relative rounded-3xl overflow-hidden bg-[#0b0e0c] aspect-video max-w-2xl mx-auto border border-white/[.1] shadow-[0_30px_90px_rgba(0,0,0,.38)]">
         <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
         <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
 
         {!isActive && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#0a0a0a]/80">
+          <div className="absolute inset-0 flex items-center justify-center bg-[#080b09]/88 backdrop-blur-sm">
             <div className="text-center">
-              <div className="text-6xl mb-4">📷</div>
+              <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl border border-white/[.1] bg-white/[.04]">
+                <Camera className="size-8 text-primary" />
+              </div>
               <p className="text-white font-semibold mb-4">Click start to enable camera</p>
               {cameraError && <p className="text-[#ef4444] text-sm mb-4 max-w-xs">{cameraError}</p>}
             </div>
@@ -218,18 +224,36 @@ export function PoseDetector() {
 
         {isActive && (
           <div className="absolute top-4 left-4 right-4 flex justify-between gap-2">
-            <div className="glass px-3 py-2 rounded-xl">
-              <div className="text-2xl font-black text-white">{repCount}</div>
-              <div className="text-[10px] text-[#a0a0a0] uppercase tracking-wider">Reps</div>
+            <div className="glass px-3 py-2 rounded-xl min-w-[4.5rem]">
+              <RepCounter count={repCount} />
             </div>
-            <div className={`glass px-3 py-2 rounded-xl border flex-1 text-center ${isGoodForm ? 'border-[#00ff87]' : 'border-[#ef4444]'}`}>
-              <div className="text-sm font-bold" style={{ color: isGoodForm ? '#00ff87' : '#ef4444' }}>
-                {feedback}
-              </div>
-            </div>
-            <div className="glass px-3 py-2 rounded-xl">
-              <div className="text-2xl font-black text-white">{angle}°</div>
-              <div className="text-[10px] text-[#a0a0a0] uppercase tracking-wider">Angle</div>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={feedback}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.2 }}
+                className={`glass px-3 py-2 rounded-xl border flex-1 flex items-center justify-center gap-2 text-center ${isGoodForm ? 'border-primary' : 'border-[#ef4444]'}`}
+              >
+                {isGoodForm
+                  ? <CheckCircle2 className="size-4 shrink-0 text-primary" />
+                  : <AlertCircle className="size-4 shrink-0 text-destructive" />}
+                <span className={`text-sm font-bold ${isGoodForm ? 'text-primary' : 'text-destructive'}`}>
+                  {feedback}
+                </span>
+              </motion.div>
+            </AnimatePresence>
+            <div className="glass px-3 py-2 rounded-xl min-w-[4.5rem] text-center">
+              <motion.div
+                key={angle}
+                initial={{ scale: 1.2, opacity: 0.5 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="font-heading text-2xl font-black text-white"
+              >
+                {angle}°
+              </motion.div>
+              <FitnessBadge variant="sets" className="mt-0.5 border-0 bg-transparent px-0">Angle</FitnessBadge>
             </div>
           </div>
         )}
@@ -237,13 +261,13 @@ export function PoseDetector() {
 
       <div className="flex gap-4 justify-center">
         {!isActive ? (
-          <button onClick={startCamera} className="btn-accent px-8 py-3 font-bold">
-            🎥 Start Camera
+          <button onClick={startCamera} className="btn-accent inline-flex items-center gap-2 px-8 py-3 font-bold">
+            <Camera className="size-4" /> Start Camera
           </button>
         ) : (
           <button onClick={stopCamera}
-            className="px-8 py-3 font-bold rounded-full border border-[#ef4444] text-[#ef4444] hover:bg-[#ef4444]/10 transition-all">
-            ⏹ Stop
+            className="inline-flex items-center gap-2 rounded-full border border-destructive px-8 py-3 font-bold text-destructive transition-all hover:bg-destructive/10">
+            <Square className="size-4" /> Stop
           </button>
         )}
       </div>

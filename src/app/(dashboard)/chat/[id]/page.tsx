@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
@@ -9,11 +10,25 @@ import { Message } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import { PageLoader } from '@/components/shared/PageLoader'
+import { SignInGate } from '@/components/shared/AccessGate'
+import { ArrowLeft, MessageCircle, Send } from 'lucide-react'
+
+interface ConversationInfo {
+  otherUser: {
+    _id: string
+    fullName: string
+    profileImage?: string
+    role?: string
+  }
+  lastMessageTime?: string
+}
 
 export default function ChatConversationPage() {
   const { id } = useParams<{ id: string }>()
   const { user, isLoading: authLoading } = useAuth()
   const [messages, setMessages] = useState<Message[]>([])
+  const [conversation, setConversation] = useState<ConversationInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
@@ -35,6 +50,9 @@ export default function ChatConversationPage() {
 
   useEffect(() => {
     if (user && id) {
+      fetch(`/api/chat/conversations/${id}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => setConversation(data))
       loadMessages()
       pollRef.current = setInterval(loadMessages, 5000)
     }
@@ -85,24 +103,32 @@ export default function ChatConversationPage() {
   const formatTime = (date: string) =>
     new Date(date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
 
-  if (authLoading) return <Loader />
-  if (!user) return (
-    <div className="min-h-screen bg-[#0a0a0a] pt-24 flex items-center justify-center">
-      <Link href="/login" className="btn-accent px-8 py-3">Sign in to chat</Link>
-    </div>
-  )
+  if (authLoading) return <PageLoader />
+  if (!user) return <SignInGate redirectLabel="Sign in to chat" />
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-[#0a0a0a] flex flex-col pb-4 md:pb-4">
+    <div className="flex min-h-[calc(100vh-4.5rem)] flex-col pb-4">
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-[#111]/95 backdrop-blur-xl border-b border-[#1a1a1a] px-4 py-3 flex items-center gap-3">
-        <Link href="/chat" className="text-[#a0a0a0] hover:text-white text-xl">←</Link>
-        <div className="w-9 h-9 rounded-full bg-[#1a1a1a] flex items-center justify-center text-[#00ff87] font-bold">
-          💬
+      <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-white/[.06] bg-[#090c0a]/88 px-4 py-3 backdrop-blur-2xl">
+        <Link href="/chat" aria-label="Back to conversations" className="flex size-9 items-center justify-center rounded-xl border border-white/[.08] text-[#8f9993] hover:text-white">
+          <ArrowLeft className="size-4" />
+        </Link>
+        <div className="relative size-10 overflow-hidden rounded-xl border border-primary/15 bg-primary/[.08] flex items-center justify-center">
+          {conversation?.otherUser?.profileImage ? (
+            <Image src={conversation.otherUser.profileImage} alt="" fill sizes="40px" className="object-cover" />
+          ) : (
+            <span className="text-primary font-bold">
+              {conversation?.otherUser?.fullName?.[0] || <MessageCircle className="size-4.5" />}
+            </span>
+          )}
         </div>
         <div>
-          <div className="font-semibold text-sm">Conversation</div>
-          <div className="text-[#555] text-xs">Online</div>
+          <div className="font-semibold text-sm">{conversation?.otherUser?.fullName || 'Conversation'}</div>
+          <div className="text-muted-foreground text-xs">
+            {conversation?.lastMessageTime
+              ? `Updated ${new Date(conversation.lastMessageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+              : 'Online'}
+          </div>
         </div>
       </div>
 
@@ -110,10 +136,10 @@ export default function ChatConversationPage() {
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 max-w-2xl mx-auto w-full">
         {loading ? (
           <div className="space-y-3">
-            {[1, 2, 3].map(i => <Skeleton key={i} className="h-12 bg-[#1a1a1a] rounded-2xl w-2/3" />)}
+            {[1, 2, 3].map(i => <Skeleton key={i} className="h-12 bg-muted rounded-2xl w-2/3" />)}
           </div>
         ) : messages.length === 0 ? (
-          <p className="text-[#555] text-center py-12">No messages yet. Say hello! 👋</p>
+          <p className="text-muted-foreground text-center py-12">No messages yet. Say hello! 👋</p>
         ) : (
           messages.map(msg => {
             const isMine = msg.senderId === user.id || msg.senderId === user._id
@@ -122,14 +148,14 @@ export default function ChatConversationPage() {
               <div key={msg._id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-sm ${
                   isMine
-                    ? 'bg-[#00ff87] text-black rounded-br-md'
-                    : 'bg-[#111] border border-[#1a1a1a] text-white rounded-bl-md'
+                    ? 'bg-gradient-to-br from-[#55ffb1] to-primary text-primary-foreground rounded-br-md shadow-[0_10px_28px_rgba(34,245,154,.12)]'
+                    : 'bg-white/[.045] border border-white/[.075] text-white rounded-bl-md'
                 } ${isOptimistic ? 'opacity-70' : ''}`}>
                   {!isMine && (
-                    <div className="text-[#00ff87] text-xs font-medium mb-1">{msg.senderName}</div>
+                    <div className="text-primary text-xs font-medium mb-1">{msg.senderName}</div>
                   )}
                   {msg.type === 'workout_plan' ? (
-                    <div className={`rounded-xl border p-3 ${isMine ? 'border-black/20 bg-black/10' : 'border-[#00ff87]/20 bg-[#00ff87]/5'}`}>
+                    <div className={`rounded-xl border p-3 ${isMine ? 'border-black/20 bg-black/10' : 'border-primary/20 bg-primary/5'}`}>
                       <div className="mb-1 text-xs font-bold uppercase tracking-wide">🏋️ Workout Plan</div>
                       <p className="break-words font-medium">{msg.attachedPlan?.title || msg.content}</p>
                       {msg.attachedPlan && (
@@ -141,7 +167,7 @@ export default function ChatConversationPage() {
                   ) : (
                     <p className="break-words">{msg.content}</p>
                   )}
-                  <div className={`text-[10px] mt-1 ${isMine ? 'text-black/50' : 'text-[#555]'}`}>
+                  <div className={`text-[10px] mt-1 ${isMine ? 'text-black/50' : 'text-muted-foreground'}`}>
                     {formatTime(msg.createdAt)}
                     {isOptimistic && ' · sending...'}
                   </div>
@@ -155,27 +181,20 @@ export default function ChatConversationPage() {
 
       {/* Input */}
       <form onSubmit={sendMessage}
-        className="sticky bottom-0 bg-[#0a0a0a] border-t border-[#1a1a1a] px-4 py-3 max-w-2xl mx-auto w-full flex gap-2">
+        className="sticky bottom-0 mx-auto flex w-full max-w-2xl gap-2 border-t border-white/[.06] bg-[#090c0a]/90 px-4 py-3 backdrop-blur-2xl">
         <Input
           value={input}
           onChange={e => setInput(e.target.value)}
           placeholder="Type a message..."
-          className="flex-1 bg-[#111] border-[#2a2a2a] rounded-full px-4 h-10"
+          className="flex-1 rounded-xl"
           disabled={sending}
         />
         <Button type="submit" disabled={sending || !input.trim()}
-          className="bg-[#00ff87] text-black hover:bg-[#00cc6a] rounded-full h-10 w-10 p-0 flex-shrink-0">
-          ➤
+          className="h-11 w-11 flex-shrink-0 rounded-xl p-0">
+          <Send className="size-4" />
         </Button>
       </form>
     </div>
   )
 }
 
-function Loader() {
-  return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-[#00ff87] border-t-transparent rounded-full animate-spin" />
-    </div>
-  )
-}

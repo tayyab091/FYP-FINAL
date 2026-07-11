@@ -1,13 +1,15 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Manrope, Space_Grotesk } from 'next/font/google'
 import './globals.css'
 import { Providers } from './providers'
 import { Navbar } from '@/components/layout/Navbar'
 import { BottomNav } from '@/components/layout/BottomNav'
+import { SiteFooter } from '@/components/layout/SiteFooter'
 import { AIChatbot } from '@/components/shared/AIChatbot'
 import { Toaster } from 'sonner'
 
-const inter = Inter({ subsets: ['latin'] })
+const manrope = Manrope({ subsets: ['latin'], variable: '--font-body' })
+const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-display' })
 
 export const metadata: Metadata = {
   title: 'T.E.S.T. — Train. Eat. Sleep. Thrive.',
@@ -18,10 +20,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={`${manrope.variable} ${spaceGrotesk.variable}`}>
         <Providers>
           <Navbar />
-          <main>{children}</main>
+          <main className="flex min-h-screen flex-col">{children}</main>
+          <SiteFooter />
           <BottomNav />
           <AIChatbot />
           <Toaster
@@ -29,8 +32,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             position="top-right"
             toastOptions={{
               style: {
-                background: '#111',
-                border: '1px solid #2a2a2a',
+                background: '#0e1210',
+                border: '1px solid rgba(255,255,255,.09)',
                 color: '#fff',
               },
             }}

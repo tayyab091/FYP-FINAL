@@ -52,7 +52,15 @@ export async function GET(req: NextRequest) {
         : c.unreadCounts?.[tokenUser.userId]
       return {
         _id: c._id,
-        otherUser: other || { fullName: 'Unknown', email: '' },
+        otherUser: other
+          ? {
+              _id: other._id.toString(),
+              fullName: other.fullName,
+              email: other.email,
+              profileImage: other.profileImage,
+              role: other.role,
+            }
+          : { _id: '', fullName: 'Unknown', email: '', role: 'user' },
         lastMessage: c.lastMessage || '',
         lastMessageTime: c.lastMessageTime || c.updatedAt,
         unreadCount: unreadCount || 0,

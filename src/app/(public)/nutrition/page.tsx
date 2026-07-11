@@ -1,19 +1,28 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
+import { Salad, ClipboardList, UtensilsCrossed, ChevronDown, ChevronUp, Globe } from 'lucide-react'
+import { SectionHeading } from '@/components/shared/SectionHeading'
+import { FadeIn, StaggerChildren, CountUp } from '@/components/motion'
+import { calculateDailyCalories } from '@/lib/nutrition'
 
-const CALORIE_GOAL = 2000
+interface MealSummary {
+  id: string
+  name: string
+  category: string
+  area: string
+  thumb: string
+  tags?: string
+}
 
-const PAKISTANI_RECIPES = [
-  { name: 'Chicken Biryani Bowl', calories: 480, protein: 35, carbs: 52, fat: 12, time: '30 min', tag: 'High Protein', emoji: '🍚' },
-  { name: 'Daal Chawal', calories: 380, protein: 18, carbs: 65, fat: 6, time: '25 min', tag: 'Balanced', emoji: '🫘' },
-  { name: 'Grilled Fish with Salad', calories: 320, protein: 42, carbs: 15, fat: 10, time: '20 min', tag: 'Low Carb', emoji: '🐟' },
-  { name: 'Egg Paratha', calories: 420, protein: 22, carbs: 45, fat: 16, time: '15 min', tag: 'Breakfast', emoji: '🍳' },
-  { name: 'Fruit Chaat', calories: 180, protein: 3, carbs: 42, fat: 1, time: '10 min', tag: 'Snack', emoji: '🍓' },
-  { name: 'Nihari with Naan', calories: 520, protein: 28, carbs: 48, fat: 22, time: '45 min', tag: 'Traditional', emoji: '🥘' },
-]
+interface MealDetail extends MealSummary {
+  instructions: string
+  ingredients: { name: string; measure: string }[]
+  youtube?: string
+}
 
 interface FoodResult {
   name: string
@@ -51,7 +60,7 @@ const MEAL_TYPES = [
 
 export default function NutritionPage() {
   const { user, isLoading: authLoading } = useAuth()
-  const [meals, setMeals] = useState<MealEntry[]>([])
+  const [todayMeals, setTodayMeals] = useState<MealEntry[]>([])
   const [totals, setTotals] = useState<DailyTotals>({ calories: 0, protein: 0, carbs: 0, fat: 0 })
   const [summaryLoading, setSummaryLoading] = useState(false)
   const [summaryLoaded, setSummaryLoaded] = useState(false)
@@ -63,6 +72,23 @@ export default function NutritionPage() {
   const [logMealType, setLogMealType] = useState('breakfast')
   const [logQuantity, setLogQuantity] = useState('100')
   const [submittingLog, setSubmittingLog] = useState(false)
+  const [calorieGoal, setCalorieGoal] = useState(2000)
+  const [recipeMeals, setRecipeMeals] = useState<MealSummary[]>([])
+  const [mealsLoading, setMealsLoading] = useState(true)
+  const [mealsLoadingMore, setMealsLoadingMore] = useState(false)
+  const [expandedMeal, setExpandedMeal] = useState<string | null>(null)
+  const [mealDetails, setMealDetails] = useState<Record<string, MealDetail>>({})
+  const [mealCategory, setMealCategory] = useState('All')
+  const [mealArea, setMealArea] = useState('All')
+  const [mealSearch, setMealSearch] = useState('')
+  const [debouncedMealSearch, setDebouncedMealSearch] = useState('')
+  const [mealLetter, setMealLetter] = useState('All')
+  const [mealCategories, setMealCategories] = useState<string[]>([])
+  const [mealAreas, setMealAreas] = useState<string[]>([])
+  const [mealTotal, setMealTotal] = useState(0)
+  const [mealCatalogTotal, setMealCatalogTotal] = useState(0)
+  const [mealPage, setMealPage] = useState(1)
+  const [mealTotalPages, setMealTotalPages] = useState(1)
 
   const fetchTodayMeals = useCallback(async () => {
     if (!user) return
@@ -77,14 +103,14 @@ export default function NutritionPage() {
       })
       if (res.ok) {
         const data = await res.json()
-        setMeals(data.meals || [])
+        setTodayMeals(data.meals || [])
         setTotals(data.totals || { calories: 0, protein: 0, carbs: 0, fat: 0 })
       } else {
-        setMeals([])
+        setTodayMeals([])
         setTotals({ calories: 0, protein: 0, carbs: 0, fat: 0 })
       }
     } catch {
-      setMeals([])
+      setTodayMeals([])
       setTotals({ calories: 0, protein: 0, carbs: 0, fat: 0 })
     } finally {
       clearTimeout(timeout)
@@ -97,6 +123,102 @@ export default function NutritionPage() {
     if (!authLoading && user) fetchTodayMeals()
     if (!authLoading && !user) setSummaryLoaded(true)
   }, [authLoading, user, fetchTodayMeals])
+
+  useEffect(() => {
+    if (!user) return
+    fetch('/api/auth/me', { credentials: 'include' })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const u = data?.user
+        if (u?.calorieGoal) {
+          setCalorieGoal(u.calorieGoal)
+        } else {
+          setCalorieGoal(calculateDailyCalories({
+            currentWeight: u?.currentWeight,
+            targetWeight: u?.targetWeight,
+            fitnessGoal: u?.fitnessGoal,
+            activityLevel: u?.activityLevel,
+          }))
+        }
+      })
+      .catch(() => {})
+  }, [user])
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedMealSearch(mealSearch), 300)
+    return () => clearTimeout(t)
+  }, [mealSearch])
+
+  const buildMealQuery = useCallback((pageNum: number) => {
+    const params = new URLSearchParams({ page: String(pageNum), limit: '24' })
+    if (debouncedMealSearch) params.set('search', debouncedMealSearch)
+    if (mealCategory !== 'All') params.set('category', mealCategory)
+    if (mealArea !== 'All') params.set('area', mealArea)
+    if (mealLetter !== 'All') params.set('letter', mealLetter)
+    return params.toString()
+  }, [debouncedMealSearch, mealCategory, mealArea, mealLetter])
+
+  useEffect(() => {
+    setMealsLoading(true)
+    setMealPage(1)
+    fetch(`/api/meals?meta=true&${buildMealQuery(1)}`)
+      .then((r) => (r.ok ? r.json() : { meals: [] }))
+      .then((data) => {
+        setRecipeMeals(data.meals || [])
+        setMealTotal(data.total ?? 0)
+        setMealTotalPages(data.totalPages ?? 1)
+        if (data.meta) {
+          setMealCategories(data.meta.categories || [])
+          setMealAreas(data.meta.areas || [])
+          setMealCatalogTotal(data.meta.total ?? 0)
+        }
+      })
+      .catch(() => setRecipeMeals([]))
+      .finally(() => setMealsLoading(false))
+  }, [buildMealQuery])
+
+  const loadMoreMeals = async () => {
+    if (mealPage >= mealTotalPages || mealsLoadingMore) return
+    setMealsLoadingMore(true)
+    const nextPage = mealPage + 1
+    try {
+      const res = await fetch(`/api/meals?${buildMealQuery(nextPage)}`)
+      if (res.ok) {
+        const data = await res.json()
+        setRecipeMeals((prev) => [...prev, ...(data.meals || [])])
+        setMealPage(nextPage)
+      }
+    } finally {
+      setMealsLoadingMore(false)
+    }
+  }
+
+  const clearMealFilters = () => {
+    setMealCategory('All')
+    setMealArea('All')
+    setMealSearch('')
+    setMealLetter('All')
+  }
+
+  const hasMealFilters = mealCategory !== 'All' || mealArea !== 'All' || debouncedMealSearch || mealLetter !== 'All'
+
+  const loadMealDetail = async (id: string) => {
+    if (mealDetails[id]) return
+    const res = await fetch(`/api/meals?id=${id}`)
+    if (res.ok) {
+      const detail = await res.json()
+      setMealDetails((prev) => ({ ...prev, [id]: detail }))
+    }
+  }
+
+  const toggleMeal = async (id: string) => {
+    if (expandedMeal === id) {
+      setExpandedMeal(null)
+      return
+    }
+    setExpandedMeal(id)
+    await loadMealDetail(id)
+  }
 
   const handleSearch = async () => {
     const query = searchQuery.trim()
@@ -184,48 +306,56 @@ export default function NutritionPage() {
     }
   }
 
-  const calorieProgress = Math.min(100, Math.round((totals.calories / CALORIE_GOAL) * 100))
+  const calorieProgress = Math.min(100, Math.round((totals.calories / calorieGoal) * 100))
   const todayLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pt-24 pb-24 px-4 lg:px-8">
+    <div className="min-h-screen pt-28 pb-28 px-4 lg:px-8">
       <div className="max-w-4xl mx-auto space-y-8">
-        <div>
-          <span className="text-[#00ff87] text-sm font-semibold uppercase tracking-widest">Nutrition</span>
-          <h1 className="text-3xl md:text-4xl font-black text-white mt-2">Track Your Meals</h1>
-          <p className="text-[#a0a0a0] mt-1">{todayLabel}</p>
-        </div>
+        <FadeIn>
+          <div className="page-hero px-6 py-10 sm:px-10 md:py-14 gym-floor">
+            <span className="eyebrow">Nutrition Intelligence</span>
+            <h1 className="display-title text-4xl md:text-6xl text-white mt-3">Fuel Every Ambition</h1>
+            <p className="mt-3 text-muted-foreground">Track meals, understand your macros, and stay aligned with your goals · {todayLabel}</p>
+            <p className="workout-label mt-3 text-primary/70">Macros · Meals · Momentum</p>
+          </div>
+        </FadeIn>
 
+        <FadeIn delay={0.1}>
         <section>
-          <h2 className="text-lg font-bold text-white mb-4">Daily Summary</h2>
+          <SectionHeading title="Daily Summary" />
 
           {authLoading || (user && summaryLoading) ? (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[...Array(4)].map((_, i) => <div key={i} className="glass rounded-2xl p-5 skeleton h-24" />)}
             </div>
           ) : !user ? (
-            <div className="glass rounded-2xl p-8 text-center">
-              <div className="text-5xl mb-4">🥗</div>
+            <div className="glass rounded-2xl p-8 text-center card-athletic">
+              <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl border border-primary/20 bg-primary/[.08] text-primary">
+                <Salad className="size-7" />
+              </div>
               <p className="text-white font-semibold mb-2">Sign in to track nutrition</p>
-              <p className="text-[#a0a0a0] text-sm mb-6">Log meals, monitor macros, and hit your daily goals.</p>
+              <p className="text-muted-foreground text-sm mb-6">Log meals, monitor macros, and hit your daily goals.</p>
               <Link href="/login" className="btn-accent px-6 py-3 text-sm">Sign In</Link>
             </div>
-          ) : summaryLoaded && meals.length === 0 ? (
+          ) : summaryLoaded && todayMeals.length === 0 ? (
             <div className="space-y-4">
-              <div className="glass rounded-2xl p-8 text-center">
-                <div className="text-4xl mb-3">📋</div>
+              <div className="glass rounded-2xl p-8 text-center card-athletic">
+                <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-xl border border-primary/20 bg-primary/[.08] text-primary">
+                  <ClipboardList className="size-6" />
+                </div>
                 <p className="text-white font-medium">No meals logged today</p>
-                <p className="text-[#a0a0a0] text-sm mt-1">Search for a food below and log your first meal.</p>
+                <p className="text-muted-foreground text-sm mt-1">Search for a food below and log your first meal.</p>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {[
-                  { label: 'Calories', value: 0, color: 'text-[#00ff87]' },
+                  { label: 'Calories', value: 0, color: 'text-primary' },
                   { label: 'Protein', value: '0g', color: 'text-red-400' },
                   { label: 'Carbs', value: '0g', color: 'text-blue-400' },
                   { label: 'Fat', value: '0g', color: 'text-yellow-400' },
                 ].map(m => (
                   <div key={m.label} className="glass rounded-2xl p-5">
-                    <p className="text-[#a0a0a0] text-xs uppercase tracking-wider">{m.label}</p>
+                    <p className="text-muted-foreground text-xs uppercase tracking-wider">{m.label}</p>
                     <p className={`text-2xl font-black mt-1 ${m.color}`}>{m.value}</p>
                   </div>
                 ))}
@@ -233,43 +363,53 @@ export default function NutritionPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="glass rounded-2xl p-5 border border-[#00ff87]/20">
-                  <p className="text-[#a0a0a0] text-xs uppercase tracking-wider">Calories</p>
-                  <p className="text-2xl font-black text-[#00ff87] mt-1">{Math.round(totals.calories)}</p>
-                  <p className="text-[#555] text-xs mt-1">/ {CALORIE_GOAL} goal</p>
+              <StaggerChildren className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="glass rounded-2xl p-5 border border-primary/20 card-athletic interactive-lift">
+                  <p className="workout-label text-muted-foreground">Calories</p>
+                  <p className="text-2xl font-black text-primary mt-1">
+                    <CountUp value={Math.round(totals.calories)} />
+                  </p>
+                  <p className="text-muted-foreground text-xs mt-1">/ {calorieGoal} goal</p>
                 </div>
-                <div className="glass rounded-2xl p-5">
-                  <p className="text-[#a0a0a0] text-xs uppercase tracking-wider">Protein</p>
-                  <p className="text-2xl font-black text-red-400 mt-1">{Math.round(totals.protein)}g</p>
+                <div className="glass rounded-2xl p-5 card-athletic interactive-lift">
+                  <p className="workout-label text-muted-foreground">Protein</p>
+                  <p className="text-2xl font-black text-red-400 mt-1">
+                    <CountUp value={Math.round(totals.protein)} suffix="g" />
+                  </p>
                 </div>
-                <div className="glass rounded-2xl p-5">
-                  <p className="text-[#a0a0a0] text-xs uppercase tracking-wider">Carbs</p>
-                  <p className="text-2xl font-black text-blue-400 mt-1">{Math.round(totals.carbs)}g</p>
+                <div className="glass rounded-2xl p-5 card-athletic interactive-lift">
+                  <p className="workout-label text-muted-foreground">Carbs</p>
+                  <p className="text-2xl font-black text-blue-400 mt-1">
+                    <CountUp value={Math.round(totals.carbs)} suffix="g" />
+                  </p>
                 </div>
-                <div className="glass rounded-2xl p-5">
-                  <p className="text-[#a0a0a0] text-xs uppercase tracking-wider">Fat</p>
-                  <p className="text-2xl font-black text-yellow-400 mt-1">{Math.round(totals.fat)}g</p>
+                <div className="glass rounded-2xl p-5 card-athletic interactive-lift">
+                  <p className="workout-label text-muted-foreground">Fat</p>
+                  <p className="text-2xl font-black text-yellow-400 mt-1">
+                    <CountUp value={Math.round(totals.fat)} suffix="g" />
+                  </p>
                 </div>
-              </div>
+              </StaggerChildren>
 
               <div className="glass rounded-2xl p-5">
                 <div className="flex justify-between text-sm mb-2">
-                  <span className="text-[#a0a0a0]">Calorie progress</span>
-                  <span className="text-white font-medium">{Math.round(totals.calories)} / {CALORIE_GOAL} cal</span>
+                  <span className="text-muted-foreground">Calorie progress</span>
+                  <span className="text-white font-medium">{Math.round(totals.calories)} / {calorieGoal} cal</span>
                 </div>
-                <div className="h-3 bg-[#1a1a1a] rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-[#00ff87] to-[#00bfff] rounded-full transition-all duration-500"
+                <div className="h-3 bg-muted rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-primary to-sky-400 rounded-full transition-all duration-500"
                     style={{ width: `${calorieProgress}%` }} />
                 </div>
-                <p className="text-[#555] text-xs mt-2">{calorieProgress}% of daily goal</p>
+                <p className="text-muted-foreground text-xs mt-2">{calorieProgress}% of daily goal</p>
               </div>
             </div>
           )}
         </section>
+        </FadeIn>
 
+        <FadeIn delay={0.15}>
         <section>
-          <h2 className="text-lg font-bold text-white mb-4">Food Search</h2>
+          <SectionHeading title="Food Search" description="Search Pakistani and international foods to log meals" />
           <div className="glass rounded-2xl p-5 space-y-4">
             <div className="flex gap-3">
               <input
@@ -277,7 +417,7 @@ export default function NutritionPage() {
                 onChange={e => setSearchQuery(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSearch()}
                 placeholder='e.g. "chicken biryani" or "roti"'
-                className="flex-1 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl px-4 py-3 text-white text-sm placeholder-[#555] outline-none focus:border-[#00ff87]"
+                className="flex-1 bg-background border border-border rounded-xl px-4 py-3 text-white text-sm placeholder:text-muted-foreground outline-none focus:border-primary"
               />
               <button onClick={handleSearch} disabled={searching || !searchQuery.trim()}
                 className="btn-accent px-6 py-3 text-sm font-bold disabled:opacity-50">
@@ -288,40 +428,40 @@ export default function NutritionPage() {
             </div>
 
             {!user && !authLoading && (
-              <p className="text-[#a0a0a0] text-sm text-center py-2">Sign in to search and log foods</p>
+              <p className="text-muted-foreground text-sm text-center py-2">Sign in to search and log foods</p>
             )}
 
             {searchResults.length > 0 && (
               <div className="space-y-3">
                 {searchResults.map((item, idx) => (
-                  <div key={idx} className="glass rounded-xl p-4 border border-[#2a2a2a]">
+                  <div key={idx} className="glass rounded-xl p-4 border border-border">
                     <div className="flex justify-between items-start gap-4">
                       <div className="flex-1 min-w-0">
                         <p className="text-white font-semibold capitalize">{item.name}</p>
-                        <p className="text-[#a0a0a0] text-sm mt-1">{item.calories} cal per {item.per}</p>
-                        <p className="text-[#555] text-xs mt-1">P: {item.protein}g · C: {item.carbs}g · F: {item.fat}g</p>
+                        <p className="text-muted-foreground text-sm mt-1">{item.calories} cal per {item.per}</p>
+                        <p className="text-muted-foreground text-xs mt-1">P: {item.protein}g · C: {item.carbs}g · F: {item.fat}g</p>
                       </div>
                       <button
                         onClick={() => { setLoggingFood(loggingFood?.name === item.name ? null : item); setLogQuantity('100') }}
-                        className="text-xs px-4 py-2 rounded-xl bg-[#00ff87]/10 text-[#00ff87] border border-[#00ff87]/30 hover:bg-[#00ff87]/20 font-medium shrink-0">
+                        className="text-xs px-4 py-2 rounded-xl bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 font-medium shrink-0">
                         Log This
                       </button>
                     </div>
 
                     {loggingFood?.name === item.name && (
-                      <div className="mt-4 pt-4 border-t border-[#2a2a2a] space-y-3">
+                      <div className="mt-4 pt-4 border-t border-border space-y-3">
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <label className="text-[#a0a0a0] text-xs block mb-1">Meal type</label>
+                            <label className="text-muted-foreground text-xs block mb-1">Meal type</label>
                             <select value={logMealType} onChange={e => setLogMealType(e.target.value)}
-                              className="w-full bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-[#00ff87]">
+                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-primary">
                               {MEAL_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                             </select>
                           </div>
                           <div>
-                            <label className="text-[#a0a0a0] text-xs block mb-1">Quantity (g)</label>
+                            <label className="text-muted-foreground text-xs block mb-1">Quantity (g)</label>
                             <input type="number" min="1" value={logQuantity} onChange={e => setLogQuantity(e.target.value)}
-                              className="w-full bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-[#00ff87]" />
+                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-primary" />
                           </div>
                         </div>
                         <button onClick={() => handleLogMeal(item)} disabled={submittingLog}
@@ -336,21 +476,22 @@ export default function NutritionPage() {
             )}
           </div>
         </section>
+        </FadeIn>
 
-        {user && meals.length > 0 && (
+        {user && todayMeals.length > 0 && (
           <section>
-            <h2 className="text-lg font-bold text-white mb-4">Today&apos;s Meals</h2>
+            <SectionHeading title="Today's Meals" />
             <div className="space-y-3">
-              {meals.map(meal => (
-                <div key={meal._id} className="glass rounded-xl p-4 border border-[#2a2a2a]">
-                  <p className="text-[#00ff87] text-xs font-semibold uppercase mb-2">{meal.mealType}</p>
+              {todayMeals.map(meal => (
+                <div key={meal._id} className="glass rounded-xl p-4 border border-border">
+                  <p className="text-primary text-xs font-semibold uppercase mb-2">{meal.mealType}</p>
                   {meal.foods.map((food, i) => (
                     <div key={i} className="flex justify-between text-sm">
                       <span className="text-white">{food.name}</span>
-                      <span className="text-[#00ff87] font-medium">{Math.round(food.calories)} cal</span>
+                      <span className="text-primary font-medium">{Math.round(food.calories)} cal</span>
                     </div>
                   ))}
-                  <p className="text-[#555] text-xs mt-2">
+                  <p className="text-muted-foreground text-xs mt-2">
                     P: {Math.round(meal.totalProtein)}g · C: {Math.round(meal.totalCarbs)}g · F: {Math.round(meal.totalFat)}g
                   </p>
                 </div>
@@ -359,34 +500,168 @@ export default function NutritionPage() {
           </section>
         )}
 
+        <FadeIn delay={0.2}>
         <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-white">Pakistani Recipes</h2>
-            <span className="text-[#555] text-xs">Curated picks</span>
+          <SectionHeading
+            title="Meal Inspiration"
+            description={
+              mealCatalogTotal > 0
+                ? `${mealCatalogTotal}+ real recipes from TheMealDB — filter by category, cuisine, or search by name`
+                : 'Real recipes from TheMealDB — images, ingredients, and instructions'
+            }
+          />
+
+          <div className="glass rounded-2xl p-4 sm:p-5 mb-4 space-y-4">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              {!mealsLoading && (
+                <span className="ml-auto">
+                  Showing <span className="text-primary font-semibold">{mealTotal.toLocaleString()}</span>
+                  {mealCatalogTotal > 0 && <> of {mealCatalogTotal.toLocaleString()} meals</>}
+                </span>
+              )}
+            </div>
+
+            <input
+              value={mealSearch}
+              onChange={(e) => setMealSearch(e.target.value)}
+              placeholder="Search recipes by name..."
+              className="w-full bg-background border border-border rounded-xl px-4 py-3 text-white text-sm placeholder:text-muted-foreground outline-none focus:border-primary"
+            />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label className="flex flex-col gap-1.5">
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Category</span>
+                <select
+                  value={mealCategory}
+                  onChange={(e) => setMealCategory(e.target.value)}
+                  className="bg-background border border-border rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-primary"
+                >
+                  <option value="All">All categories</option>
+                  {mealCategories.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Cuisine / Area</span>
+                <select
+                  value={mealArea}
+                  onChange={(e) => setMealArea(e.target.value)}
+                  className="bg-background border border-border rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-primary"
+                >
+                  <option value="All">All cuisines</option>
+                  {mealAreas.map((a) => (
+                    <option key={a} value={a}>{a}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                onClick={() => setMealLetter('All')}
+                className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${
+                  mealLetter === 'All' ? 'border-primary bg-primary text-black' : 'border-border text-muted-foreground'
+                }`}
+              >
+                All
+              </button>
+              {'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map((letter) => (
+                <button
+                  key={letter}
+                  onClick={() => setMealLetter(letter)}
+                  className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
+                    mealLetter === letter ? 'border-primary bg-primary text-black' : 'border-border text-muted-foreground hover:border-white/20'
+                  }`}
+                >
+                  {letter}
+                </button>
+              ))}
+            </div>
+
+            {hasMealFilters && (
+              <button onClick={clearMealFilters} className="text-xs text-muted-foreground hover:text-white underline underline-offset-2">
+                Clear recipe filters
+              </button>
+            )}
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {PAKISTANI_RECIPES.map((recipe, idx) => (
-              <div key={idx} className="glass rounded-2xl p-5 hover:border-[#00ff87]/20 transition-colors">
-                <div className="flex items-start gap-3">
-                  <span className="text-3xl">{recipe.emoji}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white font-semibold leading-tight">{recipe.name}</p>
-                    <span className="inline-block mt-1 text-[10px] uppercase tracking-wider text-[#00ff87] bg-[#00ff87]/10 px-2 py-0.5 rounded-full">
-                      {recipe.tag}
-                    </span>
-                  </div>
+
+          {mealsLoading ? (
+            <div className="dashboard-grid cols-3">
+              {[...Array(6)].map((_, i) => <div key={i} className="glass skeleton h-72 rounded-2xl" />)}
+            </div>
+          ) : recipeMeals.length === 0 ? (
+            <div className="glass rounded-2xl p-8 text-center">
+              <UtensilsCrossed className="size-8 mx-auto mb-3 text-primary/50" />
+              <p className="text-white font-medium">No recipes match your filters</p>
+              <p className="text-muted-foreground text-sm mt-1">Try a different category, cuisine, or search term.</p>
+            </div>
+          ) : (
+            <>
+              <StaggerChildren className="dashboard-grid cols-3">
+                {recipeMeals.map((recipe) => {
+                  const detail = mealDetails[recipe.id]
+                  const isOpen = expandedMeal === recipe.id
+                  return (
+                    <div key={recipe.id} className="glass interactive-lift card-athletic flex h-full flex-col overflow-hidden rounded-2xl">
+                      <div className="relative h-44 bg-card">
+                        {recipe.thumb ? (
+                          <Image src={recipe.thumb} alt={recipe.name} fill sizes="(max-width:768px) 100vw, 33vw" className="object-cover" loading="lazy" />
+                        ) : (
+                          <div className="flex h-full items-center justify-center text-primary/50"><UtensilsCrossed className="size-8" /></div>
+                        )}
+                        <span className="absolute left-3 top-3 rounded-full border border-primary/20 bg-black/60 px-2 py-0.5 text-[10px] font-bold text-primary backdrop-blur">
+                          {recipe.category}
+                        </span>
+                      </div>
+                      <div className="flex flex-1 flex-col p-5">
+                        <p className="text-white font-semibold leading-tight">{recipe.name}</p>
+                        <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                          <Globe className="size-3" /> {recipe.area}
+                        </div>
+                        <button
+                          onClick={() => void toggleMeal(recipe.id)}
+                          className="mt-4 flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80"
+                        >
+                          {isOpen ? <><ChevronUp className="size-3" /> Hide recipe</> : <><ChevronDown className="size-3" /> View recipe</>}
+                        </button>
+                        {isOpen && detail && (
+                          <div className="mt-3 space-y-3 border-t border-border pt-3 text-xs">
+                            <div>
+                              <p className="workout-label text-muted-foreground mb-1">Ingredients</p>
+                              <ul className="space-y-0.5 text-muted-foreground">
+                                {detail.ingredients.map((ing) => (
+                                  <li key={ing.name}>· {ing.measure} {ing.name}</li>
+                                ))}
+                              </ul>
+                            </div>
+                            <div>
+                              <p className="workout-label text-muted-foreground mb-1">Instructions</p>
+                              <p className="leading-relaxed text-muted-foreground whitespace-pre-line">{detail.instructions}</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </StaggerChildren>
+
+              {mealPage < mealTotalPages && (
+                <div className="mt-8 text-center">
+                  <button
+                    onClick={() => void loadMoreMeals()}
+                    disabled={mealsLoadingMore}
+                    className="btn-accent px-8 py-3 text-sm font-bold disabled:opacity-50"
+                  >
+                    {mealsLoadingMore ? 'Loading...' : `Load more (${recipeMeals.length} of ${mealTotal})`}
+                  </button>
                 </div>
-                <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                  <div><p className="text-[#555]">Calories</p><p className="text-white font-bold">{recipe.calories}</p></div>
-                  <div><p className="text-[#555]">Protein</p><p className="text-white font-bold">{recipe.protein}g</p></div>
-                  <div><p className="text-[#555]">Carbs</p><p className="text-white font-bold">{recipe.carbs}g</p></div>
-                  <div><p className="text-[#555]">Fat</p><p className="text-white font-bold">{recipe.fat}g</p></div>
-                </div>
-                <p className="text-[#555] text-xs mt-3">⏱ {recipe.time}</p>
-              </div>
-            ))}
-          </div>
+              )}
+            </>
+          )}
         </section>
+        </FadeIn>
       </div>
     </div>
   )

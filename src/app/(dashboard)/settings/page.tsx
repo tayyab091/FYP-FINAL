@@ -9,6 +9,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
+import { SignInGate } from '@/components/shared/AccessGate'
+import { PageLoader } from '@/components/shared/PageLoader'
+import { FormSelect } from '@/components/ui/form-select'
 
 interface ProfileData {
   fullName: string
@@ -22,6 +25,14 @@ interface ProfileData {
   profileImage: string
 }
 
+interface TrainerProfileData {
+  specialty: string
+  bio: string
+  certifications: string
+  hourlyRate: string
+  experience: string
+}
+
 export default function SettingsPage() {
   const { user, isLoading: authLoading, logout, refreshUser } = useAuth()
   const [profile, setProfile] = useState<ProfileData>({
@@ -32,6 +43,10 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [changingPass, setChangingPass] = useState(false)
+  const [trainerProfile, setTrainerProfile] = useState<TrainerProfileData>({
+    specialty: '', bio: '', certifications: '', hourlyRate: '', experience: '',
+  })
+  const [savingTrainer, setSavingTrainer] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -54,6 +69,23 @@ export default function SettingsPage() {
         }
       })
       .finally(() => setLoading(false))
+
+    if (user.role === 'trainer') {
+      fetch('/api/trainers/profile')
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          const t = data
+          if (t) {
+            setTrainerProfile({
+              specialty: Array.isArray(t.specialty) ? t.specialty.join(', ') : '',
+              bio: t.bio || '',
+              certifications: Array.isArray(t.certifications) ? t.certifications.join(', ') : '',
+              hourlyRate: t.hourlyRate?.toString() || '',
+              experience: t.experience || '',
+            })
+          }
+        })
+    }
   }, [user])
 
   const saveProfile = async (e: React.FormEvent) => {
@@ -107,32 +139,59 @@ export default function SettingsPage() {
     }
   }
 
-  if (authLoading) return <Loader />
-  if (!user) return (
-    <div className="min-h-screen bg-[#0a0a0a] pt-24 flex items-center justify-center">
-      <p className="text-[#a0a0a0]">Please sign in to access settings</p>
-    </div>
-  )
-  const settingsTabs = user.role === 'user' ? ['profile', 'fitness', 'account'] : ['profile', 'account']
+  const saveTrainerProfile = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSavingTrainer(true)
+    try {
+      const res = await fetch('/api/trainers/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          specialty: trainerProfile.specialty.split(',').map(s => s.trim()).filter(Boolean),
+          bio: trainerProfile.bio,
+          certifications: trainerProfile.certifications.split(',').map(s => s.trim()).filter(Boolean),
+          hourlyRate: trainerProfile.hourlyRate ? parseFloat(trainerProfile.hourlyRate) : 0,
+          experience: trainerProfile.experience,
+        }),
+      })
+      if (!res.ok) throw new Error()
+      toast.success('Trainer profile updated!')
+    } catch {
+      toast.error('Failed to update trainer profile')
+    } finally {
+      setSavingTrainer(false)
+    }
+  }
+
+  if (authLoading) return <PageLoader />
+  if (!user) return <SignInGate redirectLabel="Sign in to access settings" />
+  const settingsTabs = user.role === 'user'
+    ? ['profile', 'fitness', 'account']
+    : user.role === 'trainer'
+      ? ['profile', 'trainer', 'account']
+      : ['profile', 'account']
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pt-8 pb-28 px-6">
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-black mb-2">Settings</h1>
-        <p className="text-[#a0a0a0] mb-8">Manage your profile and account</p>
+    <div className="min-h-screen pt-6 pb-28 px-4 sm:px-6">
+      <div className="max-w-3xl mx-auto">
+        <div className="page-hero mb-6 px-6 py-8 sm:px-8">
+          <p className="eyebrow mb-2">Personalization</p>
+          <h1 className="display-title text-3xl md:text-4xl">Account Settings</h1>
+          <p className="mt-2 text-muted-foreground">Manage your identity, preferences, goals, and account security.</p>
+        </div>
 
         <Tabs defaultValue="profile">
-          <TabsList className="bg-[#111] border border-[#1a1a1a] mb-8">
+          <TabsList className="mb-8">
             {settingsTabs.map(t => (
-              <TabsTrigger key={t} value={t} className="capitalize data-active:bg-[#00ff87]/10 data-active:text-[#00ff87]">
-                {t === 'fitness' ? 'Fitness Goals' : t === 'account' ? 'Account' : 'Profile'}
+              <TabsTrigger key={t} value={t} className="capitalize">
+                {t === 'fitness' ? 'Fitness Goals' : t === 'account' ? 'Account' : t === 'trainer' ? 'Coach Profile' : 'Profile'}
               </TabsTrigger>
             ))}
           </TabsList>
 
           <TabsContent value="profile">
-            {loading ? <Skeleton className="h-64 bg-[#1a1a1a]" /> : (
-              <Card className="bg-[#111] border-[#1a1a1a] text-white">
+            {loading ? <Skeleton className="h-64 bg-muted" /> : (
+              <Card>
                 <CardHeader><CardTitle>Profile Information</CardTitle></CardHeader>
                 <CardContent>
                   <form onSubmit={saveProfile} className="space-y-4">
@@ -140,32 +199,32 @@ export default function SettingsPage() {
                       <Label htmlFor="fullName">Full Name</Label>
                       <Input id="fullName" value={profile.fullName}
                         onChange={e => setProfile(p => ({ ...p, fullName: e.target.value }))}
-                        className="mt-1 bg-[#0a0a0a] border-[#2a2a2a]" />
+                        className="mt-1 bg-background border-border" />
                     </div>
                     <div>
                       <Label htmlFor="email">Email</Label>
                       <Input id="email" value={profile.email} disabled
-                        className="mt-1 bg-[#0a0a0a] border-[#2a2a2a] opacity-50" />
+                        className="mt-1 bg-background border-border opacity-50" />
                     </div>
                     <div>
                       <Label htmlFor="country">Country</Label>
                       <Input id="country" value={profile.country}
                         onChange={e => setProfile(p => ({ ...p, country: e.target.value }))}
-                        className="mt-1 bg-[#0a0a0a] border-[#2a2a2a]" />
+                        className="mt-1 bg-background border-border" />
                     </div>
                     <div>
                       <Label htmlFor="bio">Bio</Label>
                       <Input id="bio" value={profile.bio}
                         onChange={e => setProfile(p => ({ ...p, bio: e.target.value }))}
-                        className="mt-1 bg-[#0a0a0a] border-[#2a2a2a]" placeholder="Tell us about yourself" />
+                        className="mt-1 bg-background border-border" placeholder="Tell us about yourself" />
                     </div>
                     <div>
                       <Label htmlFor="profileImage">Profile Image URL</Label>
                       <Input id="profileImage" value={profile.profileImage}
                         onChange={e => setProfile(p => ({ ...p, profileImage: e.target.value }))}
-                        className="mt-1 bg-[#0a0a0a] border-[#2a2a2a]" />
+                        className="mt-1 bg-background border-border" />
                     </div>
-                    <Button type="submit" disabled={saving} className="bg-[#00ff87] text-black hover:bg-[#00cc6a] w-full">
+                    <Button type="submit" disabled={saving} className="bg-primary text-black hover:brightness-95 w-full">
                       {saving ? 'Saving...' : 'Save Profile'}
                     </Button>
                   </form>
@@ -175,51 +234,101 @@ export default function SettingsPage() {
           </TabsContent>
 
           {user.role === 'user' && <TabsContent value="fitness">
-            {loading ? <Skeleton className="h-48 bg-[#1a1a1a]" /> : (
-              <Card className="bg-[#111] border-[#1a1a1a] text-white">
+            {loading ? <Skeleton className="h-48 bg-muted" /> : (
+              <Card>
                 <CardHeader><CardTitle>Fitness Goals</CardTitle></CardHeader>
                 <CardContent>
                   <form onSubmit={saveProfile} className="space-y-4">
                     <div>
                       <Label htmlFor="fitnessGoal">Primary Goal</Label>
-                      <select id="fitnessGoal" value={profile.fitnessGoal}
+                      <FormSelect id="fitnessGoal" value={profile.fitnessGoal}
                         onChange={e => setProfile(p => ({ ...p, fitnessGoal: e.target.value }))}
-                        className="mt-1 w-full h-8 rounded-lg bg-[#0a0a0a] border border-[#2a2a2a] px-2 text-sm">
+                        className="mt-1">
                         <option value="">Select a goal</option>
                         <option value="weight_loss">Weight Loss</option>
                         <option value="muscle_gain">Muscle Gain</option>
                         <option value="endurance">Endurance</option>
                         <option value="flexibility">Flexibility</option>
                         <option value="general_fitness">General Fitness</option>
-                      </select>
+                      </FormSelect>
                     </div>
                     <div>
                       <Label htmlFor="activityLevel">Activity Level</Label>
-                      <select id="activityLevel" value={profile.activityLevel}
+                      <FormSelect id="activityLevel" value={profile.activityLevel}
                         onChange={e => setProfile(p => ({ ...p, activityLevel: e.target.value }))}
-                        className="mt-1 w-full h-8 rounded-lg bg-[#0a0a0a] border border-[#2a2a2a] px-2 text-sm">
+                        className="mt-1">
                         <option value="sedentary">Sedentary</option>
                         <option value="light">Lightly Active</option>
                         <option value="moderate">Moderately Active</option>
                         <option value="very_active">Very Active</option>
-                      </select>
+                      </FormSelect>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="currentWeight">Current Weight (kg)</Label>
                         <Input id="currentWeight" type="number" step="0.1" value={profile.currentWeight}
                           onChange={e => setProfile(p => ({ ...p, currentWeight: e.target.value }))}
-                          className="mt-1 bg-[#0a0a0a] border-[#2a2a2a]" />
+                          className="mt-1 bg-background border-border" />
                       </div>
                       <div>
                         <Label htmlFor="targetWeight">Target Weight (kg)</Label>
                         <Input id="targetWeight" type="number" step="0.1" value={profile.targetWeight}
                           onChange={e => setProfile(p => ({ ...p, targetWeight: e.target.value }))}
-                          className="mt-1 bg-[#0a0a0a] border-[#2a2a2a]" />
+                          className="mt-1 bg-background border-border" />
                       </div>
                     </div>
-                    <Button type="submit" disabled={saving} className="bg-[#00ff87] text-black hover:bg-[#00cc6a] w-full">
+                    <Button type="submit" disabled={saving} className="bg-primary text-black hover:brightness-95 w-full">
                       {saving ? 'Saving...' : 'Save Goals'}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>}
+
+          {user.role === 'trainer' && <TabsContent value="trainer">
+            {loading ? <Skeleton className="h-64 bg-muted" /> : (
+              <Card>
+                <CardHeader><CardTitle>Coach Profile</CardTitle></CardHeader>
+                <CardContent>
+                  <form onSubmit={saveTrainerProfile} className="space-y-4">
+                    <div>
+                      <Label htmlFor="specialty">Specialties (comma-separated)</Label>
+                      <Input id="specialty" value={trainerProfile.specialty}
+                        onChange={e => setTrainerProfile(p => ({ ...p, specialty: e.target.value }))}
+                        className="mt-1 bg-background border-border"
+                        placeholder="Strength Training, HIIT, Nutrition" />
+                    </div>
+                    <div>
+                      <Label htmlFor="trainerBio">Bio</Label>
+                      <Input id="trainerBio" value={trainerProfile.bio}
+                        onChange={e => setTrainerProfile(p => ({ ...p, bio: e.target.value }))}
+                        className="mt-1 bg-background border-border" />
+                    </div>
+                    <div>
+                      <Label htmlFor="certifications">Certifications (comma-separated)</Label>
+                      <Input id="certifications" value={trainerProfile.certifications}
+                        onChange={e => setTrainerProfile(p => ({ ...p, certifications: e.target.value }))}
+                        className="mt-1 bg-background border-border"
+                        placeholder="ACSM, CrossFit L2" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="hourlyRate">Hourly Rate ($)</Label>
+                        <Input id="hourlyRate" type="number" min="0" value={trainerProfile.hourlyRate}
+                          onChange={e => setTrainerProfile(p => ({ ...p, hourlyRate: e.target.value }))}
+                          className="mt-1 bg-background border-border" />
+                      </div>
+                      <div>
+                        <Label htmlFor="experience">Experience</Label>
+                        <Input id="experience" value={trainerProfile.experience}
+                          onChange={e => setTrainerProfile(p => ({ ...p, experience: e.target.value }))}
+                          className="mt-1 bg-background border-border"
+                          placeholder="5 years" />
+                      </div>
+                    </div>
+                    <Button type="submit" disabled={savingTrainer} className="bg-primary text-black hover:brightness-95 w-full">
+                      {savingTrainer ? 'Saving...' : 'Save Coach Profile'}
                     </Button>
                   </form>
                 </CardContent>
@@ -229,7 +338,7 @@ export default function SettingsPage() {
 
           <TabsContent value="account">
             <div className="space-y-6">
-              <Card className="bg-[#111] border-[#1a1a1a] text-white">
+              <Card>
                 <CardHeader><CardTitle>Change Password</CardTitle></CardHeader>
                 <CardContent>
                   <form onSubmit={changePassword} className="space-y-4">
@@ -237,38 +346,38 @@ export default function SettingsPage() {
                       <Label htmlFor="current">Current Password</Label>
                       <Input id="current" type="password" value={passwords.current}
                         onChange={e => setPasswords(p => ({ ...p, current: e.target.value }))}
-                        className="mt-1 bg-[#0a0a0a] border-[#2a2a2a]" />
+                        className="mt-1 bg-background border-border" />
                     </div>
                     <div>
                       <Label htmlFor="newPass">New Password</Label>
                       <Input id="newPass" type="password" value={passwords.newPass}
                         onChange={e => setPasswords(p => ({ ...p, newPass: e.target.value }))}
-                        className="mt-1 bg-[#0a0a0a] border-[#2a2a2a]" />
+                        className="mt-1 bg-background border-border" />
                     </div>
                     <div>
                       <Label htmlFor="confirm">Confirm New Password</Label>
                       <Input id="confirm" type="password" value={passwords.confirm}
                         onChange={e => setPasswords(p => ({ ...p, confirm: e.target.value }))}
-                        className="mt-1 bg-[#0a0a0a] border-[#2a2a2a]" />
+                        className="mt-1 bg-background border-border" />
                     </div>
-                    <Button type="submit" disabled={changingPass} className="bg-[#00ff87] text-black hover:bg-[#00cc6a] w-full">
+                    <Button type="submit" disabled={changingPass} className="bg-primary text-black hover:brightness-95 w-full">
                       {changingPass ? 'Changing...' : 'Change Password'}
                     </Button>
                   </form>
                 </CardContent>
               </Card>
 
-              <Card className="bg-[#111] border-[#1a1a1a] text-white">
+              <Card>
                 <CardHeader><CardTitle>Account</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex justify-between items-center">
                     <div>
                       <div className="font-medium">Role</div>
-                      <div className="text-[#555] text-sm capitalize">{user.role.replace('_', ' ')}</div>
+                      <div className="text-muted-foreground text-sm capitalize">{user.role.replace('_', ' ')}</div>
                     </div>
                     <div>
                       <div className="font-medium">Plan</div>
-                      <div className="text-[#00ff87] text-sm capitalize">{user.subscription?.plan || 'basic'}</div>
+                      <div className="text-primary text-sm capitalize">{user.subscription?.plan || 'basic'}</div>
                     </div>
                   </div>
                   <Button onClick={logout} variant="destructive" className="w-full">
@@ -284,10 +393,3 @@ export default function SettingsPage() {
   )
 }
 
-function Loader() {
-  return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-[#00ff87] border-t-transparent rounded-full animate-spin" />
-    </div>
-  )
-}
