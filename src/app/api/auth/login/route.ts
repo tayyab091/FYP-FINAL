@@ -21,6 +21,9 @@ export async function POST(req: NextRequest) {
     if (user.isSuspended) {
       return NextResponse.json({ message: 'Account suspended. Contact support.' }, { status: 403 })
     }
+    if (user.isActive === false) {
+      return NextResponse.json({ message: 'Account is inactive. Contact support.' }, { status: 403 })
+    }
 
     const isValid = await bcrypt.compare(password, user.password)
     if (!isValid) {

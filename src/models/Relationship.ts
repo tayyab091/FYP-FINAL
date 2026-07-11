@@ -16,4 +16,6 @@ const RelationshipSchema = new Schema({
   canCreateWorkouts: { type: Boolean, default: false },
 }, { timestamps: true })
 
+RelationshipSchema.index({ userId: 1, trainerId: 1 }, { unique: true })
+
 export default mongoose.models.Relationship || mongoose.model('Relationship', RelationshipSchema)

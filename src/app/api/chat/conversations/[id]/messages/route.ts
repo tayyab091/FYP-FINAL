@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/mongodb'
 import Message from '@/models/Message'
 import Conversation from '@/models/Conversation'
 import User from '@/models/User'
+import Relationship from '@/models/Relationship'
 import { getUser } from '@/lib/auth'
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -15,9 +16,17 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const conversation = await Conversation.findOne({
       _id: id,
       participants: tokenUser.userId,
-    }).select('_id')
+    }).select('_id participants relationshipId')
     if (!conversation) {
       return NextResponse.json({ message: 'Conversation not found' }, { status: 404 })
+    }
+    const relationship = await Relationship.findOne({
+      _id: conversation.relationshipId,
+      status: 'active',
+      canChat: true,
+    }).select('_id')
+    if (!relationship) {
+      return NextResponse.json({ message: 'Chat is not available' }, { status: 403 })
     }
 
     const messages = await Message.find({ conversationId: id })
@@ -28,6 +37,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       ...message,
       attachedPlan: message.attachedPlanId || undefined,
     }))
+    await Conversation.updateOne(
+      { _id: conversation._id },
+      { $set: { [`unreadCounts.${tokenUser.userId}`]: 0 } },
+    )
     return NextResponse.json(shaped)
   } catch {
     return NextResponse.json({ message: 'Server error' }, { status: 500 })
@@ -59,6 +72,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!conversation) {
       return NextResponse.json({ message: 'Conversation not found' }, { status: 404 })
     }
+    const relationship = await Relationship.findOne({
+      _id: conversation.relationshipId,
+      status: 'active',
+      canChat: true,
+    }).select('_id')
+    if (!relationship) {
+      return NextResponse.json({ message: 'Chat is not available' }, { status: 403 })
+    }
 
     const user = await User.findById(tokenUser.userId).select('fullName')
     const message = await Message.create({
@@ -70,9 +91,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     })
 
     // Update conversation last message
+    const unreadIncrements = Object.fromEntries(
+      conversation.participants
+        .map((participantId: { toString(): string }) => participantId.toString())
+        .filter((participantId: string) => participantId !== tokenUser.userId)
+        .map((participantId: string) => [`unreadCounts.${participantId}`, 1]),
+    )
     await Conversation.findByIdAndUpdate(conversation._id, {
-      lastMessage: content.trim().slice(0, 100),
-      lastMessageTime: new Date(),
+      $set: {
+        lastMessage: content.trim().slice(0, 100),
+        lastMessageTime: new Date(),
+      },
+      ...(Object.keys(unreadIncrements).length > 0 && { $inc: unreadIncrements }),
     })
 
     return NextResponse.json(message, { status: 201 })

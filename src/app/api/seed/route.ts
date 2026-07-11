@@ -7,6 +7,9 @@ import bcrypt from 'bcryptjs'
 
 export async function POST(req: NextRequest) {
   try {
+    if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DATABASE_SEEDING !== 'true') {
+      return NextResponse.json({ message: 'Not found' }, { status: 404 })
+    }
     const { setupKey } = await req.json()
     if (setupKey !== process.env.ADMIN_SETUP_KEY) {
       return NextResponse.json({ message: 'Invalid setup key' }, { status: 403 })

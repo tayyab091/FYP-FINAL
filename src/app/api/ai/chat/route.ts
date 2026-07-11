@@ -1,8 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+interface ChatHistoryItem {
+  role?: string
+  content?: string
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { message, history = [] } = await req.json()
+    if (typeof message !== 'string' || !message.trim()) {
+      return NextResponse.json({ message: 'Message is required' }, { status: 400 })
+    }
+    if (message.length > 1000) {
+      return NextResponse.json({ message: 'Message is too long' }, { status: 400 })
+    }
+    const safeHistory = Array.isArray(history)
+      ? history.slice(-6).filter(
+          (item: ChatHistoryItem) =>
+            typeof item?.content === 'string' && item.content.length <= 1000,
+        )
+      : []
 
     const GEMINI_KEY = process.env.GEMINI_API_KEY
 
@@ -52,7 +69,7 @@ export async function POST(req: NextRequest) {
             }]
           },
           contents: [
-            ...history.slice(-6).map((m: any) => ({
+            ...safeHistory.map((m: ChatHistoryItem) => ({
               role: m.role === 'assistant' ? 'model' : 'user',
               parts: [{ text: m.content }]
             })),

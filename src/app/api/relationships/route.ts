@@ -16,9 +16,12 @@ export async function GET(req: NextRequest) {
     if (tokenUser.role === 'trainer') {
       const Trainer = (await import('@/models/Trainer')).default
       const trainer = await Trainer.findOne({ userId: tokenUser.userId })
-      if (trainer) query.trainerId = trainer._id
-    } else {
+      if (!trainer) return NextResponse.json([])
+      query.trainerId = trainer._id
+    } else if (tokenUser.role === 'user') {
       query.userId = tokenUser.userId
+    } else {
+      return NextResponse.json({ message: 'Not authorized' }, { status: 403 })
     }
     if (status) query.status = status
 

@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
         _id: c._id,
         otherUser: other || { fullName: 'Unknown', email: '' },
         lastMessage: c.lastMessage || '',
-        lastMessageTime: c.updatedAt,
+        lastMessageTime: c.lastMessageTime || c.updatedAt,
         unreadCount: (c.unreadCounts as any)?.[tokenUser.userId] || 0,
       }
     })

@@ -14,6 +14,7 @@ interface Trainer {
   bio?: string
   profileImage?: string
   gymName?: string
+  isFallback?: boolean
 }
 
 function TrainerCard({ trainer, onConnect }: { trainer: Trainer; onConnect: (id: string) => Promise<void> }) {
@@ -47,7 +48,7 @@ function TrainerCard({ trainer, onConnect }: { trainer: Trainer; onConnect: (id:
         )}
         <div className="absolute top-3 right-3 flex items-center gap-1 bg-[#0a0a0a]/80 px-2 py-1 rounded-full">
           <span className="w-1.5 h-1.5 rounded-full bg-[#00ff87] animate-pulse" />
-          <span className="text-[10px] text-[#00ff87] font-medium">Verified</span>
+          <span className="text-[10px] text-[#00ff87] font-medium">{trainer.isFallback ? 'Preview' : 'Verified'}</span>
         </div>
       </div>
 
@@ -77,16 +78,18 @@ function TrainerCard({ trainer, onConnect }: { trainer: Trainer; onConnect: (id:
 
         <button
           onClick={handleConnect}
-          disabled={status !== 'idle'}
+          disabled={status !== 'idle' || trainer.isFallback}
           className={`w-full py-2.5 rounded-xl text-sm font-bold transition-all ${
             status === 'sent' ? 'bg-[#00ff87]/20 text-[#00ff87] border border-[#00ff87]/30 cursor-default' :
             status === 'pending' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 cursor-default' :
             status === 'loading' ? 'bg-[#00ff87] text-black opacity-70 cursor-wait' :
+            trainer.isFallback ? 'bg-[#1a1a1a] text-[#777] cursor-not-allowed' :
             'bg-[#00ff87] text-black hover:bg-[#00cc6a] hover:-translate-y-0.5 active:translate-y-0'
           }`}>
           {status === 'loading' ? 'Sending...' :
            status === 'sent' ? '✓ Request Sent' :
            status === 'pending' ? '⏳ Pending' :
+           trainer.isFallback ? 'Seed database to connect' :
            'Connect'}
         </button>
       </div>

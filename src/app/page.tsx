@@ -33,8 +33,8 @@ const FEATURES = [
 
 const PLANS = [
   { name: 'Basic', price: 'Free', features: ['AI chatbot', 'Exercise library', 'Basic tracking'], highlight: false },
-  { name: 'Pro', price: 'Rs 999/mo', features: ['Everything in Basic', '1 trainer connection', 'Meal analysis', 'Progress charts'], highlight: true },
-  { name: 'Elite', price: 'Rs 2,499/mo', features: ['Everything in Pro', 'Unlimited trainers', 'Priority support', 'Custom plans'], highlight: false },
+  { name: 'Pro', price: '$19/mo', features: ['Everything in Basic', '1 trainer connection', 'Meal analysis', 'Progress charts'], highlight: true },
+  { name: 'Elite', price: '$39/mo', features: ['Everything in Pro', 'Unlimited trainers', 'Priority support', 'Custom plans'], highlight: false },
 ]
 
 function GuestPage() {

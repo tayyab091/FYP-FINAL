@@ -36,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearTimeout(timeout)
       if (res.ok) {
         const data = await res.json()
-        setUser(data.user || null)
+        setUser(data.user ? { ...data.user, id: data.user.id || data.user._id } : null)
       } else {
         setUser(null)
       }

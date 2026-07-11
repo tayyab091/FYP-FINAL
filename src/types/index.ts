@@ -26,6 +26,7 @@ export interface Trainer {
   isFullyVerified: boolean
   isActive: boolean
   isFeatured: boolean
+  isFallback?: boolean
   totalClients?: number
 }
 
