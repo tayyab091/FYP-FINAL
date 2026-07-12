@@ -93,3 +93,22 @@ export function getWorkoutWeeklyLimit(plan: PlanId): number {
 export function getTrainerConnectionLimit(plan: PlanId): number {
   return PLAN_LIMITS[plan].maxTrainerConnections
 }
+
+export async function activateUserPlan(userId: string, plan: 'pro' | 'elite') {
+  const startDate = new Date()
+  const endDate = new Date(startDate)
+  endDate.setMonth(endDate.getMonth() + 1)
+
+  return User.findByIdAndUpdate(
+    userId,
+    {
+      subscription: {
+        plan,
+        status: 'active',
+        startDate,
+        endDate,
+      },
+    },
+    { new: true, runValidators: true },
+  ).select('-password')
+}
