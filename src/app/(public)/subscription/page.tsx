@@ -1,12 +1,53 @@
 'use client'
-import { useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { toast } from 'sonner'
 import { PLANS, type PlanId } from '@/lib/plans'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+
+function isClientStripeReady(): boolean {
+  const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  if (!key) return false
+  const normalized = key.trim().toUpperCase()
+  return (
+    key.startsWith('pk_') &&
+    !normalized.includes('PASTE_') &&
+    !normalized.includes('REPLACE') &&
+    !normalized.endsWith('_HERE')
+  )
+}
+
+function SubscriptionReturnHandler() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const { refreshUser } = useAuth()
+
+  useEffect(() => {
+    const success = searchParams.get('success')
+    const canceled = searchParams.get('canceled')
+    if (!success && !canceled) return
+
+    if (success === 'true') {
+      const plan = searchParams.get('plan')
+      const planName = PLANS.find(p => p.id === plan)?.name || 'Pro'
+      refreshUser().then(() => {
+        toast.success(`${planName} plan activated!`)
+        router.replace('/subscription')
+      })
+      return
+    }
+
+    if (canceled === 'true') {
+      toast.info('Payment canceled. No charges were made.')
+      router.replace('/subscription')
+    }
+  }, [searchParams, refreshUser, router])
+
+  return null
+}
 
 export default function SubscriptionPage() {
   const { user, isLoading: authLoading, refreshUser } = useAuth()
@@ -14,6 +55,7 @@ export default function SubscriptionPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<PlanId | null>(null)
   const [processing, setProcessing] = useState(false)
+  const stripeReady = isClientStripeReady()
 
   const currentPlan: PlanId = (user?.subscription?.plan as PlanId) || 'basic'
 
@@ -32,23 +74,37 @@ export default function SubscriptionPage() {
   }
 
   const handleConfirmPayment = async () => {
-    if (!selectedPlan) return
+    if (!selectedPlan || selectedPlan === 'basic') return
     setProcessing(true)
     try {
       const res = await fetch('/api/subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: selectedPlan }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message)
+
+      if (data.mode === 'stripe' && data.url) {
+        window.location.href = data.url
+        return
+      }
+
+      const simRes = await fetch('/api/subscription', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan: selectedPlan, simulatedPayment: true }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.message)
+      const simData = await simRes.json()
+      if (!simRes.ok) throw new Error(simData.message)
+
       await refreshUser()
       const planName = PLANS.find(p => p.id === selectedPlan)?.name || 'Pro'
       toast.success(`Payment simulated! ${planName} activated.`)
       setModalOpen(false)
       setSelectedPlan(null)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Payment simulation failed')
+      toast.error(error instanceof Error ? error.message : 'Payment failed')
     } finally {
       setProcessing(false)
     }
@@ -59,8 +115,14 @@ export default function SubscriptionPage() {
     return plan.cta
   }
 
+  const selectedPlanDetails = PLANS.find(p => p.id === selectedPlan)
+
   return (
     <div className="min-h-screen pt-28 pb-24 px-6">
+      <Suspense fallback={null}>
+        <SubscriptionReturnHandler />
+      </Suspense>
+
       <div className="max-w-6xl mx-auto">
         <div className="page-hero text-center mb-12 px-6 py-12 sm:px-10 md:py-16">
           <p className="eyebrow mb-3">Invest in your strongest self</p>
@@ -71,6 +133,11 @@ export default function SubscriptionPage() {
           {user && !authLoading && (
             <p className="mt-4 text-sm text-muted-foreground">
               Current plan: <span className="text-primary font-bold capitalize">{currentPlan}</span>
+            </p>
+          )}
+          {!stripeReady && (
+            <p className="mt-3 text-xs text-amber-400/90">
+              Stripe keys not configured — demo payment mode is active.
             </p>
           )}
         </div>
@@ -146,9 +213,11 @@ export default function SubscriptionPage() {
       <Dialog open={modalOpen} onOpenChange={(open) => !processing && setModalOpen(open)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Payment Simulation</DialogTitle>
+            <DialogTitle>{stripeReady ? 'Secure Checkout' : 'Payment Simulation'}</DialogTitle>
             <DialogDescription>
-              This is a demo payment. Click confirm to activate your plan instantly.
+              {stripeReady
+                ? 'You will be redirected to Stripe to complete your payment securely.'
+                : 'This is a demo payment. Click confirm to activate your plan instantly.'}
             </DialogDescription>
           </DialogHeader>
 
@@ -160,8 +229,8 @@ export default function SubscriptionPage() {
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Amount</span>
               <span className="font-semibold text-primary">
-                {PLANS.find(p => p.id === selectedPlan)?.price}
-                {PLANS.find(p => p.id === selectedPlan)?.period}
+                {selectedPlanDetails?.price}
+                {selectedPlanDetails?.period}
               </span>
             </div>
           </div>
@@ -171,7 +240,11 @@ export default function SubscriptionPage() {
               Cancel
             </Button>
             <Button onClick={handleConfirmPayment} disabled={processing}>
-              {processing ? 'Processing...' : 'Confirm Payment'}
+              {processing
+                ? 'Processing...'
+                : stripeReady
+                  ? 'Continue to Stripe'
+                  : 'Confirm Payment'}
             </Button>
           </DialogFooter>
         </DialogContent>
