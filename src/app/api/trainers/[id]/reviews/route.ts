@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import mongoose from 'mongoose'
 import { connectDB } from '@/lib/mongodb'
 import { getUser } from '@/lib/auth'
+import { createNotification } from '@/lib/notifications'
 import Review from '@/models/Review'
 import Trainer from '@/models/Trainer'
 import User from '@/models/User'
+import Relationship from '@/models/Relationship'
 
 async function getReviewStats(trainerId: string) {
   const stats = await Review.aggregate([
@@ -106,6 +108,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ message: 'You cannot review yourself' }, { status: 403 })
     }
 
+    const relationship = await Relationship.findOne({
+      userId: tokenUser.userId,
+      trainerId: id,
+      status: 'active',
+    }).select('_id')
+    if (!relationship) {
+      return NextResponse.json(
+        { message: 'An active trainer relationship is required to leave a review' },
+        { status: 403 },
+      )
+    }
+
     const user = await User.findById(tokenUser.userId).select('fullName').lean()
     if (!user) return NextResponse.json({ message: 'User not found' }, { status: 404 })
 
@@ -124,6 +138,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const { averageRating, reviewCount } = await getReviewStats(id)
     const roundedRating = reviewCount > 0 ? Math.round(averageRating * 10) / 10 : 5
     await Trainer.updateOne({ _id: id }, { $set: { rating: roundedRating } })
+
+    if (trainer.userId) {
+      await createNotification({
+        userId: trainer.userId,
+        title: 'New review received',
+        message: `${user.fullName} left you a ${rating}-star review`,
+        type: 'trainer',
+        link: `/trainers/${id}`,
+      })
+    }
 
     return NextResponse.json({
       review: {

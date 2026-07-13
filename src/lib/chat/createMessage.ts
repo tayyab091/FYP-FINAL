@@ -81,6 +81,14 @@ export async function createMessage(input: CreateMessageInput) {
     throw new ChatError(400, 'Invalid message type')
   }
 
+  if (type === 'image') {
+    const isUploadPath = trimmed.startsWith('/uploads/')
+    const isHttpsUrl = /^https:\/\//i.test(trimmed)
+    if (!isUploadPath && !isHttpsUrl) {
+      throw new ChatError(400, 'Image content must be an /uploads/ path or https URL')
+    }
+  }
+
   await connectDB()
   const conversation = await assertCanChat(conversationId, sender.userId)
 
@@ -120,16 +128,18 @@ export async function createMessage(input: CreateMessageInput) {
       .map((participantId: string) => [`unreadCounts.${participantId}`, 1]),
   )
 
+  const lastMessagePreview = type === 'image' ? '[Image]' : trimmed.slice(0, 100)
+
   await Conversation.findByIdAndUpdate(conversation._id, {
     $set: {
-      lastMessage: trimmed.slice(0, 100),
+      lastMessage: lastMessagePreview,
       lastMessageTime: new Date(),
     },
     ...(Object.keys(unreadIncrements).length > 0 && { $inc: unreadIncrements }),
   })
 
   const senderName = user?.fullName || 'Someone'
-  const preview = trimmed.slice(0, 80)
+  const preview = type === 'image' ? 'Sent an image' : trimmed.slice(0, 80)
   await Promise.all(
     conversation.participants
       .map((participantId: { toString(): string }) => participantId.toString())

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { io, type Socket } from 'socket.io-client'
 import { Bell, CheckCheck, MessageCircle, UserPlus, Info } from 'lucide-react'
 import type { AppNotification } from '@/types'
 
@@ -36,6 +37,7 @@ export function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+  const socketRef = useRef<Socket | null>(null)
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -54,6 +56,34 @@ export function NotificationBell() {
     const interval = setInterval(() => void fetchNotifications(), 30000)
     return () => clearInterval(interval)
   }, [fetchNotifications])
+
+  useEffect(() => {
+    const socket = io({
+      path: '/socket.io',
+      withCredentials: true,
+      transports: ['websocket', 'polling'],
+      reconnectionAttempts: 5,
+      reconnectionDelay: 2000,
+      timeout: 10000,
+    })
+    socketRef.current = socket
+
+    socket.on('notification', (notification: AppNotification) => {
+      if (!notification?._id) return
+      setNotifications((prev) => {
+        if (prev.some((item) => item._id === notification._id)) return prev
+        return [notification, ...prev].slice(0, 8)
+      })
+      if (!notification.isRead) {
+        setUnreadCount((prev) => prev + 1)
+      }
+    })
+
+    return () => {
+      socket.disconnect()
+      socketRef.current = null
+    }
+  }, [])
 
   useEffect(() => {
     if (!open) return
