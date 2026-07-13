@@ -21,6 +21,13 @@ const UserSchema = new Schema({
   },
   /** Default true so existing users remain verified after migration. */
   emailVerified: { type: Boolean, default: true },
+  /** Google OAuth subject; set when linked or created via Google. */
+  googleId: { type: String, sparse: true, unique: true },
+  authProviders: {
+    type: [String],
+    enum: ['password', 'google'],
+    default: ['password'],
+  },
   resetPasswordToken: { type: String },
   resetPasswordExpires: { type: Date },
   verifyEmailToken: { type: String },
