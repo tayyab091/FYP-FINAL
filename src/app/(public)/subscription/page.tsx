@@ -32,11 +32,28 @@ function SubscriptionReturnHandler() {
 
     if (success === 'true') {
       const plan = searchParams.get('plan')
+      const sessionId = searchParams.get('session_id')
       const planName = PLANS.find(p => p.id === plan)?.name || 'Pro'
-      refreshUser().then(() => {
-        toast.success(`${planName} plan activated!`)
-        router.replace('/subscription')
-      })
+
+      void (async () => {
+        try {
+          if (sessionId) {
+            const res = await fetch(
+              `/api/subscription/confirm?session_id=${encodeURIComponent(sessionId)}`,
+            )
+            if (!res.ok) {
+              const data = await res.json().catch(() => ({}))
+              throw new Error(data.message || 'Could not confirm payment')
+            }
+          }
+          await refreshUser()
+          toast.success(`${planName} plan activated!`)
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Could not confirm payment')
+        } finally {
+          router.replace('/subscription')
+        }
+      })()
       return
     }
 
