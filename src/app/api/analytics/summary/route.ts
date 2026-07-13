@@ -2,11 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import { getUser } from '@/lib/auth'
 import { bypassesSubscriptionGate } from '@/lib/access'
-import {
-  syncUserSubscription,
-  normalizePlan,
-  canAccessAnalytics,
-} from '@/lib/subscription'
+import { normalizePlan, canAccessAnalytics } from '@/lib/subscription'
+import { syncUserSubscription } from '@/lib/subscription-server'
 import WorkoutLog from '@/models/WorkoutLog'
 import MealLog from '@/models/MealLog'
 import ProgressRecord from '@/models/ProgressRecord'

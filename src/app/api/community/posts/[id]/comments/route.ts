@@ -3,11 +3,8 @@ import mongoose from 'mongoose'
 import { connectDB } from '@/lib/mongodb'
 import { getUser } from '@/lib/auth'
 import { bypassesSubscriptionGate } from '@/lib/access'
-import {
-  syncUserSubscription,
-  normalizePlan,
-  canAccessCommunity,
-} from '@/lib/subscription'
+import { normalizePlan, canAccessCommunity } from '@/lib/subscription'
+import { syncUserSubscription } from '@/lib/subscription-server'
 import CommunityPost from '@/models/CommunityPost'
 import CommunityComment from '@/models/CommunityComment'
 import User from '@/models/User'
