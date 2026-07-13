@@ -16,8 +16,22 @@ export function conversationRoom(conversationId: string) {
   return `conversation:${conversationId}`
 }
 
+export function userRoom(userId: string) {
+  return `user:${userId}`
+}
+
+export function liveRoom(roomId: string) {
+  return `live:${roomId}`
+}
+
 export function emitNewMessage(conversationId: string, message: unknown) {
   const io = getIO()
   if (!io) return
   io.to(conversationRoom(conversationId)).emit('new_message', message)
+}
+
+export function emitNotification(userId: string, notification: unknown) {
+  const io = getIO()
+  if (!io) return
+  io.to(userRoom(userId)).emit('notification', notification)
 }
