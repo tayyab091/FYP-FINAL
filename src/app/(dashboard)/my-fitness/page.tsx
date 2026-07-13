@@ -19,7 +19,7 @@ import { SignInGate } from '@/components/shared/AccessGate'
 import { FadeIn, StaggerChildren, CountUp } from '@/components/motion'
 import { DataTable, DataTableBody, DataTableCell, DataTableHead, DataTableHeaderCell, DataTableRow } from '@/components/shared/DataTable'
 import { GamificationStats } from '@/components/gamification/GamificationStats'
-import type { GamificationMeResponse } from '@/lib/gamification'
+import type { GamificationMeResponse } from '@/types/gamification'
 
 interface FoodResult {
   name: string

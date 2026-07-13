@@ -9,6 +9,9 @@ import {
   getAchievementDefinition,
   levelFromXp,
 } from '@/lib/achievements'
+import type { GamificationMeResponse } from '@/types/gamification'
+
+export type { GamificationMeResponse } from '@/types/gamification'
 
 export const XP_REWARDS = {
   workout_complete: 50,
@@ -19,29 +22,6 @@ export const XP_REWARDS = {
 } as const
 
 export type XpAction = keyof typeof XP_REWARDS
-
-export interface GamificationMeResponse {
-  xp: number
-  level: number
-  levelTitle: string
-  levelDesc: string
-  progressToNextLevel: {
-    current: number
-    required: number
-    percent: number
-    xpRemaining: number
-  } | null
-  achievements: Array<{
-    id: string
-    label: string
-    desc: string
-    unlocked: boolean
-    unlockedAt?: string
-  }>
-  streak: number
-  formCheckerSessions: number
-  streakBonusXp: number
-}
 
 export async function getOrCreateProfile(userId: string) {
   let profile = await GamificationProfile.findOne({ userId })

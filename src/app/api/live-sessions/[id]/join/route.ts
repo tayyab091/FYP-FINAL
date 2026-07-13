@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import { getUser } from '@/lib/auth'
 import LiveSession from '@/models/LiveSession'
-import { syncUserSubscription, normalizePlan } from '@/lib/subscription'
+import { normalizePlan } from '@/lib/subscription'
+import { syncUserSubscription } from '@/lib/subscription-server'
 
 export async function POST(
   req: NextRequest,
