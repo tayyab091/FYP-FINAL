@@ -198,6 +198,14 @@ Verification helper: `node scripts/live-verify.mjs` (server must be running).
 3. **Payments PAUSED:** Stripe is one-time Checkout (simulated/test locally); JazzCash planned, not started — not in current verification scope  
 4. Live video create hard-requires Daily — cannot fully demo without key  
 
+**Security (2026-07-13 hardening):**
+
+- Zod + Mongo operator rejection on mutating API bodies (`src/lib/validation.ts`)  
+- Plain-text / http(s) URL sanitization (`src/lib/sanitize.ts`)  
+- CSP and related headers in `next.config.ts`  
+- In-memory rate limits on auth, AI, and upload routes  
+- See `docs/SECURITY_AUDIT_REPORT.md` for vuln / fix / retest  
+
 **Suggested next steps:**
 
 1. Provision Pusher / Daily / Blob / SMTP / Google; document dashboard URLs in team wiki  
@@ -205,16 +213,18 @@ Verification helper: `node scripts/live-verify.mjs` (server must be running).
 3. Add CI smoke tests against `/api/health` + login (`npm run live-verify`)  
 4. Consider MongoDB connection string with explicit hosts for CI Windows runners  
 5. Remove or archive unused custom `server.ts` if fully replaced by Pusher  
+6. Replace in-memory rate limits with Redis for multi-instance Vercel production  
 
 ---
 
 ## 10. Related docs
 
 - `docs/LIVE_VERIFICATION_REPORT.md` — live probe results (latest: 69/69 pass)  
+- `docs/SECURITY_AUDIT_REPORT.md` — NoSQL / XSS / CSP / rate-limit audit  
 - `docs/AUDIT_REPORT.md` — Working / Partial / Cannot-run matrix  
 - `docs/REALTIME_CHAT.md` — Pusher channel conventions  
 
 ---
 
-*Generated for zero-context readers. Prefer live reports over assuming a file’s presence means a feature works.*
+*Generated for zero-context readers. Prefer live reports over assuming a file’s presence means a feature works.*  
 *Payments: PAUSED (Stripe simulated/test; JazzCash planned not started).*
