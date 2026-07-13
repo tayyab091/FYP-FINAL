@@ -4,20 +4,21 @@ import User from '@/models/User'
 import bcrypt from 'bcryptjs'
 import { createToken, cookieOptions } from '@/lib/auth'
 import { createSecureToken, sendVerificationEmail } from '@/lib/auth-email'
+import { parseJsonBody, registerBodySchema } from '@/lib/validation'
+import { rateLimitAuth } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
   try {
+    const limited = rateLimitAuth(req)
+    if (limited) return limited
+
     await connectDB()
-    const { fullName, email, password, country } = await req.json()
+    const parsed = await parseJsonBody(req, registerBodySchema)
+    if ('error' in parsed) return parsed.error
 
-    if (!fullName || !email || !password) {
-      return NextResponse.json({ message: 'Full name, email and password are required' }, { status: 400 })
-    }
-    if (password.length < 8) {
-      return NextResponse.json({ message: 'Password must be at least 8 characters' }, { status: 400 })
-    }
+    const { fullName, email, password, country } = parsed.data
 
-    const existing = await User.findOne({ email: email.toLowerCase() })
+    const existing = await User.findOne({ email })
     if (existing) {
       return NextResponse.json({ message: 'An account with this email already exists' }, { status: 409 })
     }
@@ -25,8 +26,8 @@ export async function POST(req: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 12)
     const verifyToken = createSecureToken()
     const user = await User.create({
-      fullName: fullName.trim(),
-      email: email.toLowerCase().trim(),
+      fullName,
+      email,
       password: hashedPassword,
       country: country || 'Pakistan',
       role: 'user',

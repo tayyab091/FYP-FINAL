@@ -3,23 +3,31 @@ import bcrypt from 'bcryptjs'
 import { connectDB } from '@/lib/mongodb'
 import User from '@/models/User'
 import { cookieOptions, getUser } from '@/lib/auth'
+import { changePasswordSchema, parseJsonBody } from '@/lib/validation'
+import { rateLimitAuth } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
   try {
+    const limited = rateLimitAuth(req)
+    if (limited) return limited
+
     const tokenUser = await getUser(req)
     if (!tokenUser) return NextResponse.json({ message: 'Not authenticated' }, { status: 401 })
 
-    const { currentPassword, newPassword } = await req.json()
-    if (!currentPassword || !newPassword) {
-      return NextResponse.json({ message: 'Current and new password are required' }, { status: 400 })
-    }
-    if (newPassword.length < 8) {
-      return NextResponse.json({ message: 'New password must be at least 8 characters' }, { status: 400 })
-    }
+    const parsed = await parseJsonBody(req, changePasswordSchema)
+    if ('error' in parsed) return parsed.error
+
+    const { currentPassword, newPassword } = parsed.data
 
     await connectDB()
     const user = await User.findById(tokenUser.userId)
     if (!user) return NextResponse.json({ message: 'User not found' }, { status: 404 })
+    if (!user.password) {
+      return NextResponse.json(
+        { message: 'Password login is not available for this account' },
+        { status: 400 },
+      )
+    }
 
     const valid = await bcrypt.compare(currentPassword, user.password)
     if (!valid) return NextResponse.json({ message: 'Current password is incorrect' }, { status: 401 })

@@ -8,6 +8,7 @@ import { syncUserSubscription } from '@/lib/subscription-server'
 import { createNotification } from '@/lib/notifications'
 import CommunityPost from '@/models/CommunityPost'
 import User from '@/models/User'
+import { parseObjectIdParam } from '@/lib/validation'
 
 type RouteContext = { params: Promise<{ id: string }> }
 
@@ -31,10 +32,10 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     const denied = await assertCommunityAccess(tokenUser.userId, tokenUser.role)
     if (denied) return denied
 
-    const { id } = await params
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return NextResponse.json({ message: 'Invalid post id' }, { status: 400 })
-    }
+    const { id: rawId } = await params
+    const idResult = parseObjectIdParam(rawId, 'post id')
+    if ('error' in idResult) return idResult.error
+    const id = idResult.id
 
     await connectDB()
     const post = await CommunityPost.findById(id)

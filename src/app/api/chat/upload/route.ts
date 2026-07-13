@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getUser } from '@/lib/auth'
 import { uploadChatImage, isBlobConfigured } from '@/lib/blob'
+import { rateLimitUpload } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
   try {
+    const limited = rateLimitUpload(req)
+    if (limited) return limited
+
     const tokenUser = await getUser(req)
     if (!tokenUser) {
       return NextResponse.json({ message: 'Not authenticated' }, { status: 401 })

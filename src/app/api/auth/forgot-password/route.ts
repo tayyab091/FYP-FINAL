@@ -2,23 +2,28 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import User from '@/models/User'
 import { createSecureToken, sendPasswordResetEmail } from '@/lib/auth-email'
+import { forgotPasswordSchema, parseJsonBody } from '@/lib/validation'
+import { rateLimitAuth } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
   try {
-    const { email } = await req.json()
-    const normalized =
-      typeof email === 'string' ? email.toLowerCase().trim() : ''
+    const limited = rateLimitAuth(req)
+    if (limited) return limited
 
     const payload: { message: string; devLink?: string } = {
       message: 'If an account exists for that email, a reset link has been sent.',
     }
 
-    if (!normalized || !normalized.includes('@')) {
+    const parsed = await parseJsonBody(req, forgotPasswordSchema)
+    // Always return generic message for invalid shape (no email enumeration)
+    if ('error' in parsed) {
       return NextResponse.json(payload)
     }
 
+    const { email } = parsed.data
+
     await connectDB()
-    const user = await User.findOne({ email: normalized })
+    const user = await User.findOne({ email })
     if (!user) return NextResponse.json(payload)
 
     const token = createSecureToken()
@@ -31,7 +36,6 @@ export async function POST(req: NextRequest) {
       return null
     })
 
-    // Only expose the link in non-production when SMTP is unset (console fallback)
     if (process.env.NODE_ENV !== 'production' && result?.devLink) {
       payload.devLink = result.devLink
     }
