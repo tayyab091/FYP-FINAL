@@ -9,6 +9,7 @@ import Relationship from '@/models/Relationship'
 import { createDailyRoom, isDailyConfigured } from '@/lib/daily'
 import { createNotification } from '@/lib/notifications'
 import { normalizePlan, canAccessLiveSessions } from '@/lib/subscription'
+import { liveSessionCreateSchema, parseJsonBody } from '@/lib/validation'
 
 export async function GET(req: NextRequest) {
   try {
@@ -63,23 +64,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'Trainer role required' }, { status: 403 })
     }
 
-    const body = await req.json()
-    const title = typeof body.title === 'string' ? body.title.trim() : ''
-    const scheduledAt = body.scheduledAt ? new Date(body.scheduledAt) : null
-    const durationMinutes = Number(body.durationMinutes) || 60
-    const maxParticipants = Number(body.maxParticipants) || 20
+    const parsed = await parseJsonBody(req, liveSessionCreateSchema)
+    if ('error' in parsed) return parsed.error
 
-    if (!title || title.length < 3) {
-      return NextResponse.json({ message: 'Title must be at least 3 characters' }, { status: 400 })
-    }
-    if (!scheduledAt || Number.isNaN(scheduledAt.getTime())) {
+    const title = parsed.data.title
+    const scheduledAt = new Date(parsed.data.scheduledAt)
+    const durationMinutes = parsed.data.durationMinutes
+    const maxParticipants = parsed.data.maxParticipants
+
+    if (Number.isNaN(scheduledAt.getTime())) {
       return NextResponse.json({ message: 'Valid scheduledAt is required' }, { status: 400 })
     }
     if (scheduledAt.getTime() < Date.now() - 60_000) {
       return NextResponse.json({ message: 'Session must be scheduled in the future' }, { status: 400 })
-    }
-    if (durationMinutes < 15 || durationMinutes > 240) {
-      return NextResponse.json({ message: 'Duration must be 15–240 minutes' }, { status: 400 })
     }
 
     await connectDB()

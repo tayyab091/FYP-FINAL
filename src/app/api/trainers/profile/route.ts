@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import Trainer from '@/models/Trainer'
 import { getUser } from '@/lib/auth'
+import { parseJsonBody, trainerProfileSchema } from '@/lib/validation'
 
 export async function GET(req: NextRequest) {
   try {
@@ -28,28 +29,18 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ message: 'Trainers only' }, { status: 403 })
     }
 
-    const { specialty, bio, certifications, hourlyRate, experience } = await req.json()
+    const parsed = await parseJsonBody(req, trainerProfileSchema)
+    if ('error' in parsed) return parsed.error
 
-    if (specialty !== undefined && (!Array.isArray(specialty) || !specialty.every((s) => typeof s === 'string'))) {
-      return NextResponse.json({ message: 'specialty must be an array of strings' }, { status: 400 })
-    }
-    if (certifications !== undefined && (!Array.isArray(certifications) || !certifications.every((c) => typeof c === 'string'))) {
-      return NextResponse.json({ message: 'certifications must be an array of strings' }, { status: 400 })
-    }
-    if (hourlyRate !== undefined && (typeof hourlyRate !== 'number' || hourlyRate < 0)) {
-      return NextResponse.json({ message: 'hourlyRate must be a non-negative number' }, { status: 400 })
-    }
-    if (bio !== undefined && typeof bio !== 'string') {
-      return NextResponse.json({ message: 'bio must be a string' }, { status: 400 })
-    }
+    const { specialty, bio, certifications, hourlyRate, experience } = parsed.data
 
     await connectDB()
     const update: Record<string, unknown> = {}
-    if (specialty !== undefined) update.specialty = specialty.map((s: string) => s.trim()).filter(Boolean)
-    if (bio !== undefined) update.bio = bio.trim().slice(0, 2000)
-    if (certifications !== undefined) update.certifications = certifications.map((c: string) => c.trim()).filter(Boolean)
+    if (specialty !== undefined) update.specialty = specialty
+    if (bio !== undefined) update.bio = bio
+    if (certifications !== undefined) update.certifications = certifications
     if (hourlyRate !== undefined) update.hourlyRate = hourlyRate
-    if (experience !== undefined && typeof experience === 'string') update.experience = experience.trim().slice(0, 500)
+    if (experience !== undefined) update.experience = experience
 
     const trainer = await Trainer.findOneAndUpdate(
       { userId: tokenUser.userId },

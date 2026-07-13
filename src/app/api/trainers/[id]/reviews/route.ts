@@ -7,6 +7,7 @@ import Review from '@/models/Review'
 import Trainer from '@/models/Trainer'
 import User from '@/models/User'
 import Relationship from '@/models/Relationship'
+import { parseJsonBody, reviewSchema } from '@/lib/validation'
 
 async function getReviewStats(trainerId: string) {
   const stats = await Review.aggregate([
@@ -85,19 +86,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ message: 'Trainer not found' }, { status: 404 })
     }
 
-    const body = await req.json()
-    const rating = Number(body.rating)
-    const comment = typeof body.comment === 'string' ? body.comment.trim() : ''
-
-    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-      return NextResponse.json({ message: 'Rating must be between 1 and 5' }, { status: 400 })
-    }
-    if (!comment) {
-      return NextResponse.json({ message: 'Comment is required' }, { status: 400 })
-    }
-    if (comment.length > 1000) {
-      return NextResponse.json({ message: 'Comment is too long' }, { status: 400 })
-    }
+    const parsed = await parseJsonBody(req, reviewSchema)
+    if ('error' in parsed) return parsed.error
+    const { rating, comment } = parsed.data
 
     await connectDB()
 

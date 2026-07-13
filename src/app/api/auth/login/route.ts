@@ -3,17 +3,21 @@ import { connectDB } from '@/lib/mongodb'
 import User from '@/models/User'
 import bcrypt from 'bcryptjs'
 import { createToken, cookieOptions } from '@/lib/auth'
+import { loginBodySchema, parseJsonBody } from '@/lib/validation'
+import { rateLimitAuth } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
   try {
+    const limited = rateLimitAuth(req)
+    if (limited) return limited
+
     await connectDB()
-    const { email, password } = await req.json()
+    const parsed = await parseJsonBody(req, loginBodySchema)
+    if ('error' in parsed) return parsed.error
 
-    if (typeof email !== 'string' || typeof password !== 'string' || !email.trim() || !password) {
-      return NextResponse.json({ message: 'Email and password are required' }, { status: 400 })
-    }
+    const { email, password } = parsed.data
 
-    const user = await User.findOne({ email: email.toLowerCase().trim() })
+    const user = await User.findOne({ email })
     if (!user) {
       return NextResponse.json({ message: 'Invalid email or password' }, { status: 401 })
     }

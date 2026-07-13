@@ -4,6 +4,8 @@ import WorkoutPlan from '@/models/WorkoutPlan'
 import Trainer from '@/models/Trainer'
 import Relationship from '@/models/Relationship'
 import { getUser } from '@/lib/auth'
+import { parseJsonBody, workoutPlanCreateSchema } from '@/lib/validation'
+import { sanitizePlainText } from '@/lib/sanitize'
 
 export async function GET(req: NextRequest) {
   try {
@@ -32,11 +34,11 @@ export async function POST(req: NextRequest) {
     if (!tokenUser) return NextResponse.json({ message: 'Not authenticated' }, { status: 401 })
     if (tokenUser.role !== 'trainer') return NextResponse.json({ message: 'Trainers only' }, { status: 403 })
 
+    const parsed = await parseJsonBody(req, workoutPlanCreateSchema)
+    if ('error' in parsed) return parsed.error
+    const { userId, relationshipId, title, goal, durationWeeks, difficulty, weeklySchedule } = parsed.data
+
     await connectDB()
-    const { userId, title, goal, durationWeeks, difficulty, weeklySchedule, relationshipId } = await req.json()
-    if (!userId || !relationshipId || typeof title !== 'string' || !title.trim()) {
-      return NextResponse.json({ message: 'Client, relationship, and title are required' }, { status: 400 })
-    }
 
     const trainer = await Trainer.findOne({ userId: tokenUser.userId })
     if (!trainer) return NextResponse.json({ message: 'Trainer profile not found' }, { status: 404 })
@@ -53,8 +55,13 @@ export async function POST(req: NextRequest) {
     }
 
     const plan = await WorkoutPlan.create({
-      userId, trainerId: trainer._id, relationshipId,
-      title: title.trim(), goal, durationWeeks, difficulty,
+      userId,
+      trainerId: trainer._id,
+      relationshipId,
+      title,
+      goal: goal || '',
+      durationWeeks,
+      difficulty: difficulty ? sanitizePlainText(difficulty, 40) : undefined,
       weeklySchedule: Array.isArray(weeklySchedule) ? weeklySchedule : [],
       status: 'draft',
     })

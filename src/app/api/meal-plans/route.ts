@@ -7,6 +7,7 @@ import { syncUserSubscription } from '@/lib/subscription-server'
 import { generateMealPlan } from '@/lib/meal-plan-generator'
 import MealPlan from '@/models/MealPlan'
 import User from '@/models/User'
+import { mealPlanGenerateSchema, parseJsonBody } from '@/lib/validation'
 
 async function assertMealPlanAccess(userId: string, role: string) {
   if (bypassesSubscriptionGate(role)) return null
@@ -49,12 +50,9 @@ export async function POST(req: NextRequest) {
     if (denied) return denied
 
     await connectDB()
-    const body = await req.json() as {
-      goal?: string
-      preferenceNotes?: string
-      title?: string
-      dailyCalories?: number
-    }
+    const parsed = await parseJsonBody(req, mealPlanGenerateSchema)
+    if ('error' in parsed) return parsed.error
+    const body = parsed.data
 
     const profile = await User.findById(tokenUser.userId)
       .select('fitnessGoal activityLevel currentWeight targetWeight')
@@ -68,7 +66,7 @@ export async function POST(req: NextRequest) {
       targetWeight: profile?.targetWeight,
       preferenceNotes: body.preferenceNotes,
       title: body.title,
-      dailyCaloriesOverride: typeof body.dailyCalories === 'number' ? body.dailyCalories : undefined,
+      dailyCaloriesOverride: body.dailyCalories,
     })
 
     const plan = await MealPlan.create({

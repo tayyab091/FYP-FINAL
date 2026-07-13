@@ -4,14 +4,20 @@ import User from '@/models/User'
 import Trainer from '@/models/Trainer'
 import Gym from '@/models/Gym'
 import bcrypt from 'bcryptjs'
+import { parseJsonBody, setupKeySchema } from '@/lib/validation'
+import { rateLimitAuth } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
   try {
+    const limited = rateLimitAuth(req)
+    if (limited) return limited
+
     if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DATABASE_SEEDING !== 'true') {
       return NextResponse.json({ message: 'Not found' }, { status: 404 })
     }
-    const { setupKey } = await req.json()
-    if (setupKey !== process.env.ADMIN_SETUP_KEY) {
+    const parsed = await parseJsonBody(req, setupKeySchema)
+    if ('error' in parsed) return parsed.error
+    if (parsed.data.setupKey !== process.env.ADMIN_SETUP_KEY) {
       return NextResponse.json({ message: 'Invalid setup key' }, { status: 403 })
     }
 
