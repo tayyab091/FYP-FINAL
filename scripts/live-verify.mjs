@@ -100,8 +100,19 @@ record(
   'POST forgot-password',
   (a) => a.status === 200 || a.status === 503,
   r,
-  'SMTP may be unset',
+  r.json?.devLink ? 'devLink returned' : 'SMTP may be unset',
 )
+
+if (r.json?.devLink && typeof r.json.devLink === 'string') {
+  const tokenMatch = r.json.devLink.match(/token=([a-f0-9]+)/i)
+  if (tokenMatch) {
+    r = await api('POST', '/api/auth/reset-password', {
+      token: tokenMatch[1],
+      password: 'User@123',
+    })
+    record('Password reset complete', 'POST reset-password', [200, 400], r)
+  }
+}
 
 r = await api('GET', '/api/auth/oauth/google')
 record(
@@ -150,7 +161,6 @@ const checks = [
   ['Nutrition meals', '/api/meals'],
   ['Nutrition today', '/api/tracking/meal-logs/today'],
   ['Progress', '/api/tracking/progress'],
-  ['Workout plans', '/api/tracking/plans'],
   ['My plan', '/api/tracking/plans/my-plan'],
   ['Subscription', '/api/subscription'],
   ['Notifications', '/api/notifications'],
@@ -166,6 +176,10 @@ for (const [name, pathName] of checks) {
   r = await api('GET', pathName)
   record(name, `GET ${pathName}`, 200, r)
 }
+
+// Trainer-only plans list — members get 403
+r = await api('GET', '/api/tracking/plans')
+record('Workout plans (member)', 'GET /api/tracking/plans', 403, r, 'trainers-only endpoint')
 
 // Reviews
 const trainers = (await api('GET', '/api/trainers')).json
@@ -199,27 +213,72 @@ record(
   'BLOB_READ_WRITE_TOKEN may be unset',
 )
 
-// Nutrition analyze
-r = await api('POST', '/api/nutrition/analyze', { description: 'grilled chicken salad' })
+// Nutrition analyze (GET-only)
+r = await api('GET', '/api/nutrition/analyze?query=chicken')
 record(
   'Nutrition analyze',
-  'POST analyze',
+  'GET analyze?query=chicken',
   (a) => [200, 503].includes(a.status),
   r,
   'Spoonacular/Gemini optional',
 )
+
+// Detail pages — exercises / nutrition
+const exerciseList = (await api('GET', '/api/exercises')).json
+const exerciseId = Array.isArray(exerciseList)
+  ? exerciseList[0]?.id || exerciseList[0]?._id
+  : exerciseList?.exercises?.[0]?.id || exerciseList?.exercises?.[0]?._id
+if (exerciseId) {
+  r = await api('GET', `/exercises/${exerciseId}`)
+  record('Exercise detail page', `GET /exercises/${exerciseId}`, [200, 307, 308], r)
+}
+
+const mealList = (await api('GET', '/api/meals')).json
+const mealId = Array.isArray(mealList)
+  ? mealList[0]?.id || mealList[0]?._id
+  : mealList?.meals?.[0]?.id || mealList?.meals?.[0]?._id
+if (mealId) {
+  r = await api('GET', `/nutrition/${mealId}`)
+  record('Nutrition detail page', `GET /nutrition/${mealId}`, [200, 307, 308], r)
+}
 
 // Community post (user1 is pro — community allowed)
 r = await api('POST', '/api/community/posts', {
   content: 'Live verification post ' + Date.now(),
 })
 record('Community post', 'POST post', [200, 201], r)
+const communityPostId = r.json?._id || r.json?.post?._id
+
+if (communityPostId) {
+  await loginAs('user2@test.com', 'User@123')
+  r = await api('POST', `/api/community/posts/${communityPostId}/like`)
+  record('Community like', 'POST like', [200, 201], r)
+  r = await api('POST', `/api/community/posts/${communityPostId}/comments`, {
+    content: 'Live verify comment',
+  })
+  record('Community comment', 'POST comment', [200, 201], r)
+
+  await loginAs('user1@test.com', 'User@123')
+  r = await api('GET', '/api/notifications')
+  const notifs = Array.isArray(r.json?.notifications) ? r.json.notifications : []
+  const hasCommunityNotif = notifs.some(
+    (n) => n.type === 'community' || /like|comment/i.test(n.title || ''),
+  )
+  record(
+    'Community notifications',
+    'notification after like/comment',
+    (a) => a.status === 200 && hasCommunityNotif,
+    r,
+    hasCommunityNotif ? 'community notification present' : 'expected community notification missing',
+  )
+}
 
 // Meal plan generate (pro)
+await loginAs('user1@test.com', 'User@123')
 r = await api('POST', '/api/meal-plans', {})
 record('Meal plan generate', 'POST meal-plans', [200, 201, 403, 500], r)
 
-// Live session create as elite
+// Live session create — Elite member forbidden; trainer + Daily required
 await loginAs('user3@test.com', 'User@123')
 r = await api('GET', '/api/live-sessions')
 record('Live sessions elite', 'GET as elite', 200, r)
@@ -228,12 +287,31 @@ r = await api('POST', '/api/live-sessions', {
   scheduledAt: new Date(Date.now() + 86400000).toISOString(),
   durationMinutes: 30,
 })
+record('Live session create (member)', 'POST as elite member', 403, r, 'create is trainer-only')
+
+await loginAs('ali@test.com', 'Trainer@123')
+r = await api('POST', '/api/live-sessions', {
+  title: 'Verify Trainer Session',
+  scheduledAt: new Date(Date.now() + 86400000).toISOString(),
+  durationMinutes: 30,
+})
 record(
-  'Live session create',
-  'POST live-sessions',
-  (a) => [200, 201, 403, 500, 503].includes(a.status),
+  'Live session create (trainer)',
+  'POST as trainer',
+  (a) => [201, 503, 502].includes(a.status),
   r,
-  'DAILY_API_KEY / trainer role may be required',
+  'DAILY_API_KEY required for 201',
+)
+
+// Payments PAUSED — only read plan status
+await loginAs('user1@test.com', 'User@123')
+r = await api('GET', '/api/subscription')
+record(
+  'Subscription (PAUSED payments)',
+  'GET subscription plan fields only',
+  200,
+  r,
+  'Stripe checkout out of scope — PAUSED',
 )
 
 // Pusher auth
@@ -268,6 +346,9 @@ const pages = [
   '/notifications',
   '/exercise-check',
   '/my-fitness',
+  '/exercises',
+  '/forgot-password',
+  '/verify-email',
 ]
 await loginAs('user1@test.com', 'User@123')
 for (const page of pages) {
