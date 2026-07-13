@@ -4,7 +4,7 @@ import { Trophy } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress, ProgressTrack, ProgressIndicator } from '@/components/ui/progress'
 import { FitnessBadge, CountUp } from '@/components/motion'
-import type { GamificationMeResponse } from '@/lib/gamification'
+import type { GamificationMeResponse } from '@/types/gamification'
 
 interface GamificationStatsProps {
   data: GamificationMeResponse | null

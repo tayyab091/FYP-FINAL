@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import { getUser } from '@/lib/auth'
-import { activateUserPlan } from '@/lib/subscription'
+import { activateUserPlan } from '@/lib/subscription-server'
 import {
   getAppBaseUrl,
   getPaidPlanAmountCents,

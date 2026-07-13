@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import { getUser } from '@/lib/auth'
 import { recordFormCheckSession } from '@/lib/gamification'
-import { syncUserSubscription, normalizePlan, canUseExerciseCheck } from '@/lib/subscription'
+import { normalizePlan, canUseExerciseCheck } from '@/lib/subscription'
+import { syncUserSubscription } from '@/lib/subscription-server'
 
 export async function POST(req: NextRequest) {
   try {
