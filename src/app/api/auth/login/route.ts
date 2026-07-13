@@ -25,7 +25,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'Account is inactive. Contact support.' }, { status: 403 })
     }
 
-    const isValid = await bcrypt.compare(password, user.password)
+    const isValid = user.password
+      ? await bcrypt.compare(password, user.password)
+      : false
     if (!isValid) {
       return NextResponse.json({ message: 'Invalid email or password' }, { status: 401 })
     }

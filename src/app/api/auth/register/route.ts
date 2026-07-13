@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/mongodb'
 import User from '@/models/User'
 import bcrypt from 'bcryptjs'
 import { createToken, cookieOptions } from '@/lib/auth'
+import { createSecureToken, sendVerificationEmail } from '@/lib/auth-email'
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,12 +23,20 @@ export async function POST(req: NextRequest) {
     }
 
     const hashedPassword = await bcrypt.hash(password, 12)
+    const verifyToken = createSecureToken()
     const user = await User.create({
       fullName: fullName.trim(),
       email: email.toLowerCase().trim(),
       password: hashedPassword,
       country: country || 'Pakistan',
       role: 'user',
+      emailVerified: false,
+      verifyEmailToken: verifyToken,
+      verifyEmailExpires: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    })
+
+    void sendVerificationEmail(user.email, verifyToken).catch((err) => {
+      console.error('Verification email error:', err)
     })
 
     const token = createToken({ userId: user._id.toString(), role: user.role, email: user.email })

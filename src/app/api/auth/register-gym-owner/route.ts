@@ -5,6 +5,7 @@ import Gym from '@/models/Gym'
 import bcrypt from 'bcryptjs'
 import mongoose from 'mongoose'
 import { createToken, cookieOptions } from '@/lib/auth'
+import { createSecureToken, sendVerificationEmail } from '@/lib/auth-email'
 
 export async function POST(req: NextRequest) {
   try {
@@ -35,6 +36,7 @@ export async function POST(req: NextRequest) {
     }
 
     const hashedPassword = await bcrypt.hash(password, 12)
+    const verifyToken = createSecureToken()
     const session = await mongoose.startSession()
     const user = await session.withTransaction(async () => {
       const [createdUser] = await User.create([{
@@ -43,6 +45,9 @@ export async function POST(req: NextRequest) {
         password: hashedPassword,
         country: country || 'Pakistan',
         role: 'gym_owner',
+        emailVerified: false,
+        verifyEmailToken: verifyToken,
+        verifyEmailExpires: new Date(Date.now() + 24 * 60 * 60 * 1000),
       }], { session })
 
       await Gym.create([{
@@ -56,6 +61,10 @@ export async function POST(req: NextRequest) {
       return createdUser
     }).finally(() => session.endSession())
     if (!user) throw new Error('Gym registration transaction did not complete')
+
+    void sendVerificationEmail(normalizedEmail, verifyToken).catch((err) => {
+      console.error('Verification email error:', err)
+    })
 
     const token = createToken({ userId: user._id.toString(), role: 'gym_owner', email: user.email })
     const response = NextResponse.json({

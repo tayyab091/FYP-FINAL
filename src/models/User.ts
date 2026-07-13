@@ -3,7 +3,8 @@ import mongoose, { Schema } from 'mongoose'
 const UserSchema = new Schema({
   fullName: { type: String, required: true, trim: true },
   email: { type: String, required: true, unique: true, lowercase: true },
-  password: { type: String, required: true, minlength: 6 },
+  /** Optional for OAuth users (they store a random hash). */
+  password: { type: String, required: false, minlength: 6 },
   role: {
     type: String,
     enum: ['user', 'trainer', 'gym_owner', 'admin', 'super_admin'],
@@ -18,6 +19,12 @@ const UserSchema = new Schema({
     startDate: Date,
     endDate: Date,
   },
+  /** Default true so existing users remain verified after migration. */
+  emailVerified: { type: Boolean, default: true },
+  resetPasswordToken: { type: String },
+  resetPasswordExpires: { type: Date },
+  verifyEmailToken: { type: String },
+  verifyEmailExpires: { type: Date },
   isActive: { type: Boolean, default: true },
   isSuspended: { type: Boolean, default: false },
   freeChatsUsed: { type: Number, default: 0 },
