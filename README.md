@@ -6,16 +6,19 @@ Full-stack fitness coaching platform built as a Final Year Project. Members conn
 
 | Layer | Technology |
 |-------|------------|
-| Framework | Next.js 16 (App Router) + custom Node server (`server.ts`) |
+| Framework | Next.js 16 (App Router) — Vercel serverless |
 | Language | TypeScript |
 | Database | MongoDB + Mongoose |
 | Auth | JWT (httpOnly cookies), Google OAuth, email verify / password reset |
-| Realtime | Socket.io (chat, notifications, WebRTC signaling) |
+| Realtime | **Pusher** (chat + notifications) — Vercel-compatible |
+| Live video | **Daily.co** rooms (Elite); scheduling gated in our API |
+| Uploads | **Vercel Blob** (chat images) |
 | UI | Tailwind CSS 4, shadcn/ui, Recharts, Framer Motion |
 | AI | Google Gemini (chatbot, nutrition hints) |
 | Pose | MediaPipe Pose (exercise form checker) |
 | Payments | Stripe Checkout (test mode) with simulated fallback when keys unset |
 | Email | SMTP via nodemailer (console link fallback in development) |
+| Deploy | **Vercel** serverless (no Socket.io / no local disk writes) |
 
 ## Features
 
@@ -27,15 +30,15 @@ Full-stack fitness coaching platform built as a Final Year Project. Members conn
 - **Progress tracking** — Weight, body fat, measurements with charts
 - **Advanced analytics** — Pro+ dashboard: workouts, nutrition, weight trends (`/analytics`)
 - **Community feed** — Basic+ posts, likes, comments (`/community`)
-- **Live training sessions** — Elite scheduling + WebRTC video rooms (`/live-sessions`)
-- **Chat** — Realtime messaging with workout plan cards and image uploads
-- **Notifications** — In-app center + bell; Socket.io push with poll fallback
+- **Live training sessions** — Elite scheduling + **Daily.co** video rooms (`/live-sessions`)
+- **Chat** — REST + **Pusher** realtime; workout plan cards and **Vercel Blob** image uploads
+- **Notifications** — In-app center + bell; Pusher push with poll fallback
 - **Trainer reviews** — Rating + comment; average on trainer profiles
 - **AI form checker** — Pro/Elite gated pose feedback (`/exercise-check`)
 - **Subscriptions** — Basic / Pro / Elite via Stripe Checkout (or simulated when Stripe unset)
 - **Auth extras** — Google OAuth, email verification, forgot / reset password
 - **Admin / gym owner** — Verification, suspend users, gym analytics
-- **Route protection** — Server-side guards in `src/proxy.ts` (Next.js 16 proxy middleware)
+- **Route protection** — Edge-compatible guards in `src/proxy.ts` / `src/middleware.ts` (jose only)
 
 ## Prerequisites
 
@@ -72,16 +75,19 @@ Optional integrations (see `.env.example`):
 | `STRIPE_SECRET_KEY` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` / `STRIPE_WEBHOOK_SECRET` | Real Stripe Checkout |
 | `SMTP_*` | Transactional email (verify / reset links) |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth |
+| `PUSHER_*` / `NEXT_PUBLIC_PUSHER_*` | Realtime chat + notifications |
+| `DAILY_API_KEY` | Elite live video rooms |
+| `BLOB_READ_WRITE_TOKEN` | Chat image uploads (Vercel Blob) |
 | `GEMINI_API_KEY` | AI chatbot |
 | `SPOONACULAR_API_KEY` | Enhanced food search |
 
-3. **Run development server** (required for Socket.io)
+3. **Run development server**
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Use `npm run start` after `npm run build` for production (same custom server).
+Open [http://localhost:3000](http://localhost:3000). For production on Vercel, set the env vars above in the project settings.
 
 4. **Seed the database** (recommended for demos)
 
@@ -151,9 +157,9 @@ Additional trainers: `sarah@test.com`, `usman@test.com`, `fatima@test.com`, `bil
 ## Scripts
 
 ```bash
-npm run dev      # Development (Socket.io enabled)
+npm run dev      # next dev (Vercel-compatible)
 npm run build    # Production build
-npm run start    # Production server (Socket.io enabled)
+npm run start    # next start
 npm run lint     # ESLint
 ```
 
@@ -163,12 +169,12 @@ npm run lint     # ESLint
 src/
 ├── app/              # Next.js App Router (pages + API routes)
 ├── components/       # UI components
-├── hooks/            # React hooks (useAuth, useChatSocket)
-├── lib/              # Auth, MongoDB, Stripe, Socket, plans, nutrition
+├── hooks/            # React hooks (useAuth, useChatRealtime)
+├── lib/              # Auth, MongoDB, Stripe, Pusher, Daily, Blob, plans
 ├── models/           # Mongoose schemas
-└── types/            # Shared TypeScript types
-server.ts             # Custom HTTP server + Socket.io
-docs/AUDIT_REPORT.md  # Latest module audit
+├── middleware.ts     # Edge route guards (re-exports proxy)
+└── proxy.ts          # Next.js 16 request proxy / auth redirects
+docs/                 # Audit + realtime notes
 ```
 
 ## License
