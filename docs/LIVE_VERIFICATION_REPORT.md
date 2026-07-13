@@ -1,10 +1,10 @@
 # Live Verification Report
 
-**Date:** 2026-07-13 (Phase 1–3 re-verify)  
+**Date:** 2026-07-13 (Phase 1–3 security re-verify)  
 **Branch:** `musadiq`  
 **Runtime:** `npm run dev` (Next.js 16.2.10) on `http://localhost:3000`  
 **Database:** MongoDB Atlas (`mongodb+srv://…`) — connected after DNS SRV workaround  
-**Method:** `npm run live-verify` (`scripts/live-verify.mjs`); HTTP API probes + authenticated page fetches  
+**Method:** `npm run live-verify` (`scripts/live-verify.mjs`); HTTP API probes + authenticated page fetches + security probes  
 **Payments:** **PAUSED — out of scope** (Stripe checkout / webhooks not exercised; plan fields read-only for gating)
 
 ## Environment inventory
@@ -13,7 +13,7 @@
 |----------|-----------------|-------|
 | `MONGODB_URI` | ✅ Set (Atlas) | Required. Windows ISP DNS refused `querySrv`; app resolves SRV via Google DNS then connects with a direct `mongodb://` URI |
 | `JWT_SECRET` | ✅ Set | Required |
-| `NEXT_PUBLIC_APP_URL` | ✅ Set | |
+| `NEXT_PUBLIC_APP_URL` | ✅ Set | Used for CORS allow-origin |
 | `ADMIN_SETUP_KEY` | ✅ Set | Seed / admin setup |
 | `GEMINI_API_KEY` / `SPOONACULAR_API_KEY` | Placeholder | Nutrition falls back to local DB |
 | `STRIPE_*` | Placeholder | **PAUSED** — simulated path when unset/non-live |
@@ -36,39 +36,52 @@
 
 ## Feature-by-feature results
 
-Legend: ✅ working · ⚠️ partial / env-gated · ❌ broken · 🧩 newly wired this session · ⏸️ payments paused
+Legend: ✅ working · ⚠️ partial / env-gated · ❌ broken · 🧩 newly wired · ⏸️ payments paused · 🔒 security hardened
 
 | Feature | Status | What was verified | Notes |
 |---------|--------|-------------------|-------|
 | Health / Mongo | ✅ | `GET /api/health` | `database: connected` |
-| Signup / login / me | ✅ | register + login + me | JWT httpOnly cookie |
-| Password reset | ✅🧩 | forgot → `devLink` → reset | SMTP unset → console + API `devLink` in non-prod; UI shows link |
-| Email verify | ✅ | register logs verify `devLink` | Routes `/verify-email` + API exist |
-| Google OAuth | ⚠️ | start → 503 without secrets | Code: CSRF `state`, `googleId` linking, role redirect |
-| Homepage | ✅ | `GET /` | Transient Turbopack/sonner cache 500 cleared via `.next` wipe |
+| Signup / login / me | ✅🔒 | register + login + me | Zod + rate limit; NoSQL operator login rejected |
+| Password reset | ✅🔒 | forgot → `devLink` → reset | Zod + rate limit |
+| Email verify | ✅🔒 | register logs verify `devLink` | Zod token body |
+| Google OAuth | ⚠️ | start → 503 without secrets | Code: CSRF `state`, `googleId` linking |
+| Homepage | ✅🔒 | `GET /` | CSP + security headers present |
 | Role dashboards | ✅ | trainer / gym / admin APIs | |
-| Coaching / trainers | ✅ | `GET /api/trainers` | Atlas trainers |
-| Trainer reviews | ✅🧩 | GET reviews | Notification link fixed → `/coaching/[id]` |
-| Chat list / send / typing | ✅ | messages POST + typing | Pusher optional |
-| Chat image (Blob) | ⚠️ | upload without file → 503 | Needs `BLOB_READ_WRITE_TOKEN` |
+| Coaching / trainers | ✅ | `GET /api/trainers` | |
+| Trainer reviews | ✅🔒 | GET/POST reviews | Zod rating/comment sanitize |
+| Chat list / send / typing | ✅🔒 | messages POST + typing | ObjectId + sanitized text; https-only images |
+| Chat image (Blob) | ⚠️🔒 | upload without file → 503 | MIME/size + rate limit; needs Blob token |
 | Pusher realtime | ⚠️ | auth → 503 | Needs Pusher keys; REST poll fallback OK |
-| Notifications center | ✅🧩 | list + community triggers | Like/comment notify author; live-session notify Elite clients |
-| Nutrition catalog | ✅ | meals + analyze GET | |
+| Notifications center | ✅ | list + community triggers | |
+| Nutrition catalog | ✅🔒 | meals + analyze GET | Query Zod-sanitized |
 | `/nutrition/[id]` | ✅ | detail page 200 | |
 | `/exercises/[id]` | ✅ | detail page 200 | |
-| Progress / my-fitness | ✅ | progress + pages | |
-| Workout plans | ✅ | member 403 on trainer list; my-plan 200 | Expected |
-| Meal plans (Pro) | ✅ | GET + POST generate 201 | |
+| Progress / my-fitness | ✅🔒 | progress POST Zod | |
+| Workout plans | ✅🔒 | member 403 on trainer list; my-plan 200 | Plan create Zod + ownership |
+| Meal plans (Pro) | ✅🔒 | GET + POST generate 201 | Zod body |
 | Analytics (Pro) | ✅ | summary 200 | |
-| Community feed | ✅🧩 | post / like / comment | Notifications fired |
-| Live sessions | ⚠️ | list OK; member create 403; trainer create 503 | Elite join gated by plan; Daily required to create |
-| Subscription / payments | ⏸️ | GET plan fields only | **PAUSED — out of scope** (Stripe simulated/test; JazzCash planned not started) |
-| Edge route guards | ✅ | `src/proxy.ts` only (no `middleware.ts`) | jose JWT; protected/guest/role routes |
-| Gamification | ✅ | `/api/gamification/me` | |
+| Community feed | ✅🔒 | post / like / comment | HTML stripped server-side |
+| Live sessions | ⚠️🔒 | list OK; member create 403; trainer create 503 | Create body Zod; Daily required |
+| Subscription / payments | ⏸️ | GET plan fields only | **PAUSED — out of scope** |
+| Edge route guards | ✅ | `src/proxy.ts` only | jose JWT |
+| Gamification | ✅🔒 | `/api/gamification/me`; form-check Zod + rate limit | |
+| AI chat | ✅🔒 | auth + Zod + rate limit | Not in live-verify script |
+| CSP / headers | ✅🔒 | CSP, nosniff, frame options | Via `next.config.ts` |
+
+## Security probes (this session)
+
+| Probe | Result |
+|-------|--------|
+| Login `email: {$ne: null}` | **400** — operator rejected |
+| Register operator email | **400** |
+| Community `<script>` / `<img onerror>` | Stored as plain text (tags stripped) |
+| Profile `profileImage: javascript:…` | **400** |
+| CSP on `/` | Present |
 
 ## Summary counts (latest scripted run)
 
 - **69 pass / 0 fail / 69 total** (`npm run live-verify`)
+- `npm run build` — success
 - Env-gated expected 503s counted as pass: OAuth, Blob upload, Pusher auth, Daily create
 
 ## Cannot fully verify without secrets
@@ -76,15 +89,17 @@ Legend: ✅ working · ⚠️ partial / env-gated · ❌ broken · 🧩 newly wi
 - Realtime push (Pusher)
 - Live video room create (Daily.co)
 - Chat image Blob uploads
-- Google OAuth end-to-end (needs Console credentials)
+- Google OAuth end-to-end
 - SMTP-delivered emails (dev `devLink` verified instead)
 - Real Stripe Checkout — **PAUSED**
 
-## Fixes applied this session
+## Fixes applied this session (security)
 
-1. Review notification deep-link → `/coaching/[id]`
-2. Community like/comment → `createNotification` (type `community`)
-3. Live session create → notify Elite active clients
-4. Google OAuth: `googleId` + `authProviders`, CSRF `state` cookie, role-based redirect
-5. Forgot-password / register: return + show `devLink` when SMTP unset (non-production)
-6. Extended `scripts/live-verify.mjs` + `npm run live-verify`
+1. Zod + NoSQL operator rejection across mutating APIs  
+2. Plain-text / URL sanitization for UGC  
+3. CSP and related security headers; tighter CORS origin  
+4. Rate limits on auth, AI, and upload routes  
+5. AI chat requires authentication  
+6. Chat UI blocks non-https image URLs  
+
+See `docs/SECURITY_AUDIT_REPORT.md`.
