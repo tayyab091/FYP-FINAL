@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
           quantity: 1,
         },
       ],
-      success_url: `${baseUrl}/subscription?success=true&plan=${plan}`,
+      success_url: `${baseUrl}/subscription?success=true&plan=${plan}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/subscription?canceled=true`,
       customer_email: tokenUser.email,
       metadata: {
@@ -96,6 +96,10 @@ export async function PUT(req: NextRequest) {
     const { plan, simulatedPayment } = await req.json()
     if (!isPaidPlan(plan) || simulatedPayment !== true) {
       return NextResponse.json({ message: 'Invalid subscription request' }, { status: 400 })
+    }
+
+    if (isStripeConfigured()) {
+      return NextResponse.json({ message: 'Use Stripe checkout' }, { status: 403 })
     }
 
     await connectDB()

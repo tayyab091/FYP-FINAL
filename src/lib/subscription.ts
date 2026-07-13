@@ -1,5 +1,6 @@
 import User from '@/models/User'
 import type { PlanId } from '@/lib/plans'
+import { createNotification } from '@/lib/notifications'
 
 export interface ResolvedSubscription {
   plan: PlanId
@@ -13,16 +14,28 @@ export const PLAN_LIMITS = {
     maxTrainerConnections: 5,
     workoutsPerWeek: 3,
     exerciseCheck: false,
+    mealPlans: false,
+    analytics: false,
+    community: true,
+    liveSessions: false,
   },
   pro: {
     maxTrainerConnections: Infinity,
     workoutsPerWeek: Infinity,
     exerciseCheck: true,
+    mealPlans: true,
+    analytics: true,
+    community: true,
+    liveSessions: false,
   },
   elite: {
     maxTrainerConnections: Infinity,
     workoutsPerWeek: Infinity,
     exerciseCheck: true,
+    mealPlans: true,
+    analytics: true,
+    community: true,
+    liveSessions: true,
   },
 } as const
 
@@ -86,6 +99,22 @@ export function canUseExerciseCheck(plan: PlanId): boolean {
   return PLAN_LIMITS[plan].exerciseCheck
 }
 
+export function canAccessMealPlans(plan: PlanId): boolean {
+  return PLAN_LIMITS[plan].mealPlans
+}
+
+export function canAccessAnalytics(plan: PlanId): boolean {
+  return PLAN_LIMITS[plan].analytics
+}
+
+export function canAccessCommunity(plan: PlanId): boolean {
+  return PLAN_LIMITS[plan].community
+}
+
+export function canAccessLiveSessions(plan: PlanId): boolean {
+  return PLAN_LIMITS[plan].liveSessions
+}
+
 export function getWorkoutWeeklyLimit(plan: PlanId): number {
   return PLAN_LIMITS[plan].workoutsPerWeek
 }
@@ -94,12 +123,29 @@ export function getTrainerConnectionLimit(plan: PlanId): number {
   return PLAN_LIMITS[plan].maxTrainerConnections
 }
 
+/** Activate a paid plan. Safe to call from webhook and confirm — skips if already active. */
 export async function activateUserPlan(userId: string, plan: 'pro' | 'elite') {
+  const existing = await User.findById(userId).select('subscription')
+  if (!existing) return null
+
+  const currentEnd = existing.subscription?.endDate
+    ? new Date(existing.subscription.endDate)
+    : undefined
+  const alreadyActive =
+    existing.subscription?.plan === plan &&
+    existing.subscription?.status === 'active' &&
+    !!currentEnd &&
+    currentEnd > new Date()
+
+  if (alreadyActive) {
+    return User.findById(userId).select('-password')
+  }
+
   const startDate = new Date()
   const endDate = new Date(startDate)
   endDate.setMonth(endDate.getMonth() + 1)
 
-  return User.findByIdAndUpdate(
+  const user = await User.findByIdAndUpdate(
     userId,
     {
       subscription: {
@@ -111,4 +157,17 @@ export async function activateUserPlan(userId: string, plan: 'pro' | 'elite') {
     },
     { new: true, runValidators: true },
   ).select('-password')
+
+  if (user) {
+    const planLabel = plan === 'pro' ? 'Pro' : 'Elite'
+    await createNotification({
+      userId,
+      title: `${planLabel} plan activated`,
+      message: `Your ${planLabel} plan is active`,
+      type: 'payment',
+      link: '/subscription',
+    })
+  }
+
+  return user
 }
