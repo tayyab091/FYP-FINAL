@@ -84,7 +84,7 @@ export default function ChatConversationPage() {
     [user],
   )
 
-  const { connected, sendMessage: sendViaSocket, sendTyping } = useChatSocket({
+  const { connected, sendTyping } = useChatSocket({
     conversationId: id,
     enabled: Boolean(user && id),
     onMessage: handleIncomingMessage,
@@ -151,17 +151,7 @@ export default function ChatConversationPage() {
     sendTyping(false)
 
     try {
-      let saved: Message
-      if (connected) {
-        const result = await sendViaSocket(content, type)
-        if (result.ok && result.message) {
-          saved = result.message
-        } else {
-          saved = await sendMessageRest(content, type)
-        }
-      } else {
-        saved = await sendMessageRest(content, type)
-      }
+      const saved = await sendMessageRest(content, type)
 
       setMessages((prev) =>
         prev.map((message) => (message._id === optimistic._id ? saved : message)),
