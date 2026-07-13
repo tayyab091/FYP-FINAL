@@ -67,4 +67,9 @@
 1. Provision Pusher / Daily / Blob for production Vercel demos  
 2. Wire real SMTP for reset/verify  
 3. Enable Google OAuth credentials  
-4. Replace placeholder Stripe keys for live Checkout + webhook  
+4. **Payments PAUSED** — defer live Stripe Checkout + webhook until payments resume  
+5. Consider Redis-backed rate limits for production multi-instance
+
+## Security follow-up (done 2026-07-13)
+
+See `docs/SECURITY_AUDIT_REPORT.md` — Zod validation, NoSQL operator rejection, XSS sanitization, CSP, rate limits. Payments routes untouched.
