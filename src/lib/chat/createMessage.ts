@@ -76,16 +76,20 @@ export async function createMessage(input: CreateMessageInput) {
   const trimmed = content.trim()
 
   if (!trimmed) throw new ChatError(400, 'Message cannot be empty')
-  if (trimmed.length > 2000) throw new ChatError(400, 'Message is too long')
+  if (type !== 'image' && trimmed.length > 2000) {
+    throw new ChatError(400, 'Message is too long')
+  }
   if (!['text', 'workout_plan', 'image'].includes(type)) {
     throw new ChatError(400, 'Invalid message type')
   }
 
   if (type === 'image') {
-    const isUploadPath = trimmed.startsWith('/uploads/')
     const isHttpsUrl = /^https:\/\//i.test(trimmed)
-    if (!isUploadPath && !isHttpsUrl) {
-      throw new ChatError(400, 'Image content must be an /uploads/ path or https URL')
+    if (!isHttpsUrl) {
+      throw new ChatError(400, 'Image content must be an https URL (Vercel Blob)')
+    }
+    if (trimmed.length > 2048) {
+      throw new ChatError(400, 'Image URL is too long')
     }
   }
 
