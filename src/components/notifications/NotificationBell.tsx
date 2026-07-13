@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { io, type Socket } from 'socket.io-client'
+import Pusher from 'pusher-js'
 import { Bell, CheckCheck, MessageCircle, UserPlus, Info } from 'lucide-react'
 import type { AppNotification } from '@/types'
+import { useAuth } from '@/hooks/useAuth'
 
 function formatTime(dateStr: string) {
   const date = new Date(dateStr)
@@ -32,12 +33,12 @@ function typeIcon(type: AppNotification['type']) {
 
 export function NotificationBell() {
   const router = useRouter()
+  const { user } = useAuth()
   const [open, setOpen] = useState(false)
   const [notifications, setNotifications] = useState<AppNotification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
-  const socketRef = useRef<Socket | null>(null)
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -58,17 +59,19 @@ export function NotificationBell() {
   }, [fetchNotifications])
 
   useEffect(() => {
-    const socket = io({
-      path: '/socket.io',
-      withCredentials: true,
-      transports: ['websocket', 'polling'],
-      reconnectionAttempts: 5,
-      reconnectionDelay: 2000,
-      timeout: 10000,
-    })
-    socketRef.current = socket
+    const userId = user?.id || user?._id
+    const key = process.env.NEXT_PUBLIC_PUSHER_KEY
+    const cluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER
+    if (!userId || !key || !cluster) return
 
-    socket.on('notification', (notification: AppNotification) => {
+    const pusher = new Pusher(key, {
+      cluster,
+      authEndpoint: '/api/pusher/auth',
+    })
+    const channelName = `private-user-${userId}`
+    const channel = pusher.subscribe(channelName)
+
+    channel.bind('notification', (notification: AppNotification) => {
       if (!notification?._id) return
       setNotifications((prev) => {
         if (prev.some((item) => item._id === notification._id)) return prev
@@ -80,10 +83,11 @@ export function NotificationBell() {
     })
 
     return () => {
-      socket.disconnect()
-      socketRef.current = null
+      channel.unbind_all()
+      pusher.unsubscribe(channelName)
+      pusher.disconnect()
     }
-  }, [])
+  }, [user?.id, user?._id])
 
   useEffect(() => {
     if (!open) return

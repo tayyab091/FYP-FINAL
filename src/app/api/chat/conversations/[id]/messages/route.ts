@@ -4,7 +4,7 @@ import Message from '@/models/Message'
 import Conversation from '@/models/Conversation'
 import { getUser } from '@/lib/auth'
 import { createMessage, ChatError, assertCanChat } from '@/lib/chat/createMessage'
-import { emitNewMessage } from '@/lib/socket/io'
+import { publishChatMessage } from '@/lib/realtime'
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       attachedPlanId,
     })
 
-    emitNewMessage(id, saved)
+    await publishChatMessage(id, saved).catch(() => {})
 
     return NextResponse.json(saved, { status: 201 })
   } catch (error) {

@@ -1,6 +1,6 @@
-import mongoose from 'mongoose'
 import Notification from '@/models/Notification'
-import { emitNotification } from '@/lib/socket/io'
+import mongoose from 'mongoose'
+import { publishNotification } from '@/lib/realtime'
 
 type NotificationType = 'chat' | 'workout' | 'system' | 'trainer' | 'payment'
 
@@ -46,6 +46,6 @@ export async function createNotification(input: CreateNotificationInput) {
   })
 
   const shaped = shapeNotification(notification)
-  emitNotification(shaped.userId, shaped)
+  await publishNotification(shaped.userId, shaped).catch(() => {})
   return shaped
 }

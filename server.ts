@@ -1,7 +1,11 @@
+/**
+ * Local optional server entry.
+ * Production on Vercel uses `next start` / serverless — no Socket.io.
+ * Realtime: Pusher | Live video: Daily.co | Uploads: Vercel Blob
+ */
 import { createServer } from 'http'
 import { parse } from 'url'
 import next from 'next'
-import { initSocketServer } from './src/lib/socket/server'
 
 const dev = process.env.NODE_ENV !== 'production'
 const hostname = process.env.HOSTNAME || 'localhost'
@@ -16,9 +20,7 @@ app.prepare().then(() => {
     handle(req, res, parsedUrl)
   })
 
-  initSocketServer(httpServer)
-
   httpServer.listen(port, () => {
-    console.log(`> Ready on http://${hostname}:${port} (Socket.io enabled)`)
+    console.log(`> Ready on http://${hostname}:${port}`)
   })
 })
