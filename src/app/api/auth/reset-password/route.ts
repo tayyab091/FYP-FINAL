@@ -2,20 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { connectDB } from '@/lib/mongodb'
 import User from '@/models/User'
+import { parseJsonBody, resetPasswordSchema } from '@/lib/validation'
+import { rateLimitAuth } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
   try {
-    const { token, password } = await req.json()
+    const limited = rateLimitAuth(req)
+    if (limited) return limited
 
-    if (typeof token !== 'string' || !token.trim()) {
-      return NextResponse.json({ message: 'Reset token is required' }, { status: 400 })
-    }
-    if (typeof password !== 'string' || password.length < 8) {
-      return NextResponse.json(
-        { message: 'Password must be at least 8 characters' },
-        { status: 400 },
-      )
-    }
+    const parsed = await parseJsonBody(req, resetPasswordSchema)
+    if ('error' in parsed) return parsed.error
+
+    const { token, password } = parsed.data
 
     await connectDB()
     const user = await User.findOne({

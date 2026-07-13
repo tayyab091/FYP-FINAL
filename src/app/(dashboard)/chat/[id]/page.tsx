@@ -304,13 +304,16 @@ export default function ChatConversationPage() {
                         </p>
                       )}
                     </div>
-                  ) : msg.type === 'image' ? (
+                  ) : msg.type === 'image' && typeof msg.content === 'string' && /^https:\/\//i.test(msg.content) ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={msg.content}
                       alt="Shared image"
                       className="max-h-64 max-w-full rounded-lg object-contain"
+                      referrerPolicy="no-referrer"
                     />
+                  ) : msg.type === 'image' ? (
+                    <p className="break-words text-xs opacity-70">[Blocked unsafe image URL]</p>
                   ) : (
                     <p className="break-words">{msg.content}</p>
                   )}

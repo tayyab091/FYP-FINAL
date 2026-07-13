@@ -5,7 +5,7 @@ import { bypassesSubscriptionGate } from '@/lib/access'
 import { normalizePlan, canAccessMealPlans } from '@/lib/subscription'
 import { syncUserSubscription } from '@/lib/subscription-server'
 import MealPlan from '@/models/MealPlan'
-import mongoose from 'mongoose'
+import { mealPlanUpdateSchema, parseJsonBody, parseObjectIdParam } from '@/lib/validation'
 
 async function assertMealPlanAccess(userId: string, role: string) {
   if (bypassesSubscriptionGate(role)) return null
@@ -30,13 +30,12 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     const denied = await assertMealPlanAccess(tokenUser.userId, tokenUser.role)
     if (denied) return denied
 
-    const { id } = await params
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return NextResponse.json({ message: 'Invalid plan id' }, { status: 400 })
-    }
+    const { id: rawId } = await params
+    const idResult = parseObjectIdParam(rawId, 'plan id')
+    if ('error' in idResult) return idResult.error
 
     await connectDB()
-    const plan = await MealPlan.findOne({ _id: id, userId: tokenUser.userId }).lean()
+    const plan = await MealPlan.findOne({ _id: idResult.id, userId: tokenUser.userId }).lean()
     if (!plan) return NextResponse.json({ message: 'Meal plan not found' }, { status: 404 })
 
     return NextResponse.json(plan)
@@ -53,31 +52,23 @@ export async function PUT(req: NextRequest, { params }: RouteContext) {
     const denied = await assertMealPlanAccess(tokenUser.userId, tokenUser.role)
     if (denied) return denied
 
-    const { id } = await params
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return NextResponse.json({ message: 'Invalid plan id' }, { status: 400 })
-    }
+    const { id: rawId } = await params
+    const idResult = parseObjectIdParam(rawId, 'plan id')
+    if ('error' in idResult) return idResult.error
+
+    const parsed = await parseJsonBody(req, mealPlanUpdateSchema)
+    if ('error' in parsed) return parsed.error
+    const body = parsed.data
 
     await connectDB()
-    const plan = await MealPlan.findOne({ _id: id, userId: tokenUser.userId })
+    const plan = await MealPlan.findOne({ _id: idResult.id, userId: tokenUser.userId })
     if (!plan) return NextResponse.json({ message: 'Meal plan not found' }, { status: 404 })
 
-    const body = await req.json() as {
-      title?: string
-      goal?: string
-      dailyCalories?: number
-      days?: unknown
-      status?: string
-      preferenceNotes?: string
-    }
-
-    if (typeof body.title === 'string' && body.title.trim()) plan.title = body.title.trim()
-    if (typeof body.goal === 'string') plan.goal = body.goal
-    if (typeof body.dailyCalories === 'number' && body.dailyCalories > 0) {
-      plan.dailyCalories = Math.round(body.dailyCalories)
-    }
-    if (Array.isArray(body.days)) plan.days = body.days
-    if (typeof body.preferenceNotes === 'string') plan.preferenceNotes = body.preferenceNotes
+    if (body.title) plan.title = body.title
+    if (body.goal !== undefined) plan.goal = body.goal
+    if (body.dailyCalories !== undefined) plan.dailyCalories = body.dailyCalories
+    if (body.days !== undefined) plan.days = body.days as typeof plan.days
+    if (body.preferenceNotes !== undefined) plan.preferenceNotes = body.preferenceNotes
 
     if (body.status === 'active' || body.status === 'draft') {
       if (body.status === 'active') {
@@ -104,13 +95,12 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
     const denied = await assertMealPlanAccess(tokenUser.userId, tokenUser.role)
     if (denied) return denied
 
-    const { id } = await params
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return NextResponse.json({ message: 'Invalid plan id' }, { status: 400 })
-    }
+    const { id: rawId } = await params
+    const idResult = parseObjectIdParam(rawId, 'plan id')
+    if ('error' in idResult) return idResult.error
 
     await connectDB()
-    const deleted = await MealPlan.findOneAndDelete({ _id: id, userId: tokenUser.userId })
+    const deleted = await MealPlan.findOneAndDelete({ _id: idResult.id, userId: tokenUser.userId })
     if (!deleted) return NextResponse.json({ message: 'Meal plan not found' }, { status: 404 })
 
     return NextResponse.json({ message: 'Meal plan deleted' })

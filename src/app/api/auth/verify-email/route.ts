@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import User from '@/models/User'
+import { parseJsonBody, verifyEmailSchema } from '@/lib/validation'
+import { rateLimitAuth } from '@/lib/rate-limit'
 
 async function verifyEmailToken(token: string | null) {
   if (!token?.trim()) {
@@ -27,9 +29,13 @@ async function verifyEmailToken(token: string | null) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json().catch(() => ({}))
-    const token = typeof body.token === 'string' ? body.token : null
-    const result = await verifyEmailToken(token)
+    const limited = rateLimitAuth(req)
+    if (limited) return limited
+
+    const parsed = await parseJsonBody(req, verifyEmailSchema)
+    if ('error' in parsed) return parsed.error
+
+    const result = await verifyEmailToken(parsed.data.token)
     if (!result.ok) {
       return NextResponse.json({ message: result.message }, { status: result.status })
     }
@@ -42,6 +48,9 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
+    const limited = rateLimitAuth(req)
+    if (limited) return limited
+
     const token = req.nextUrl.searchParams.get('token')
     const result = await verifyEmailToken(token)
     if (!result.ok) {

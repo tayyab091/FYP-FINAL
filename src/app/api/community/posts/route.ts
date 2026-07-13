@@ -7,6 +7,9 @@ import { syncUserSubscription } from '@/lib/subscription-server'
 import CommunityPost from '@/models/CommunityPost'
 import CommunityComment from '@/models/CommunityComment'
 import User from '@/models/User'
+import { communityPostSchema, parseJsonBody } from '@/lib/validation'
+import { z } from 'zod'
+import { parseSearchParams } from '@/lib/validation'
 
 async function assertCommunityAccess(userId: string, role: string) {
   if (bypassesSubscriptionGate(role)) return null
@@ -20,6 +23,17 @@ async function assertCommunityAccess(userId: string, role: string) {
   return null
 }
 
+const listQuerySchema = z.object({
+  limit: z
+    .string()
+    .optional()
+    .transform((v) => {
+      const n = parseInt(v || '20', 10)
+      if (!Number.isFinite(n)) return 20
+      return Math.min(50, Math.max(1, n))
+    }),
+})
+
 export async function GET(req: NextRequest) {
   try {
     const tokenUser = await getUser(req)
@@ -28,12 +42,13 @@ export async function GET(req: NextRequest) {
     const denied = await assertCommunityAccess(tokenUser.userId, tokenUser.role)
     if (denied) return denied
 
-    await connectDB()
-    const limit = Math.min(50, Math.max(1, parseInt(req.nextUrl.searchParams.get('limit') || '20', 10) || 20))
+    const query = parseSearchParams(req.nextUrl.searchParams, listQuerySchema)
+    if ('error' in query) return query.error
 
+    await connectDB()
     const posts = await CommunityPost.find()
       .sort({ createdAt: -1 })
-      .limit(limit)
+      .limit(query.data.limit)
       .lean()
 
     const postIds = posts.map((p) => p._id)
@@ -66,14 +81,8 @@ export async function POST(req: NextRequest) {
     const denied = await assertCommunityAccess(tokenUser.userId, tokenUser.role)
     if (denied) return denied
 
-    const body = await req.json() as { content?: string }
-    const content = typeof body.content === 'string' ? body.content.trim() : ''
-    if (!content) {
-      return NextResponse.json({ message: 'Post content is required' }, { status: 400 })
-    }
-    if (content.length > 2000) {
-      return NextResponse.json({ message: 'Post is too long (max 2000 characters)' }, { status: 400 })
-    }
+    const parsed = await parseJsonBody(req, communityPostSchema)
+    if ('error' in parsed) return parsed.error
 
     await connectDB()
     const user = await User.findById(tokenUser.userId).select('fullName').lean()
@@ -82,7 +91,7 @@ export async function POST(req: NextRequest) {
     const post = await CommunityPost.create({
       authorId: tokenUser.userId,
       authorName,
-      content,
+      content: parsed.data.content,
       likes: [],
     })
 

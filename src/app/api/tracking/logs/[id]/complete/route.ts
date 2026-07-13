@@ -6,13 +6,7 @@ import WorkoutLog from '@/models/WorkoutLog'
 import { getWorkoutWeeklyLimit, normalizePlan } from '@/lib/subscription'
 import { syncUserSubscription } from '@/lib/subscription-server'
 import { awardWorkoutXp } from '@/lib/gamification'
-
-interface CompletedExercise {
-  name: string
-  setsCompleted?: number
-  repsCompleted?: string
-  notes?: string
-}
+import { parseJsonBody, parseObjectIdParam, workoutCompleteSchema } from '@/lib/validation'
 
 export async function POST(
   req: NextRequest,
@@ -27,18 +21,16 @@ export async function POST(
       return NextResponse.json({ message: 'Member account required' }, { status: 403 })
     }
 
-    const { id } = await params
-    const body = await req.json()
-    const exercises = Array.isArray(body.exercises)
-      ? body.exercises.filter(
-          (exercise: CompletedExercise) =>
-            typeof exercise.name === 'string' && exercise.name.trim(),
-        )
-      : []
+    const { id: rawId } = await params
+    const idResult = parseObjectIdParam(rawId, 'plan id')
+    if ('error' in idResult) return idResult.error
+
+    const parsed = await parseJsonBody(req, workoutCompleteSchema)
+    if ('error' in parsed) return parsed.error
 
     await connectDB()
     const plan = await WorkoutPlan.findOne({
-      _id: id,
+      _id: idResult.id,
       userId: tokenUser.userId,
       status: 'active',
     }).select('_id')
@@ -69,9 +61,9 @@ export async function POST(
       userId: tokenUser.userId,
       planId: plan._id,
       status: 'completed',
-      exercises,
-      durationMinutes: Math.max(0, Number(body.durationMinutes) || 0),
-      notes: typeof body.notes === 'string' ? body.notes.trim() : '',
+      exercises: parsed.data.exercises,
+      durationMinutes: parsed.data.durationMinutes || 0,
+      notes: parsed.data.notes || '',
       date: new Date(),
     })
 
