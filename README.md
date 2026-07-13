@@ -6,27 +6,36 @@ Full-stack fitness coaching platform built as a Final Year Project. Members conn
 
 | Layer | Technology |
 |-------|------------|
-| Framework | Next.js 16 (App Router) |
+| Framework | Next.js 16 (App Router) + custom Node server (`server.ts`) |
 | Language | TypeScript |
 | Database | MongoDB + Mongoose |
-| Auth | JWT (httpOnly cookies) |
-| UI | Tailwind CSS 4, shadcn/ui, Recharts |
+| Auth | JWT (httpOnly cookies), Google OAuth, email verify / password reset |
+| Realtime | Socket.io (chat, notifications, WebRTC signaling) |
+| UI | Tailwind CSS 4, shadcn/ui, Recharts, Framer Motion |
 | AI | Google Gemini (chatbot, nutrition hints) |
 | Pose | MediaPipe Pose (exercise form checker) |
-| Payments | Simulated in-app (Stripe keys optional) |
+| Payments | Stripe Checkout (test mode) with simulated fallback when keys unset |
+| Email | SMTP via nodemailer (console link fallback in development) |
 
 ## Features
 
 - **Trainer marketplace** — Browse, filter, and connect with verified coaches
-- **Coaching relationships** — Request / accept flow with permission flags (`canViewProgress`, `canViewNutrition`, etc.)
+- **Coaching relationships** — Request / accept flow with permission flags
 - **Workout plans** — Trainers create weekly schedules; clients complete sessions with history & streaks
 - **Nutrition tracking** — Food search, meal logging, personalized calorie targets
-- **Progress tracking** — Weight, body fat, chest/waist/hips measurements with charts
-- **Chat** — Trainer–client messaging with workout plan attachments
+- **Personalized meal plans** — Rule-based Pro+ generator with save / edit / activate (`/meal-plans`)
+- **Progress tracking** — Weight, body fat, measurements with charts
+- **Advanced analytics** — Pro+ dashboard: workouts, nutrition, weight trends (`/analytics`)
+- **Community feed** — Basic+ posts, likes, comments (`/community`)
+- **Live training sessions** — Elite scheduling + WebRTC video rooms (`/live-sessions`)
+- **Chat** — Realtime messaging with workout plan cards and image uploads
+- **Notifications** — In-app center + bell; Socket.io push with poll fallback
+- **Trainer reviews** — Rating + comment; average on trainer profiles
 - **AI form checker** — Pro/Elite gated pose feedback (`/exercise-check`)
-- **Subscriptions** — Basic / Pro / Elite tiers with plan limits (simulated upgrade flow)
-- **Admin panel** — User management, trainer/gym verification, suspend users, audit logs
-- **Gym owner dashboard** — Gym and trainer analytics
+- **Subscriptions** — Basic / Pro / Elite via Stripe Checkout (or simulated when Stripe unset)
+- **Auth extras** — Google OAuth, email verification, forgot / reset password
+- **Admin / gym owner** — Verification, suspend users, gym analytics
+- **Route protection** — Server-side guards in `src/proxy.ts` (Next.js 16 proxy middleware)
 
 ## Prerequisites
 
@@ -54,18 +63,27 @@ Edit `.env.local` and set at minimum:
 - `MONGODB_URI` — MongoDB connection string
 - `JWT_SECRET` — Long random string for signing tokens
 - `ADMIN_SETUP_KEY` — Secret used for seed/admin bootstrap
+- `NEXT_PUBLIC_APP_URL` — App origin (e.g. `http://localhost:3000`)
 
-3. **Run development server**
+Optional integrations (see `.env.example`):
+
+| Variable | Purpose |
+|----------|---------|
+| `STRIPE_SECRET_KEY` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` / `STRIPE_WEBHOOK_SECRET` | Real Stripe Checkout |
+| `SMTP_*` | Transactional email (verify / reset links) |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth |
+| `GEMINI_API_KEY` | AI chatbot |
+| `SPOONACULAR_API_KEY` | Enhanced food search |
+
+3. **Run development server** (required for Socket.io)
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000). Use `npm run start` after `npm run build` for production (same custom server).
 
 4. **Seed the database** (recommended for demos)
-
-With the dev server running:
 
 ```bash
 curl -X POST http://localhost:3000/api/seed \
@@ -73,9 +91,18 @@ curl -X POST http://localhost:3000/api/seed \
   -d "{\"setupKey\": \"YOUR_ADMIN_SETUP_KEY\"}"
 ```
 
-Replace `YOUR_ADMIN_SETUP_KEY` with the value from `.env.local`.
+> **Note:** The coaching page shows **preview trainers** when the DB is empty. Connect buttons are disabled until you seed.
 
-> **Note:** The coaching page shows **preview trainers** when the DB is empty. Connect buttons are disabled until you seed — fallback IDs are not real MongoDB documents.
+## Test accounts (after seed)
+
+| Role | Email | Password |
+|------|-------|----------|
+| Admin | admin@test.com | Admin@123 |
+| Gym owner | gymowner@test.com | GymOwner@123 |
+| Trainer | ali@test.com | Trainer@123 |
+| Member (Pro) | user1@test.com | User@123 |
+| Member (Basic) | user2@test.com | User@123 |
+| Member (Elite) | user3@test.com | User@123 |
 
 ## Test accounts (after seed)
 
@@ -94,31 +121,39 @@ Additional trainers: `sarah@test.com`, `usman@test.com`, `fatima@test.com`, `bil
 
 | Plan | Highlights |
 |------|------------|
-| **Basic** | Free — 3 workouts/week, 5 trainer connection requests |
-| **Pro** | Unlimited workouts, AI form checker, 1-on-1 chat |
-| **Elite** | Everything in Pro + unlimited trainer connections |
+| **Basic** | Free — 3 workouts/week, community feed, 5 trainer connection requests |
+| **Pro** | Unlimited workouts, meal plans, analytics, AI form checker, chat |
+| **Elite** | Everything in Pro + live sessions + unlimited trainer connections |
 
-Upgrades are **simulated** on `/subscription` (no real Stripe charge). Paid plans expire after 30 days and auto-downgrade to Basic on next `/api/auth/me` call.
+**Payments:** When Stripe keys are set, checkout uses Stripe (test mode supported). Simulated `PUT` upgrades are **blocked** while Stripe is configured. Without Stripe keys, the app falls back to simulated activation for demos.
+
+**Webhooks:** Point Stripe to `POST /api/webhooks/stripe`. Success URL also confirms via `GET /api/subscription/confirm?session_id=…`.
 
 ## Key routes
 
 | Path | Description |
 |------|-------------|
 | `/coaching` | Trainer marketplace |
-| `/coaching/[id]` | Trainer profile detail |
 | `/my-fitness` | Member hub (workout, history, nutrition, progress) |
+| `/meal-plans` | Personalized meal plans (Pro+) |
+| `/analytics` | Advanced analytics (Pro+) |
+| `/community` | Community feed (Basic+) |
+| `/live-sessions` | Live training (Elite) |
 | `/trainer-dashboard` | Trainer workspace |
-| `/chat` | Messaging |
+| `/chat` | Messaging (text, images, workout plans) |
+| `/notifications` | Notification center |
 | `/exercise-check` | AI pose form checker (Pro/Elite) |
+| `/subscription` | Plans & Stripe checkout |
+| `/forgot-password` / `/reset-password` / `/verify-email` | Account recovery |
 | `/admin` | Platform admin |
-| `/settings` | Profile & coach profile editing |
+| `/settings` | Profile editing |
 
 ## Scripts
 
 ```bash
-npm run dev      # Development
+npm run dev      # Development (Socket.io enabled)
 npm run build    # Production build
-npm run start    # Production server
+npm run start    # Production server (Socket.io enabled)
 npm run lint     # ESLint
 ```
 
@@ -128,17 +163,13 @@ npm run lint     # ESLint
 src/
 ├── app/              # Next.js App Router (pages + API routes)
 ├── components/       # UI components
-├── hooks/            # React hooks (useAuth)
-├── lib/              # Auth, MongoDB, plans, subscription, nutrition helpers
+├── hooks/            # React hooks (useAuth, useChatSocket)
+├── lib/              # Auth, MongoDB, Stripe, Socket, plans, nutrition
 ├── models/           # Mongoose schemas
 └── types/            # Shared TypeScript types
+server.ts             # Custom HTTP server + Socket.io
+docs/AUDIT_REPORT.md  # Latest module audit
 ```
-
-## Optional integrations
-
-- **GEMINI_API_KEY** — Powers the AI chatbot (`/api/ai/chat`)
-- **SPOONACULAR_API_KEY** — Enhanced food nutrition search; falls back to local data without it
-- **Stripe keys** — Reserved for future real payments; not required for FYP demo
 
 ## License
 
