@@ -145,7 +145,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         title: 'New review received',
         message: `${user.fullName} left you a ${rating}-star review`,
         type: 'trainer',
-        link: `/trainers/${id}`,
+        link: `/coaching/${id}`,
       })
     }
 

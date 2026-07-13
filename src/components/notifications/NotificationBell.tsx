@@ -26,6 +26,8 @@ function typeIcon(type: AppNotification['type']) {
       return MessageCircle
     case 'trainer':
       return UserPlus
+    case 'community':
+      return MessageCircle
     default:
       return Info
   }
