@@ -4,7 +4,11 @@ import { connectDB } from '@/lib/mongodb'
 import { getUser } from '@/lib/auth'
 import LiveSession from '@/models/LiveSession'
 import User from '@/models/User'
+import Trainer from '@/models/Trainer'
+import Relationship from '@/models/Relationship'
 import { createDailyRoom, isDailyConfigured } from '@/lib/daily'
+import { createNotification } from '@/lib/notifications'
+import { normalizePlan, canAccessLiveSessions } from '@/lib/subscription'
 
 export async function GET(req: NextRequest) {
   try {
@@ -110,6 +114,44 @@ export async function POST(req: NextRequest) {
       dailyRoomName: dailyRoom.name,
       dailyRoomUrl: dailyRoom.url,
     })
+
+    // Notify Elite clients with an active coaching relationship
+    try {
+      const trainerProfile = await Trainer.findOne({ userId: tokenUser.userId }).select('_id').lean()
+      if (trainerProfile) {
+        const relationships = await Relationship.find({
+          trainerId: trainerProfile._id,
+          status: 'active',
+        }).select('userId').lean()
+
+        const clientIds = relationships.map((r) => r.userId)
+        if (clientIds.length > 0) {
+          const clients = await User.find({ _id: { $in: clientIds } })
+            .select('_id fullName subscription')
+            .lean()
+
+          const trainerUser = await User.findById(tokenUser.userId).select('fullName').lean()
+          const trainerName = trainerUser?.fullName || 'Your trainer'
+          const when = scheduledAt.toLocaleString()
+
+          await Promise.all(
+            clients
+              .filter((c) => canAccessLiveSessions(normalizePlan(c.subscription?.plan)))
+              .map((c) =>
+                createNotification({
+                  userId: c._id,
+                  title: 'New live training session',
+                  message: `${trainerName} scheduled “${title}” for ${when}`,
+                  type: 'trainer',
+                  link: `/live-sessions/${session._id.toString()}`,
+                }).catch(() => {}),
+              ),
+          )
+        }
+      }
+    } catch (notifyError) {
+      console.error('Live session notify error:', notifyError)
+    }
 
     return NextResponse.json(
       {

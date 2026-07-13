@@ -5,6 +5,7 @@ import { getUser } from '@/lib/auth'
 import { bypassesSubscriptionGate } from '@/lib/access'
 import { normalizePlan, canAccessCommunity } from '@/lib/subscription'
 import { syncUserSubscription } from '@/lib/subscription-server'
+import { createNotification } from '@/lib/notifications'
 import CommunityPost from '@/models/CommunityPost'
 import CommunityComment from '@/models/CommunityComment'
 import User from '@/models/User'
@@ -73,7 +74,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     }
 
     await connectDB()
-    const post = await CommunityPost.findById(id).select('_id').lean()
+    const post = await CommunityPost.findById(id).select('_id authorId').lean()
     if (!post) return NextResponse.json({ message: 'Post not found' }, { status: 404 })
 
     const user = await User.findById(tokenUser.userId).select('fullName').lean()
@@ -85,6 +86,16 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       authorName,
       content,
     })
+
+    if (post.authorId.toString() !== tokenUser.userId) {
+      await createNotification({
+        userId: post.authorId,
+        title: 'New comment on your post',
+        message: `${authorName} commented on your community post`,
+        type: 'community',
+        link: '/community',
+      }).catch(() => {})
+    }
 
     return NextResponse.json(comment, { status: 201 })
   } catch {
