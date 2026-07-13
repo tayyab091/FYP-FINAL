@@ -9,6 +9,11 @@ export const PROTECTED_ROUTES = [
   '/admin',
   '/chat',
   '/settings',
+  '/meal-plans',
+  '/community',
+  '/analytics',
+  '/live-sessions',
+  '/notifications',
 ] as const
 
 /** Auth pages that redirect authenticated users to their workspace. */
@@ -17,6 +22,8 @@ export const GUEST_ONLY_ROUTES = [
   '/signup',
   '/register-trainer',
   '/register-gym-owner',
+  '/forgot-password',
+  '/reset-password',
 ] as const
 
 export const ROLE_ROUTE_RESTRICTIONS: ReadonlyArray<{

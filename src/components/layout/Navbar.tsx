@@ -27,7 +27,9 @@ export function Navbar() {
 
   const hideOn = [
     '/admin', '/gym-owner', '/trainer-dashboard', '/my-fitness', '/chat', '/settings',
+    '/meal-plans', '/community', '/analytics', '/live-sessions', '/notifications',
     '/login', '/signup', '/register-trainer', '/register-gym-owner',
+    '/forgot-password', '/reset-password', '/verify-email',
   ]
   if (hideOn.some(p => pathname.startsWith(p))) return null
 
