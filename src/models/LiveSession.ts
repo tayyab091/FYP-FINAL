@@ -14,7 +14,12 @@ const LiveSessionSchema = new Schema(
       default: 'scheduled',
       index: true,
     },
+    /** Local identifier used when creating the Daily room name. */
     roomId: { type: String, required: true, unique: true },
+    /** Daily.co room name returned by the Daily API. */
+    dailyRoomName: { type: String, default: '' },
+    /** Daily.co join URL for the Prebuilt / iframe client. */
+    dailyRoomUrl: { type: String, default: '' },
   },
   { timestamps: true },
 )

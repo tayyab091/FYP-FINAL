@@ -4,6 +4,7 @@ import { connectDB } from '@/lib/mongodb'
 import { getUser } from '@/lib/auth'
 import LiveSession from '@/models/LiveSession'
 import User from '@/models/User'
+import { createDailyRoom, isDailyConfigured } from '@/lib/daily'
 
 export async function GET(req: NextRequest) {
   try {
@@ -78,6 +79,25 @@ export async function POST(req: NextRequest) {
     }
 
     await connectDB()
+
+    if (!isDailyConfigured()) {
+      return NextResponse.json(
+        { message: 'Live video requires DAILY_API_KEY (Daily.co)' },
+        { status: 503 },
+      )
+    }
+
+    const roomId = randomUUID()
+    const expUnix = Math.floor(scheduledAt.getTime() / 1000) + durationMinutes * 60 + 3600
+
+    let dailyRoom: { name: string; url: string }
+    try {
+      dailyRoom = await createDailyRoom({ name: `live-${roomId}`, expUnix })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to create Daily room'
+      return NextResponse.json({ message }, { status: 502 })
+    }
+
     const session = await LiveSession.create({
       trainerId: tokenUser.userId,
       title,
@@ -86,7 +106,9 @@ export async function POST(req: NextRequest) {
       maxParticipants: Math.min(50, Math.max(1, maxParticipants)),
       participantIds: [],
       status: 'scheduled',
-      roomId: randomUUID(),
+      roomId,
+      dailyRoomName: dailyRoom.name,
+      dailyRoomUrl: dailyRoom.url,
     })
 
     return NextResponse.json(
