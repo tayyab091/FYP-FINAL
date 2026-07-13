@@ -7,6 +7,7 @@ import { usePathname, useSearchParams } from 'next/navigation'
 import {
   Activity,
   Apple,
+  BarChart3,
   Building2,
   ClipboardList,
   Dumbbell,
@@ -15,9 +16,11 @@ import {
   LogOut,
   Menu,
   MessageCircle,
+  Radio,
   ScanLine,
   Settings,
   Users,
+  Utensils,
   X,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
@@ -43,6 +46,10 @@ const roleNavigation: Record<UserRole, NavItem[]> = {
   user: [
     { label: 'Home', href: '/', icon: Home, exact: true },
     { label: 'My Fitness', href: '/my-fitness', icon: LayoutDashboard },
+    { label: 'Meal Plans', href: '/meal-plans', icon: Utensils },
+    { label: 'Community', href: '/community', icon: Users },
+    { label: 'Analytics', href: '/analytics', icon: BarChart3 },
+    { label: 'Live Sessions', href: '/live-sessions', icon: Radio },
     { label: 'Nutrition', href: '/nutrition', icon: Apple },
     { label: 'Messages', href: '/chat', icon: MessageCircle },
     { label: 'Settings', href: '/settings', icon: Settings },
@@ -50,6 +57,7 @@ const roleNavigation: Record<UserRole, NavItem[]> = {
   ],
   trainer: [
     { label: 'Home', href: '/trainer-dashboard', icon: Home, exact: true },
+    { label: 'Live Sessions', href: '/live-sessions', icon: Radio },
     { label: 'Messages', href: '/chat', icon: MessageCircle },
     { label: 'Exercise Library', href: '/exercises', icon: Dumbbell },
     { label: 'AI Form Checker', href: '/exercise-check', icon: ScanLine },
@@ -88,6 +96,9 @@ const roleNavigation: Record<UserRole, NavItem[]> = {
 const pageTitles: Record<string, string> = {
   '/': 'Home',
   '/my-fitness': 'My Fitness',
+  '/meal-plans': 'Meal Plans',
+  '/community': 'Community',
+  '/analytics': 'Analytics',
   '/trainer-dashboard': 'Trainer Dashboard',
   '/gym-owner': 'Gym Management',
   '/admin': 'Admin Console',
@@ -97,6 +108,7 @@ const pageTitles: Record<string, string> = {
   '/exercise-check': 'AI Form Checker',
   '/coaching': 'Find Trainers',
   '/chat': 'Messages',
+  '/live-sessions': 'Live Sessions',
   '/notifications': 'Notifications',
   '/settings': 'Settings',
 }
