@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PageLoader } from '@/components/shared/PageLoader'
 import { SignInGate } from '@/components/shared/AccessGate'
-import { ArrowLeft, MessageCircle, Send } from 'lucide-react'
+import { ArrowLeft, ImagePlus, MessageCircle, Send } from 'lucide-react'
 
 interface ConversationInfo {
   otherUser: {
@@ -26,6 +26,7 @@ interface ConversationInfo {
 }
 
 const POLL_INTERVAL_MS = 5000
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024
 
 function mergeIncomingMessage(prev: Message[], incoming: Message) {
   if (prev.some((message) => message._id === incoming._id)) return prev
@@ -54,6 +55,7 @@ export default function ChatConversationPage() {
   const [socketConnected, setSocketConnected] = useState(false)
   const [otherUserTyping, setOtherUserTyping] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -126,14 +128,51 @@ export default function ChatConversationPage() {
     }
   }, [])
 
-  const sendMessageRest = async (content: string) => {
+  const sendMessageRest = async (
+    content: string,
+    type: Message['type'] = 'text',
+  ) => {
     const res = await fetch(`/api/chat/conversations/${id}/messages`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ content, type }),
     })
     if (!res.ok) throw new Error('Failed to send')
     return res.json() as Promise<Message>
+  }
+
+  const deliverMessage = async (
+    content: string,
+    type: Message['type'],
+    optimistic: Message,
+  ) => {
+    setMessages((prev) => [...prev, optimistic])
+    setSending(true)
+    sendTyping(false)
+
+    try {
+      let saved: Message
+      if (connected) {
+        const result = await sendViaSocket(content, type)
+        if (result.ok && result.message) {
+          saved = result.message
+        } else {
+          saved = await sendMessageRest(content, type)
+        }
+      } else {
+        saved = await sendMessageRest(content, type)
+      }
+
+      setMessages((prev) =>
+        prev.map((message) => (message._id === optimistic._id ? saved : message)),
+      )
+    } catch {
+      setMessages((prev) => prev.filter((message) => message._id !== optimistic._id))
+      if (type === 'text') setInput(content)
+      toast.error('Failed to send message')
+    } finally {
+      setSending(false)
+    }
   }
 
   const sendMessage = async (event: React.FormEvent) => {
@@ -151,30 +190,49 @@ export default function ChatConversationPage() {
       createdAt: new Date().toISOString(),
     }
 
-    setMessages((prev) => [...prev, optimistic])
     setInput('')
-    setSending(true)
-    sendTyping(false)
+    await deliverMessage(content, 'text', optimistic)
+  }
 
+  const handleImagePick = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file || !id || !user) return
+
+    if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
+      toast.error('Only JPEG, PNG, WebP, and GIF images are allowed')
+      return
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      toast.error('Image must be 4MB or smaller')
+      return
+    }
+
+    setSending(true)
     try {
-      let saved: Message
-      if (connected) {
-        const result = await sendViaSocket(content)
-        if (result.ok && result.message) {
-          saved = result.message
-        } else {
-          saved = await sendMessageRest(content)
-        }
-      } else {
-        saved = await sendMessageRest(content)
+      const formData = new FormData()
+      formData.append('image', file)
+      const uploadRes = await fetch('/api/chat/upload', {
+        method: 'POST',
+        body: formData,
+      })
+      const uploadData = await uploadRes.json()
+      if (!uploadRes.ok) throw new Error(uploadData.message || 'Upload failed')
+
+      const url = uploadData.url as string
+      const optimistic: Message = {
+        _id: `temp-${Date.now()}`,
+        conversationId: id,
+        senderId: user.id,
+        senderName: user.fullName,
+        content: url,
+        type: 'image',
+        createdAt: new Date().toISOString(),
       }
 
-      setMessages((prev) => prev.map((message) => (message._id === optimistic._id ? saved : message)))
-    } catch {
-      setMessages((prev) => prev.filter((message) => message._id !== optimistic._id))
-      setInput(content)
-      toast.error('Failed to send message')
-    } finally {
+      await deliverMessage(url, 'image', optimistic)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to send image')
       setSending(false)
     }
   }
@@ -256,6 +314,13 @@ export default function ChatConversationPage() {
                         </p>
                       )}
                     </div>
+                  ) : msg.type === 'image' ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={msg.content}
+                      alt="Shared image"
+                      className="max-h-64 max-w-full rounded-lg object-contain"
+                    />
                   ) : (
                     <p className="break-words">{msg.content}</p>
                   )}
@@ -273,6 +338,23 @@ export default function ChatConversationPage() {
 
       <form onSubmit={sendMessage}
         className="sticky bottom-0 mx-auto flex w-full max-w-2xl gap-2 border-t border-white/[.06] bg-[#090c0a]/90 px-4 py-3 backdrop-blur-2xl">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          className="hidden"
+          onChange={(event) => void handleImagePick(event)}
+        />
+        <Button
+          type="button"
+          variant="outline"
+          disabled={sending}
+          onClick={() => fileInputRef.current?.click()}
+          className="h-11 w-11 flex-shrink-0 rounded-xl p-0"
+          aria-label="Send image"
+        >
+          <ImagePlus className="size-4" />
+        </Button>
         <Input
           value={input}
           onChange={(event) => handleInputChange(event.target.value)}

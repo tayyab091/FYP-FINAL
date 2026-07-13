@@ -9,7 +9,7 @@ import {
   createMessage,
   ChatError,
 } from '@/lib/chat/createMessage'
-import { conversationRoom, setIO } from '@/lib/socket/io'
+import { conversationRoom, liveRoom, setIO, userRoom } from '@/lib/socket/io'
 
 interface AuthedSocket extends Socket {
   user: TokenPayload
@@ -60,6 +60,7 @@ export function initSocketServer(httpServer: HttpServer) {
 
   io.on('connection', (socket) => {
     const authedSocket = socket as AuthedSocket
+    void socket.join(userRoom(authedSocket.user.userId))
 
     authedSocket.on(
       'join_conversation',
@@ -124,6 +125,56 @@ export function initSocketServer(httpServer: HttpServer) {
           userId: authedSocket.user.userId,
           isTyping: payload.isTyping,
         })
+      },
+    )
+
+    authedSocket.on(
+      'join_live_room',
+      (
+        payload: { roomId: string },
+        ack?: (res: { ok: boolean; error?: string }) => void,
+      ) => {
+        try {
+          if (!payload?.roomId) {
+            ack?.({ ok: false, error: 'roomId required' })
+            return
+          }
+          void socket.join(liveRoom(payload.roomId))
+          socket.to(liveRoom(payload.roomId)).emit('peer_joined', {
+            userId: authedSocket.user.userId,
+          })
+          ack?.({ ok: true })
+        } catch {
+          ack?.({ ok: false, error: 'Failed to join live room' })
+        }
+      },
+    )
+
+    authedSocket.on(
+      'webrtc_signal',
+      (payload: {
+        roomId: string
+        type: 'offer' | 'answer' | 'ice'
+        sdp?: unknown
+        candidate?: unknown
+        targetUserId?: string
+      }) => {
+        if (!payload?.roomId || !payload?.type) return
+        const signal = {
+          type: payload.type,
+          sdp: payload.sdp,
+          candidate: payload.candidate,
+          fromUserId: authedSocket.user.userId,
+          roomId: payload.roomId,
+        }
+        if (payload.targetUserId) {
+          socket.to(liveRoom(payload.roomId)).emit('webrtc_signal', {
+            ...signal,
+            targetUserId: payload.targetUserId,
+          })
+        } else {
+          socket.to(liveRoom(payload.roomId)).emit('webrtc_signal', signal)
+        }
       },
     )
   })
