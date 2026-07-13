@@ -6,22 +6,21 @@ import bcrypt from 'bcryptjs'
 import mongoose from 'mongoose'
 import { createToken, cookieOptions } from '@/lib/auth'
 import { createSecureToken, sendVerificationEmail } from '@/lib/auth-email'
+import { parseJsonBody, registerTrainerSchema } from '@/lib/validation'
+import { rateLimitAuth } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
   try {
+    const limited = rateLimitAuth(req)
+    if (limited) return limited
+
     await connectDB()
-    const { fullName, email, password, country, specialty, bio, experience } = await req.json()
+    const parsed = await parseJsonBody(req, registerTrainerSchema)
+    if ('error' in parsed) return parsed.error
 
-    if (typeof fullName !== 'string' || typeof email !== 'string' || !fullName.trim() || !email.trim() || !password) {
-      return NextResponse.json({ message: 'Name, email and password required' }, { status: 400 })
-    }
-    if (typeof password !== 'string' || password.length < 8) {
-      return NextResponse.json({ message: 'Password must be at least 8 characters' }, { status: 400 })
-    }
+    const { fullName, email, password, country, specialty, bio, experience } = parsed.data
 
-    const normalizedEmail = email.toLowerCase().trim()
-    const normalizedName = fullName.trim()
-    const existing = await User.findOne({ email: normalizedEmail })
+    const existing = await User.findOne({ email })
     if (existing) {
       return NextResponse.json({ message: 'Email already registered' }, { status: 409 })
     }
@@ -31,8 +30,8 @@ export async function POST(req: NextRequest) {
     const session = await mongoose.startSession()
     const user = await session.withTransaction(async () => {
       const [createdUser] = await User.create([{
-        fullName: normalizedName,
-        email: normalizedEmail,
+        fullName,
+        email,
         password: hashedPassword,
         country: country || 'Pakistan',
         role: 'trainer',
@@ -43,9 +42,9 @@ export async function POST(req: NextRequest) {
 
       await Trainer.create([{
         userId: createdUser._id,
-        name: normalizedName,
-        email: normalizedEmail,
-        specialty: Array.isArray(specialty) ? specialty : [specialty].filter(Boolean),
+        name: fullName,
+        email,
+        specialty: specialty || [],
         country: country || 'Pakistan',
         bio: bio || '',
         experience: experience || '',
@@ -56,14 +55,14 @@ export async function POST(req: NextRequest) {
     }).finally(() => session.endSession())
     if (!user) throw new Error('Trainer registration transaction did not complete')
 
-    void sendVerificationEmail(normalizedEmail, verifyToken).catch((err) => {
+    void sendVerificationEmail(email, verifyToken).catch((err) => {
       console.error('Verification email error:', err)
     })
 
     const token = createToken({ userId: user._id.toString(), role: 'trainer', email: user.email })
     const response = NextResponse.json({
       message: 'Trainer account created. Pending verification.',
-      user: { id: user._id, fullName: normalizedName, email: normalizedEmail, role: 'trainer' }
+      user: { id: user._id, fullName, email, role: 'trainer' },
     }, { status: 201 })
     response.cookies.set('token', token, cookieOptions())
     return response

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import mongoose from 'mongoose'
 import { connectDB } from '@/lib/mongodb'
 import { getUser } from '@/lib/auth'
 import { bypassesSubscriptionGate } from '@/lib/access'
@@ -9,6 +8,7 @@ import { createNotification } from '@/lib/notifications'
 import CommunityPost from '@/models/CommunityPost'
 import CommunityComment from '@/models/CommunityComment'
 import User from '@/models/User'
+import { communityCommentSchema, parseJsonBody, parseObjectIdParam } from '@/lib/validation'
 
 type RouteContext = { params: Promise<{ id: string }> }
 
@@ -32,16 +32,15 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     const denied = await assertCommunityAccess(tokenUser.userId, tokenUser.role)
     if (denied) return denied
 
-    const { id } = await params
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return NextResponse.json({ message: 'Invalid post id' }, { status: 400 })
-    }
+    const { id: rawId } = await params
+    const idResult = parseObjectIdParam(rawId, 'post id')
+    if ('error' in idResult) return idResult.error
 
     await connectDB()
-    const post = await CommunityPost.findById(id).select('_id').lean()
+    const post = await CommunityPost.findById(idResult.id).select('_id').lean()
     if (!post) return NextResponse.json({ message: 'Post not found' }, { status: 404 })
 
-    const comments = await CommunityComment.find({ postId: id })
+    const comments = await CommunityComment.find({ postId: idResult.id })
       .sort({ createdAt: 1 })
       .lean()
 
@@ -59,32 +58,25 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     const denied = await assertCommunityAccess(tokenUser.userId, tokenUser.role)
     if (denied) return denied
 
-    const { id } = await params
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return NextResponse.json({ message: 'Invalid post id' }, { status: 400 })
-    }
+    const { id: rawId } = await params
+    const idResult = parseObjectIdParam(rawId, 'post id')
+    if ('error' in idResult) return idResult.error
 
-    const body = await req.json() as { content?: string }
-    const content = typeof body.content === 'string' ? body.content.trim() : ''
-    if (!content) {
-      return NextResponse.json({ message: 'Comment content is required' }, { status: 400 })
-    }
-    if (content.length > 1000) {
-      return NextResponse.json({ message: 'Comment is too long (max 1000 characters)' }, { status: 400 })
-    }
+    const parsed = await parseJsonBody(req, communityCommentSchema)
+    if ('error' in parsed) return parsed.error
 
     await connectDB()
-    const post = await CommunityPost.findById(id).select('_id authorId').lean()
+    const post = await CommunityPost.findById(idResult.id).select('_id authorId').lean()
     if (!post) return NextResponse.json({ message: 'Post not found' }, { status: 404 })
 
     const user = await User.findById(tokenUser.userId).select('fullName').lean()
     const authorName = user?.fullName || tokenUser.email
 
     const comment = await CommunityComment.create({
-      postId: id,
+      postId: idResult.id,
       authorId: tokenUser.userId,
       authorName,
-      content,
+      content: parsed.data.content,
     })
 
     if (post.authorId.toString() !== tokenUser.userId) {

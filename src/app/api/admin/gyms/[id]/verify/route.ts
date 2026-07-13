@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/mongodb'
 import Gym from '@/models/Gym'
 import AuditLog from '@/models/AuditLog'
 import { getUser } from '@/lib/auth'
+import { adminActionSchema, parseJsonBody, parseObjectIdParam } from '@/lib/validation'
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -12,16 +13,20 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ message: 'Admin access required' }, { status: 403 })
     }
 
-    const { id } = await params
-    const { action } = await req.json()
-    if (!['verify', 'reject'].includes(action)) {
-      return NextResponse.json({ message: 'Invalid action' }, { status: 400 })
-    }
+    const { id: rawId } = await params
+    const idResult = parseObjectIdParam(rawId, 'gym id')
+    if ('error' in idResult) return idResult.error
+
+    const parsed = await parseJsonBody(req, adminActionSchema)
+    if ('error' in parsed) return parsed.error
+    const { action } = parsed.data
+
     await connectDB()
 
-    const gym = await Gym.findByIdAndUpdate(id,
+    const gym = await Gym.findByIdAndUpdate(
+      idResult.id,
       { verificationStatus: action === 'verify' ? 'verified' : 'rejected' },
-      { new: true }
+      { new: true },
     )
     if (!gym) return NextResponse.json({ message: 'Gym not found' }, { status: 404 })
 

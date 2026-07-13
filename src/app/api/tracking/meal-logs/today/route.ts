@@ -3,16 +3,7 @@ import { connectDB } from '@/lib/mongodb'
 import MealLog from '@/models/MealLog'
 import { getUser } from '@/lib/auth'
 import { awardXp, XP_REWARDS } from '@/lib/gamification'
-
-interface MealFood {
-  name: string
-  calories: number
-  protein: number
-  carbs: number
-  fat: number
-  quantity?: number
-  unit?: string
-}
+import { parseJsonBody, mealLogSchema } from '@/lib/validation'
 
 export async function GET(req: NextRequest) {
   try {
@@ -54,34 +45,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'Member account required' }, { status: 403 })
     }
 
+    const parsed = await parseJsonBody(req, mealLogSchema)
+    if ('error' in parsed) return parsed.error
+
+    const { mealType, foods } = parsed.data
     await connectDB()
-    const { mealType, foods } = await req.json() as { mealType?: unknown; foods?: unknown }
-    if (typeof mealType !== 'string' || !Array.isArray(foods) || foods.length === 0) {
-      return NextResponse.json({ message: 'Meal type and foods required' }, { status: 400 })
-    }
 
-    const safeFoods: MealFood[] = foods.map((item) => {
-      const food = item && typeof item === 'object' ? item as Record<string, unknown> : {}
-      return {
-        name: typeof food.name === 'string' ? food.name : 'Food',
-        calories: typeof food.calories === 'number' ? food.calories : 0,
-        protein: typeof food.protein === 'number' ? food.protein : 0,
-        carbs: typeof food.carbs === 'number' ? food.carbs : 0,
-        fat: typeof food.fat === 'number' ? food.fat : 0,
-        quantity: typeof food.quantity === 'number' ? food.quantity : undefined,
-        unit: typeof food.unit === 'string' ? food.unit : undefined,
-      }
-    })
-
-    const totalCalories = safeFoods.reduce((sum, food) => sum + food.calories, 0)
-    const totalProtein = safeFoods.reduce((sum, food) => sum + food.protein, 0)
-    const totalCarbs = safeFoods.reduce((sum, food) => sum + food.carbs, 0)
-    const totalFat = safeFoods.reduce((sum, food) => sum + food.fat, 0)
+    const totalCalories = foods.reduce((sum, food) => sum + (food.calories || 0), 0)
+    const totalProtein = foods.reduce((sum, food) => sum + (food.protein || 0), 0)
+    const totalCarbs = foods.reduce((sum, food) => sum + (food.carbs || 0), 0)
+    const totalFat = foods.reduce((sum, food) => sum + (food.fat || 0), 0)
 
     const meal = await MealLog.create({
       userId: tokenUser.userId,
       mealType,
-      foods: safeFoods,
+      foods,
       totalCalories,
       totalProtein,
       totalCarbs,
