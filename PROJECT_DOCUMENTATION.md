@@ -22,6 +22,8 @@ T.E.S.T. connects members, verified trainers, gym owners, and admins:
 
 Monetization uses three plans: **Basic** (free), **Pro**, **Elite**, with server-side entitlement checks.
 
+**Payments status: PAUSED — out of scope for current work.** Stripe Checkout exists in code (simulated when keys unset / non-live). JazzCash is planned and **not started**. Do not treat payment checkout as verified.
+
 ---
 
 ## 2. Architecture
@@ -138,7 +140,7 @@ Privileged roles (admin / trainer / gym_owner) bypass member subscription gates 
 
 ### Live & billing
 `/api/live-sessions`, `[id]`, `[id]/join`  
-`/api/subscription`, `/api/subscription/confirm`, `/api/webhooks/stripe`
+`/api/subscription`, `/api/subscription/confirm`, `/api/webhooks/stripe` — **payments PAUSED** (read plan fields for gating only; Stripe simulated/test; JazzCash not started)
 
 ### Ops
 `/api/health`, `/api/seed`, `/api/admin/*`, `/api/gym-owner/*`
@@ -162,9 +164,9 @@ JWT_SECRET=...
 | `PUSHER_*` + `NEXT_PUBLIC_PUSHER_*` | Optional | Chat/notifications poll instead of push |
 | `DAILY_API_KEY` | Optional | Live session create returns 503 |
 | `BLOB_READ_WRITE_TOKEN` | Optional | Chat image upload 503 |
-| `STRIPE_*` | Optional | Simulated checkout (`PUT` with `simulatedPayment: true` only when Stripe unset) |
-| `SMTP_*` | Optional | Reset/verify links logged in development |
-| `GOOGLE_CLIENT_*` | Optional | OAuth returns 503 |
+| `STRIPE_*` | Optional / **PAUSED** | Simulated checkout when unset; live Checkout out of scope for current phase |
+| `SMTP_*` | Optional | Reset/verify links logged + `devLink` returned in development |
+| `GOOGLE_CLIENT_*` | Optional | OAuth returns 503; when set, links same-email accounts via `googleId` |
 | `GEMINI_API_KEY` / `SPOONACULAR_API_KEY` | Optional | AI / food search degrade gracefully |
 
 **Windows note:** Some ISP DNS resolvers refuse MongoDB SRV (`querySrv ECONNREFUSED`). `src/lib/mongodb.ts` resolves SRV via Google DNS and connects with a direct URI.
@@ -193,25 +195,26 @@ Verification helper: `node scripts/live-verify.mjs` (server must be running).
 
 1. Production realtime requires Pusher + Daily + Blob tokens on Vercel  
 2. Google OAuth and SMTP need real credentials for production auth UX  
-3. Stripe is one-time Checkout, not recurring Billing Subscriptions  
+3. **Payments PAUSED:** Stripe is one-time Checkout (simulated/test locally); JazzCash planned, not started — not in current verification scope  
 4. Live video create hard-requires Daily — cannot fully demo without key  
 
 **Suggested next steps:**
 
-1. Provision Pusher / Daily / Blob / SMTP / Google / live Stripe; document dashboard URLs in team wiki  
-2. Add CI smoke tests against `/api/health` + login  
-3. Consider MongoDB connection string with explicit hosts for CI Windows runners  
-4. Remove or archive unused custom `server.ts` if fully replaced by Pusher  
-5. Expand E2E (Playwright) for chat + plan upgrade happy paths  
+1. Provision Pusher / Daily / Blob / SMTP / Google; document dashboard URLs in team wiki  
+2. When payments resume: live Stripe keys + webhook, then JazzCash design  
+3. Add CI smoke tests against `/api/health` + login (`npm run live-verify`)  
+4. Consider MongoDB connection string with explicit hosts for CI Windows runners  
+5. Remove or archive unused custom `server.ts` if fully replaced by Pusher  
 
 ---
 
 ## 10. Related docs
 
-- `docs/LIVE_VERIFICATION_REPORT.md` — Phase 0 live probe results  
+- `docs/LIVE_VERIFICATION_REPORT.md` — live probe results (latest: 69/69 pass)  
 - `docs/AUDIT_REPORT.md` — Working / Partial / Cannot-run matrix  
 - `docs/REALTIME_CHAT.md` — Pusher channel conventions  
 
 ---
 
 *Generated for zero-context readers. Prefer live reports over assuming a file’s presence means a feature works.*
+*Payments: PAUSED (Stripe simulated/test; JazzCash planned not started).*
