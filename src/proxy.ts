@@ -22,7 +22,7 @@ async function getRoleFromToken(token: string | undefined): Promise<string> {
   }
 }
 
-/** Server-side route protection — complements client AccessGate/SignInGate. */
+/** Edge-safe route protection — jose JWT only (no Node fs / Mongoose). */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const role = await getRoleFromToken(request.cookies.get('token')?.value)
