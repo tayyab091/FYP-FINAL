@@ -33,17 +33,34 @@ export async function POST(req: NextRequest) {
       emailVerified: false,
       verifyEmailToken: verifyToken,
       verifyEmailExpires: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      authProviders: ['password'],
     })
 
-    void sendVerificationEmail(user.email, verifyToken).catch((err) => {
+    const emailResult = await sendVerificationEmail(user.email, verifyToken).catch((err) => {
       console.error('Verification email error:', err)
+      return null
     })
 
     const token = createToken({ userId: user._id.toString(), role: user.role, email: user.email })
-    const response = NextResponse.json({
+    const body: {
+      message: string
+      user: { id: unknown; fullName: string; email: string; role: string; subscription: unknown }
+      devLink?: string
+    } = {
       message: 'Account created successfully',
-      user: { id: user._id, fullName: user.fullName, email: user.email, role: user.role, subscription: user.subscription },
-    }, { status: 201 })
+      user: {
+        id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        role: user.role,
+        subscription: user.subscription,
+      },
+    }
+    if (process.env.NODE_ENV !== 'production' && emailResult?.devLink) {
+      body.devLink = emailResult.devLink
+    }
+
+    const response = NextResponse.json(body, { status: 201 })
 
     response.cookies.set('token', token, cookieOptions())
     return response
