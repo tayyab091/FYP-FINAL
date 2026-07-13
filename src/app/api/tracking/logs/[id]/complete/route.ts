@@ -3,7 +3,8 @@ import { connectDB } from '@/lib/mongodb'
 import { getUser } from '@/lib/auth'
 import WorkoutPlan from '@/models/WorkoutPlan'
 import WorkoutLog from '@/models/WorkoutLog'
-import { syncUserSubscription, getWorkoutWeeklyLimit, normalizePlan } from '@/lib/subscription'
+import { getWorkoutWeeklyLimit, normalizePlan } from '@/lib/subscription'
+import { syncUserSubscription } from '@/lib/subscription-server'
 import { awardWorkoutXp } from '@/lib/gamification'
 
 interface CompletedExercise {

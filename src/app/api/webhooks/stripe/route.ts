@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import type Stripe from 'stripe'
 import { connectDB } from '@/lib/mongodb'
-import { activateUserPlan } from '@/lib/subscription'
+import { activateUserPlan } from '@/lib/subscription-server'
 import { getStripe } from '@/lib/stripe'
 
 export const dynamic = 'force-dynamic'

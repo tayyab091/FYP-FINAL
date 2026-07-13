@@ -1,6 +1,13 @@
 import type { NextConfig } from 'next'
+import path from 'path'
+
+const projectRoot = path.resolve(__dirname)
 
 const nextConfig: NextConfig = {
+  // Parent lockfile at C:\Users\al rafio\package-lock.json otherwise becomes Turbopack root.
+  turbopack: {
+    root: projectRoot,
+  },
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'randomuser.me' },
@@ -31,6 +38,16 @@ const nextConfig: NextConfig = {
         source: '/pricing',
         destination: '/subscription',
         permanent: true,
+      },
+      {
+        source: '/progress',
+        destination: '/my-fitness',
+        permanent: false,
+      },
+      {
+        source: '/workout-plans',
+        destination: '/my-fitness',
+        permanent: false,
       },
     ]
   },

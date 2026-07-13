@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import User from '@/models/User'
 import { getUser } from '@/lib/auth'
-import { syncUserSubscription } from '@/lib/subscription'
+import { syncUserSubscription } from '@/lib/subscription-server'
 import { calculateDailyCalories } from '@/lib/nutrition'
 
 export async function GET(req: NextRequest) {
