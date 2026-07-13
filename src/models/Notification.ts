@@ -6,7 +6,7 @@ const NotificationSchema = new Schema({
   message: { type: String, required: true },
   type: {
     type: String,
-    enum: ['chat', 'workout', 'system', 'trainer', 'payment'],
+    enum: ['chat', 'workout', 'system', 'trainer', 'payment', 'community'],
     default: 'system'
   },
   isRead: { type: Boolean, default: false },

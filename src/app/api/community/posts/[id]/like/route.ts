@@ -5,7 +5,9 @@ import { getUser } from '@/lib/auth'
 import { bypassesSubscriptionGate } from '@/lib/access'
 import { normalizePlan, canAccessCommunity } from '@/lib/subscription'
 import { syncUserSubscription } from '@/lib/subscription-server'
+import { createNotification } from '@/lib/notifications'
 import CommunityPost from '@/models/CommunityPost'
+import User from '@/models/User'
 
 type RouteContext = { params: Promise<{ id: string }> }
 
@@ -52,6 +54,17 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     }
 
     await post.save()
+
+    if (!alreadyLiked && post.authorId.toString() !== tokenUser.userId) {
+      const liker = await User.findById(tokenUser.userId).select('fullName').lean()
+      await createNotification({
+        userId: post.authorId,
+        title: 'New like on your post',
+        message: `${liker?.fullName || 'Someone'} liked your community post`,
+        type: 'community',
+        link: '/community',
+      }).catch(() => {})
+    }
 
     return NextResponse.json({
       likedByMe: !alreadyLiked,
