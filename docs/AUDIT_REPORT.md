@@ -1,58 +1,70 @@
 # Phase 1 — Module Audit Report
 
 **Date:** 2026-07-13  
-**Repo:** FYP-FINAL  
-**Method:** Source trace (UI → API → DB → response); no assumption from file presence alone.
+**Repo:** FYP-FINAL (`musadiq`)  
+**Method:** Cross-reference of live verification (`docs/LIVE_VERIFICATION_REPORT.md`) + source traces.  
+**Supersedes:** earlier audit that still listed Socket.io / placeholders for meal plans, analytics, community, live sessions.
 
-| Module | Status |
-|--------|--------|
-| Auth (login/register/JWT cookies) | ✅ Working |
-| Server-side route guards (`proxy.ts`) | ✅ Working |
-| Socket.io realtime chat | ✅ Working |
-| Notification center (list/read) | ✅ Working |
-| Trainer review system | ✅ Working |
-| Nutrition logging | ✅ Working |
-| Body metrics / progress charts | ✅ Working |
-| Workout plan assignment | ✅ Working |
-| Exercise catalog + `/exercises/[id]` | ✅ Working |
-| Nutrition detail `/nutrition/[id]` | ✅ Working |
-| Trainer dashboard clients | ✅ Working |
-| Stripe / subscriptions | ⚠️ Partially working |
-| Chat image messages | ⚠️ Partially working |
-| Plan entitlements vs marketing | ⚠️ Partially working |
-| Password reset / email verification | ❌ Not implemented |
-| OAuth / social login | 🧩 Absent |
-| Live training sessions (Elite) | 🧩 Placeholder (marketing only) |
-| Personalized meal plans | 🧩 Placeholder (marketing only) |
-| Advanced analytics (Pro) | 🧩 Placeholder (marketing only) |
-| Community feed (Basic+) | 🧩 Absent |
+| Module | Status | Notes |
+|--------|--------|-------|
+| Auth (register / login / JWT cookies / me / logout) | ✅ Working | Live verified all roles + new signup |
+| Password reset / forgot-password | ⚠️ Partial | API + UI work; email delivery needs `SMTP_*` (dev logs link) |
+| Email verification | ⚠️ Partial | Routes present; full inbox flow needs SMTP |
+| Google OAuth | 🧩 Cannot run | Needs `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` |
+| Edge route guards (`proxy.ts` + jose) | ✅ Working | Protected / guest / role redirects verified |
+| Role dashboards (user / trainer / gym / admin) | ✅ Working | APIs + pages |
+| Coaching / trainer discovery | ✅ Working | Live DB trainers (not fallback) |
+| Trainer reviews | ✅ Working | |
+| Relationships / coaching requests | ✅ Working | |
+| Chat (REST + optional Pusher) | ✅ Working | Send/list/typing OK; poll fallback without Pusher |
+| Chat image upload (Vercel Blob) | 🧩 Cannot run | Needs `BLOB_READ_WRITE_TOKEN` |
+| Notifications | ✅ Working | List/read; push needs Pusher |
+| Nutrition logging / meals | ✅ Working | |
+| Nutrition analyze | ✅ Working | `GET ?query=` |
+| Body metrics / progress | ✅ Working | Via `/my-fitness` + `/api/tracking/progress` |
+| Workout plan assignment | ✅ Working | Trainer CRUD; member `my-plan` |
+| Exercise catalog + detail | ✅ Working | |
+| Exercise / AI form check | ✅ Working | Page loads; plan-gated API |
+| Subscription / Stripe | ⚠️ Partial | Simulated path live (`stripeEnabled: false`); real Checkout when Stripe configured; PUT simulated blocked when live Stripe |
+| Personalized meal plans | ✅ Working | Generate + list (Pro+) |
+| Advanced analytics | ✅ Working | Summary charts (Pro+) |
+| Community feed | ✅ Working | Posts create/list (Basic+) |
+| Live training sessions | ⚠️ Partial | List/UI/gating OK; **create/join video** needs `DAILY_API_KEY` |
+| Gamification | ✅ Working | |
+| Seed / admin setup | ✅ Working | Env-gated |
+| MongoDB connectivity (Windows) | ✅ Working | SRV workaround in `mongodb.ts` |
+| Vercel realtime stack docs | ✅ Working | Pusher / Daily / Blob — see `docs/REALTIME_CHAT.md` |
 
-## Detail notes
+## Legend
 
-### ✅ Working
-- **Auth:** bcrypt + JWT httpOnly cookie; register/login/me/logout; role redirects.
-- **Guards:** `src/proxy.ts` + `route-access.ts` (Next 16 proxy; no classic `middleware.ts`). APIs use `getUser`.
-- **Socket.io:** Custom `server.ts`; chat join/send/typing; REST poll fallback.
-- **Notifications:** Model + list/mark-read APIs + bell + page; triggered on chat/relationship events (poll-based).
-- **Reviews:** `Review` model; POST/GET; average on trainer; shown on coaching profile.
-- **Nutrition / progress / plans / catalogs / details / trainer clients:** Full CRUD-ish flows as documented in prior audits.
+- ✅ **Working** — verified live against running server + Atlas  
+- ⚠️ **Partial** — core path works; external provider or secondary path incomplete  
+- 🧩 **Cannot run / Placeholder** — missing env or intentionally unavailable without SaaS keys  
 
-### ⚠️ Partial
-- **Stripe:** Checkout + webhook exist; simulated `PUT` still works even when Stripe is configured (free upgrade hole). One-time payment, not recurring Subscriptions. Success toast may fire before webhook.
-- **Image chat:** `type: 'image'` in schema/types; no upload API or UI render branch.
-- **Entitlements:** Workout limits, trainer connections, form-check gated; meal plans / analytics / live / community marketed but not enforced.
+## Plan entitlement alignment
 
-### ❌ / 🧩 Missing
-- Forgot-password, email verify tokens, email provider.
-- Google/GitHub OAuth.
-- Live session scheduling + WebRTC.
-- Custom meal plan generator/save/edit.
-- Pro analytics dashboard.
-- Community posts/comments feed.
+| Capability | Basic | Pro | Elite | Enforcement |
+|------------|-------|-----|-------|-------------|
+| Community | Yes | Yes | Yes | API gate |
+| Meal plans | No | Yes | Yes | API gate |
+| Analytics | No | Yes | Yes | API gate |
+| AI form check | No | Yes | Yes | API gate |
+| Live sessions | No | No | Yes (join) | API gate; trainers create |
+| Workout weekly limit | 3 | Unlimited | Unlimited | API on complete |
+| Trainer connection limit | 5 | Unlimited | Unlimited | API on request |
 
-## Phase 2 priority (from this audit)
-1. Harden Stripe (disable simulated when live; sync DB).
-2. Image chat upload + render.
-3. Socket-pushed notifications.
-4. Build: meal plans, analytics, community, live sessions, email/reset, OAuth.
-5. Align README + `.env.example`; ensure route guards cover new pages.
+## Phase 2 gap list (from this audit + Phase 0)
+
+1. ~~Mongo DNS / server start blockers~~ — **fixed**  
+2. ~~Client Mongoose leak via `subscription.ts`~~ — **fixed**  
+3. ~~Dual middleware + proxy~~ — **fixed** (proxy only)  
+4. ~~Legacy `/progress` & `/workout-plans` 404~~ — **redirected** to `/my-fitness`  
+5. Optional SaaS keys (Pusher, Daily, Blob, Google, SMTP, live Stripe) — **documented**, not inventable  
+6. Recurring Stripe Subscriptions vs one-time Checkout — still one-time payment model (known product limit)
+
+## Priority if continuing
+
+1. Provision Pusher / Daily / Blob for production Vercel demos  
+2. Wire real SMTP for reset/verify  
+3. Enable Google OAuth credentials  
+4. Replace placeholder Stripe keys for live Checkout + webhook  
