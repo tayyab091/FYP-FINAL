@@ -6,6 +6,7 @@ import { Navbar } from '@/components/layout/Navbar'
 import { BottomNav } from '@/components/layout/BottomNav'
 import { SiteFooter } from '@/components/layout/SiteFooter'
 import { AIChatbot } from '@/components/shared/AIChatbot'
+import { FloatingChat } from '@/components/shared/FloatingChat'
 import { Toaster } from 'sonner'
 
 const manrope = Manrope({ subsets: ['latin'], variable: '--font-body' })
@@ -26,6 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main className="flex min-h-screen flex-col">{children}</main>
           <SiteFooter />
           <BottomNav />
+          <FloatingChat />
           <AIChatbot />
           <Toaster
             theme="dark"

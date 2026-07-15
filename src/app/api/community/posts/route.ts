@@ -31,7 +31,8 @@ export async function GET(req: NextRequest) {
     await connectDB()
     const limit = Math.min(50, Math.max(1, parseInt(req.nextUrl.searchParams.get('limit') || '20', 10) || 20))
 
-    const posts = await CommunityPost.find()
+    const posts = await CommunityPost.find({})
+      .populate('authorId', 'fullName profileImage role')
       .sort({ createdAt: -1 })
       .limit(limit)
       .lean()
@@ -43,14 +44,23 @@ export async function GET(req: NextRequest) {
     ])
     const countMap = new Map(commentCounts.map((c) => [c._id.toString(), c.count as number]))
 
-    const shaped = posts.map((post) => ({
-      ...post,
-      likeCount: post.likes?.length || 0,
-      likedByMe: (post.likes || []).some(
-        (id: { toString(): string }) => id.toString() === tokenUser.userId,
-      ),
-      commentCount: countMap.get(post._id.toString()) || 0,
-    }))
+    const shaped = posts.map((post) => {
+      const author =
+        post.authorId && typeof post.authorId === 'object' && 'fullName' in post.authorId
+          ? (post.authorId as { fullName?: string; profileImage?: string; role?: string })
+          : null
+      return {
+        ...post,
+        authorName: author?.fullName || post.authorName,
+        authorImage: author?.profileImage,
+        authorRole: author?.role,
+        likeCount: post.likes?.length || 0,
+        likedByMe: (post.likes || []).some(
+          (id: { toString(): string }) => id.toString() === tokenUser.userId,
+        ),
+        commentCount: countMap.get(post._id.toString()) || 0,
+      }
+    })
 
     return NextResponse.json(shaped)
   } catch {

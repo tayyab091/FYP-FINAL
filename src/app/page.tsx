@@ -6,20 +6,14 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/hooks/useAuth'
-import { Trainer, WorkoutPlan } from '@/types'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Trainer } from '@/types'
 import { Badge } from '@/components/ui/badge'
-import { Progress, ProgressTrack, ProgressIndicator } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { FadeIn, StaggerChildren, CountUp, FitnessBadge, ScrollProgress, ParallaxSection } from '@/components/motion'
 import { MARKETING_PLANS } from '@/lib/plans'
-import { calculateDailyCalories } from '@/lib/nutrition'
-import { getRoleHomePath } from '@/lib/access'
 import { ACHIEVEMENT_DEFINITIONS, JOURNEY_LEVELS } from '@/lib/achievements'
-import type { GamificationMeResponse } from '@/types/gamification'
-import { GamificationStats } from '@/components/gamification/GamificationStats'
-import { Bot, BadgeCheck, Apple, BarChart3, MessageCircle, Building2, LayoutDashboard, Users, Dumbbell, Flame, Search, Zap } from 'lucide-react'
+import { Bot, BadgeCheck, Apple, BarChart3, MessageCircle, Building2, Search, Zap } from 'lucide-react'
 import { easeTransition } from '@/lib/motion'
 
 const STATS = [
@@ -332,193 +326,29 @@ function GuestPage() {
   )
 }
 
-function LoggedInDashboard() {
-  const { user } = useAuth()
-  const [plan, setPlan] = useState<WorkoutPlan | null>(null)
-  const [calories, setCalories] = useState({ calories: 0, protein: 0, carbs: 0, fat: 0 })
-  const [calorieGoal, setCalorieGoal] = useState(2000)
-  const [gamification, setGamification] = useState<GamificationMeResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 8000)
-
-    Promise.all([
-      fetch('/api/tracking/plans/my-plan', { signal: controller.signal }).then(r => r.ok ? r.json() : null),
-      fetch('/api/tracking/meal-logs/today', { signal: controller.signal }).then(r => r.ok ? r.json() : { totals: { calories: 0, protein: 0, carbs: 0, fat: 0 } }),
-      fetch('/api/auth/me', { signal: controller.signal }).then(r => r.ok ? r.json() : null),
-      fetch('/api/gamification/me', { signal: controller.signal }).then(r => r.ok ? r.json() : null),
-    ]).then(([planData, mealData, meData, gamificationData]) => {
-      if (planData?.plan === null) setPlan(null)
-      else if (planData?._id) setPlan(planData)
-      else if (planData?.plan) setPlan(planData.plan)
-      setCalories(mealData?.totals || { calories: 0, protein: 0, carbs: 0, fat: 0 })
-      const u = meData?.user
-      if (u?.calorieGoal) setCalorieGoal(u.calorieGoal)
-      else if (u) {
-        setCalorieGoal(calculateDailyCalories({
-          currentWeight: u.currentWeight,
-          targetWeight: u.targetWeight,
-          fitnessGoal: u.fitnessGoal,
-          activityLevel: u.activityLevel,
-        }))
-      }
-      if (gamificationData?.xp !== undefined) setGamification(gamificationData)
-    }).catch(() => {
-      setPlan(null)
-      setCalories({ calories: 0, protein: 0, carbs: 0, fat: 0 })
-    }).finally(() => {
-      clearTimeout(timeout)
-      setLoading(false)
-    })
-
-    return () => {
-      clearTimeout(timeout)
-      controller.abort()
-    }
-  }, [])
-
-  const caloriePct = Math.min(100, Math.round((calories.calories / calorieGoal) * 100))
-
-  const quickActions = [
-    { href: '/my-fitness', icon: LayoutDashboard, label: 'My Fitness' },
-    { href: '/nutrition', icon: Apple, label: 'Log Meal' },
-    { href: '/coaching', icon: Users, label: 'Find Trainer' },
-    { href: '/chat', icon: MessageCircle, label: 'Messages' },
-  ]
-
-  return (
-    <div className="min-h-screen pt-28 pb-28 px-6">
-      <div className="max-w-6xl mx-auto space-y-8">
-        <FadeIn>
-          <div className="page-hero px-6 py-10 sm:px-10">
-            <p className="eyebrow mb-3">Today&apos;s Command Center</p>
-            <h1 className="display-title text-3xl md:text-5xl">
-              Welcome back, <span className="gradient-text">{user?.fullName?.split(' ')[0] || 'Athlete'}</span>
-            </h1>
-            <p className="text-muted-foreground mt-2">Here&apos;s your fitness snapshot for today</p>
-            <p className="workout-label mt-2 text-primary/70">Time to move · Own the session</p>
-          </div>
-        </FadeIn>
-
-        <StaggerChildren className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {quickActions.map(a => {
-            const Icon = a.icon
-            return (
-            <Link key={a.href} href={a.href} className="elite-panel interactive-lift card-athletic rounded-2xl p-5 text-center">
-              <div className="mx-auto mb-2 flex size-10 items-center justify-center rounded-xl bg-primary/[.1] text-primary">
-                <Icon className="size-5" strokeWidth={2.2} />
-              </div>
-              <div className="font-medium text-sm">{a.label}</div>
-            </Link>
-          )})}
-        </StaggerChildren>
-
-        <FadeIn>
-          <GamificationStats data={gamification} loading={loading} />
-        </FadeIn>
-
-        <StaggerChildren className="dashboard-grid cols-2">
-          {/* Active Plan */}
-          <Card className="card-athletic interactive-lift">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Dumbbell className="size-5 text-primary" /> Active Workout Plan
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <Skeleton className="h-24 bg-muted" />
-              ) : plan ? (
-                <div>
-                  <h3 className="font-bold text-lg text-primary">{plan.title}</h3>
-                  <p className="text-muted-foreground text-sm mt-1 capitalize">{plan.goal?.replace('_', ' ')} · {plan.difficulty} · {plan.durationWeeks} weeks</p>
-                  <div className="mt-4 flex gap-2 flex-wrap">
-                    {plan.weeklySchedule?.slice(0, 4).map(d => (
-                      <Badge key={d.day} variant="outline" className="border-border text-muted-foreground">
-                        {d.day}: {d.isRestDay ? 'Rest' : `${d.exercises?.length || 0} exercises`}
-                      </Badge>
-                    ))}
-                  </div>
-                  <Link href="/my-fitness" className="inline-block mt-4 text-primary text-sm font-medium hover:underline">View full plan →</Link>
-                </div>
-              ) : (
-                <div className="text-center py-6">
-                  <p className="text-muted-foreground mb-4">No active workout plan yet</p>
-                  <Link href="/coaching" className="btn-accent px-6 py-2 text-sm">Find a Trainer</Link>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Today's Calories */}
-          <Card className="card-athletic interactive-lift">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Flame className="size-5 text-primary" /> Today&apos;s Calories
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <Skeleton className="h-24 bg-muted" />
-              ) : (
-                <div>
-                  <div className="flex items-end justify-between mb-3">
-                    <span className="text-4xl font-black text-primary">
-                      <CountUp value={calories.calories} />
-                    </span>
-                    <span className="text-muted-foreground text-sm">/ {calorieGoal} kcal goal</span>
-                  </div>
-                  <Progress value={caloriePct} className="mb-4">
-                    <ProgressTrack className="bg-muted h-2">
-                      <ProgressIndicator className="bg-primary" />
-                    </ProgressTrack>
-                  </Progress>
-                  <div className="grid grid-cols-3 gap-4 text-center">
-                    <div>
-                      <div className="text-primary font-bold">{Math.round(calories.protein)}g</div>
-                      <div className="text-muted-foreground text-xs">Protein</div>
-                    </div>
-                    <div>
-                      <div className="font-bold text-sky-400">{Math.round(calories.carbs)}g</div>
-                      <div className="text-muted-foreground text-xs">Carbs</div>
-                    </div>
-                    <div>
-                      <div className="font-bold text-destructive">{Math.round(calories.fat)}g</div>
-                      <div className="text-muted-foreground text-xs">Fat</div>
-                    </div>
-                  </div>
-                  <Link href="/nutrition" className="inline-block mt-4 text-primary text-sm font-medium hover:underline">Log a meal →</Link>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </StaggerChildren>
-      </div>
-    </div>
-  )
-}
-
 export default function HomePage() {
   const { user, isLoading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (isLoading || !user || user.role === 'user') return
-    router.replace(getRoleHomePath(user.role))
+    if (isLoading || !user) return
+    switch (user.role) {
+      case 'admin':
+      case 'super_admin':
+        router.replace('/admin')
+        break
+      case 'trainer':
+        router.replace('/trainer-dashboard')
+        break
+      case 'gym_owner':
+        router.replace('/gym-owner')
+        break
+      default:
+        router.replace('/dashboard')
+    }
   }, [isLoading, user, router])
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
-  }
-
-  if (user && user.role === 'user') return <LoggedInDashboard />
-  if (user && user.role !== 'user') {
+  if (isLoading || user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
