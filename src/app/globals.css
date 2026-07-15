@@ -407,6 +407,14 @@ select option {
   display: flex;
   flex-direction: column;
   min-height: 120px;
+  height: 100%;
+}
+
+.marketing-tile {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 11rem;
 }
 
 /* ─── Floating message button ─── */
