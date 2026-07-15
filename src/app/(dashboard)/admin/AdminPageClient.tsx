@@ -224,7 +224,7 @@ export default function AdminPageClient() {
               Nutrition
             </Link>
             <Link
-              href="/coaching"
+              href="/?marketing=1"
               className="inline-flex items-center gap-2 rounded-xl border border-primary/30 px-4 py-2 text-sm font-bold text-primary hover:bg-primary/10"
             >
               <ArrowLeft className="size-4" />
