@@ -2,20 +2,38 @@
 
 import Link from 'next/link'
 import { Suspense } from 'react'
-import { usePathname, useSearchParams } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
-import { Apple, Home, LayoutDashboard, MessageCircle, Users } from 'lucide-react'
+import { Home, LayoutDashboard, MessageCircle, Users, UtensilsCrossed } from 'lucide-react'
+import { isAuthPath } from '@/lib/shell-routes'
 
 function BottomNavInner() {
   const { user } = useAuth()
   const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const fitnessTab = searchParams.get('tab')
 
   if (!user || user.role !== 'user') return null
 
-  const hideOn = ['/admin', '/gym-owner', '/trainer-dashboard', '/login', '/signup', '/register-trainer', '/register-gym-owner']
-  if (hideOn.some((p) => pathname.startsWith(p))) return null
+  if (
+    isAuthPath(pathname) ||
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/gym-owner') ||
+    pathname.startsWith('/trainer-dashboard')
+  ) {
+    return null
+  }
+
+  const showOn =
+    pathname === '/dashboard' ||
+    pathname.startsWith('/my-fitness') ||
+    pathname.startsWith('/community') ||
+    pathname.startsWith('/chat') ||
+    pathname.startsWith('/analytics') ||
+    pathname.startsWith('/meal-plans') ||
+    pathname.startsWith('/live-sessions') ||
+    pathname.startsWith('/notifications') ||
+    pathname.startsWith('/settings')
+
+  if (!showOn) return null
 
   const links = [
     { href: '/dashboard', icon: Home, label: 'Home', active: pathname === '/dashboard' },
@@ -23,13 +41,13 @@ function BottomNavInner() {
       href: '/my-fitness',
       icon: LayoutDashboard,
       label: 'Fitness',
-      active: pathname.startsWith('/my-fitness') && fitnessTab !== 'nutrition',
+      active: pathname.startsWith('/my-fitness'),
     },
     {
-      href: '/my-fitness?tab=nutrition',
-      icon: Apple,
-      label: 'Nutrition',
-      active: pathname.startsWith('/my-fitness') && fitnessTab === 'nutrition',
+      href: '/meal-plans',
+      icon: UtensilsCrossed,
+      label: 'Meals',
+      active: pathname.startsWith('/meal-plans'),
     },
     {
       href: '/community',

@@ -325,7 +325,7 @@ export default function NutritionPage() {
   const todayLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 
   return (
-    <div className="min-h-screen pt-28 pb-28 px-4 lg:px-8">
+    <div className="min-h-screen pt-8 pb-28 px-4 lg:px-8">
       <div className="max-w-4xl mx-auto space-y-8">
         <FadeIn>
           <div className="page-hero px-6 py-10 sm:px-10 md:py-14 gym-floor">

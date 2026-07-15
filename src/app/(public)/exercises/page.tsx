@@ -307,7 +307,7 @@ export default function ExercisesPage() {
   }
 
   return (
-    <div className="min-h-screen pt-28 pb-24">
+    <div className="min-h-screen pt-8 pb-24">
       <div className="max-w-6xl mx-auto px-6">
         <FadeIn>
           <div className="page-hero mb-6 px-6 py-10 sm:px-10 md:py-14 gym-floor">
