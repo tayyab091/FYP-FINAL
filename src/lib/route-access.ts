@@ -46,7 +46,7 @@ export function getRoleDashboardPath(role: string): string {
     case 'super_admin':
       return '/admin'
     case 'user':
-      return '/my-fitness'
+      return '/dashboard'
     default:
       return '/dashboard'
   }

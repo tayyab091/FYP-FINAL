@@ -45,13 +45,14 @@ export function AIChatbot() {
   return (
     <>
       <button onClick={() => setOpen(!open)} aria-label="AI Fitness Coach"
-        className="fixed bottom-24 right-5 md:bottom-8 md:right-6 z-50 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#55ffb1] to-primary text-primary-foreground shadow-[0_16px_45px_rgba(34,245,154,.26)] transition-transform hover:-translate-y-1">
+        className="fixed z-50 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#55ffb1] to-primary text-primary-foreground shadow-[0_16px_45px_rgba(34,245,154,.26)] transition-transform hover:-translate-y-1 right-5 md:right-6"
+        style={{ bottom: 160 }}>
         {open ? <X className="size-5" /> : <Bot className="size-6" />}
       </button>
 
       {open && (
-        <div className="fixed bottom-44 right-3 md:bottom-28 md:right-6 z-50 flex w-[calc(100vw-1.5rem)] max-w-sm flex-col overflow-hidden rounded-3xl border border-white/[.1] bg-[#0c100d]/96 shadow-[0_30px_100px_rgba(0,0,0,.5)] backdrop-blur-2xl"
-          style={{ height: 420 }}>
+        <div className="fixed right-3 md:right-6 z-50 flex w-[calc(100vw-1.5rem)] max-w-sm flex-col overflow-hidden rounded-3xl border border-white/[.1] bg-[#0c100d]/96 shadow-[0_30px_100px_rgba(0,0,0,.5)] backdrop-blur-2xl"
+          style={{ height: 420, bottom: 230 }}>
           <div className="px-4 py-3 border-b border-white/[.07] flex items-center gap-3 flex-shrink-0">
             <div className="flex size-9 items-center justify-center rounded-xl border border-primary/15 bg-primary/[.09] text-primary"><Bot className="size-4" /></div>
             <div>
