@@ -490,7 +490,7 @@ export default function SettingsPage() {
                     { href: '/admin?tab=users', label: 'User & Role Management', desc: 'Suspend, inspect accounts' },
                     { href: '/admin?tab=verifications', label: 'Verification Queue', desc: 'Trainers and gyms' },
                     { href: '/admin?tab=audit', label: 'Audit Logs', desc: 'Security trail' },
-                    { href: '/admin?tab=subscriptions', label: 'Subscription Stats', desc: 'Plan distribution' },
+                    { href: '/admin?tab=subscriptions', label: 'Subscription Management', desc: 'Grant, renew, revoke plans' },
                     { href: '/admin/exercises', label: 'Exercise Content', desc: 'Catalog oversight' },
                     { href: '/admin/nutrition', label: 'Nutrition Content', desc: 'Meal library oversight' },
                     { href: '/coaching', label: 'Public Site Preview', desc: 'Browse as visitors do' },

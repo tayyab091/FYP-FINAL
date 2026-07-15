@@ -35,7 +35,26 @@ interface AdminUser {
   role: string
   isSuspended?: boolean
   createdAt: string
-  subscription?: { plan?: string }
+  subscription?: {
+    plan?: string
+    status?: string
+    startDate?: string | null
+    endDate?: string | null
+  }
+}
+
+interface SubscriptionRow {
+  _id: string
+  fullName: string
+  email: string
+  role: string
+  subscription: {
+    plan: string
+    status: string
+    startDate?: string | null
+    endDate?: string | null
+  }
+  effective?: { plan: string; status: string }
 }
 
 interface AdminTrainer {
@@ -77,6 +96,9 @@ export default function AdminPageClient() {
   const [trainers, setTrainers] = useState<AdminTrainer[]>([])
   const [gyms, setGyms] = useState<AdminGym[]>([])
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
+  const [subscriptions, setSubscriptions] = useState<SubscriptionRow[]>([])
+  const [subCounts, setSubCounts] = useState({ basic: 0, pro: 0, elite: 0 })
+  const [subActionId, setSubActionId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   const setActive = (id: string) => {
@@ -95,13 +117,18 @@ export default function AdminPageClient() {
       fetch('/api/admin/trainers', { signal: controller.signal }).then((r) => (r.ok ? r.json() : [])).catch(() => []),
       fetch('/api/admin/gyms', { signal: controller.signal }).then((r) => (r.ok ? r.json() : [])).catch(() => []),
       fetch('/api/admin/audit-logs', { signal: controller.signal }).then((r) => (r.ok ? r.json() : [])).catch(() => []),
+      fetch('/api/admin/subscriptions', { signal: controller.signal }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
     ])
-      .then(([s, u, t, g, a]) => {
+      .then(([s, u, t, g, a, subs]) => {
         setStats(s)
         setUsers(Array.isArray(u) ? u : [])
         setTrainers(Array.isArray(t) ? t : [])
         setGyms(Array.isArray(g) ? g : [])
         setAuditLogs(Array.isArray(a) ? a : [])
+        if (subs && Array.isArray(subs.subscriptions)) {
+          setSubscriptions(subs.subscriptions)
+          setSubCounts(subs.counts || { basic: 0, pro: 0, elite: 0 })
+        }
       })
       .finally(() => {
         setLoading(false)
@@ -169,6 +196,53 @@ export default function AdminPageClient() {
       setUsers((u) => u.map((row) => (row._id === id ? { ...row, isSuspended: suspend } : row)))
     } else {
       toast.error('Action failed')
+    }
+  }
+
+  const refreshSubscriptions = async () => {
+    const [subsRes, usersRes, auditRes] = await Promise.all([
+      fetch('/api/admin/subscriptions').then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      fetch('/api/admin/users').then((r) => (r.ok ? r.json() : [])).catch(() => []),
+      fetch('/api/admin/audit-logs').then((r) => (r.ok ? r.json() : [])).catch(() => []),
+    ])
+    if (subsRes && Array.isArray(subsRes.subscriptions)) {
+      setSubscriptions(subsRes.subscriptions)
+      setSubCounts(subsRes.counts || { basic: 0, pro: 0, elite: 0 })
+    }
+    if (Array.isArray(usersRes)) setUsers(usersRes)
+    if (Array.isArray(auditRes)) setAuditLogs(auditRes)
+  }
+
+  const manageSubscription = async (
+    userId: string,
+    action: 'grant' | 'revoke' | 'renew' | 'set',
+    plan?: 'basic' | 'pro' | 'elite',
+    months = 1,
+  ) => {
+    setSubActionId(userId)
+    try {
+      const res = await fetch(`/api/admin/subscriptions/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, plan, months }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data.message || 'Subscription action failed')
+        return
+      }
+      const labels: Record<string, string> = {
+        grant: plan === 'elite' ? 'Elite granted' : plan === 'pro' ? 'Pro granted' : 'Plan granted',
+        set: `Plan set to ${plan || 'basic'}`,
+        renew: 'Subscription renewed (+1 month)',
+        revoke: 'Revoked to Basic',
+      }
+      toast.success(labels[action] || 'Subscription updated')
+      await refreshSubscriptions()
+    } catch {
+      toast.error('Network error')
+    } finally {
+      setSubActionId(null)
     }
   }
 
@@ -649,10 +723,13 @@ export default function AdminPageClient() {
               <div>
                 <p className="section-eyebrow">Revenue</p>
                 <h1 className="text-2xl font-black text-white">Subscriptions</h1>
+                <p className="mt-1 text-sm text-[#a0a0a0]">
+                  Grant, renew, or revoke plans manually — platform DB only (not synced to Stripe).
+                </p>
               </div>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                {['basic', 'pro', 'elite'].map((plan) => {
-                  const count = users.filter((u) => (u.subscription?.plan || 'basic') === plan).length
+                {(['basic', 'pro', 'elite'] as const).map((plan) => {
+                  const count = subCounts[plan] ?? 0
                   const colors: Record<string, string> = { basic: '#a0a0a0', pro: '#00ff87', elite: '#ffd93d' }
                   return (
                     <div key={plan} className="tile items-center text-center">
@@ -660,10 +737,126 @@ export default function AdminPageClient() {
                         {count}
                       </p>
                       <p className="mt-2 font-bold capitalize text-white">{plan}</p>
-                      <p className="text-xs text-[#a0a0a0]">subscribers</p>
+                      <p className="text-xs text-[#a0a0a0]">effective subscribers</p>
                     </div>
                   )
                 })}
+              </div>
+              <div className="tile overflow-x-auto p-0">
+                <table className="w-full text-sm">
+                  <thead className="border-b border-white/5">
+                    <tr className="text-left text-[#a0a0a0]">
+                      <th className="px-4 py-3 font-medium">User</th>
+                      <th className="px-4 py-3 font-medium">Plan</th>
+                      <th className="px-4 py-3 font-medium">Status</th>
+                      <th className="hidden px-4 py-3 font-medium md:table-cell">End date</th>
+                      <th className="px-4 py-3 font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {subscriptions.map((row) => {
+                      const plan = row.subscription?.plan || 'basic'
+                      const status = row.subscription?.status === 'inactive' ? 'canceled' : 'active'
+                      const endDate = row.subscription?.endDate
+                      const busy = subActionId === row._id
+                      return (
+                        <tr key={row._id} className="border-b border-white/5 hover:bg-white/[.02]">
+                          <td className="px-4 py-3">
+                            <p className="font-medium text-white">{row.fullName}</p>
+                            <p className="text-xs text-[#a0a0a0]">{row.email}</p>
+                            <p className="mt-0.5 text-[10px] uppercase tracking-wide text-[#555]">{row.role}</p>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`badge-accent text-xs ${PLAN_COLORS[plan] || ''}`}>
+                              {plan}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={`badge-accent text-xs ${
+                                status === 'active'
+                                  ? 'bg-green-500/20 text-green-400'
+                                  : 'bg-red-500/20 text-red-400'
+                              }`}
+                            >
+                              {status}
+                            </span>
+                          </td>
+                          <td className="hidden px-4 py-3 text-xs text-[#a0a0a0] md:table-cell">
+                            {endDate ? new Date(endDate).toLocaleDateString() : '—'}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => manageSubscription(row._id, 'grant', 'pro')}
+                                className="rounded-lg border border-[#00ff87]/30 px-2.5 py-1 text-xs text-[#00ff87] hover:bg-[#00ff87]/10 disabled:opacity-50"
+                              >
+                                Grant Pro
+                              </button>
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => manageSubscription(row._id, 'grant', 'elite')}
+                                className="rounded-lg border border-yellow-500/30 px-2.5 py-1 text-xs text-yellow-400 hover:bg-yellow-500/10 disabled:opacity-50"
+                              >
+                                Grant Elite
+                              </button>
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => manageSubscription(row._id, 'renew')}
+                                className="rounded-lg border border-blue-500/30 px-2.5 py-1 text-xs text-blue-400 hover:bg-blue-500/10 disabled:opacity-50"
+                              >
+                                Renew +1mo
+                              </button>
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => {
+                                  if (window.confirm(`Revoke ${row.fullName} to Basic?`)) {
+                                    manageSubscription(row._id, 'revoke')
+                                  }
+                                }}
+                                className="rounded-lg border border-red-500/30 px-2.5 py-1 text-xs text-red-400 hover:bg-red-500/10 disabled:opacity-50"
+                              >
+                                Revoke
+                              </button>
+                              <select
+                                disabled={busy}
+                                defaultValue=""
+                                aria-label={`Set plan for ${row.fullName}`}
+                                onChange={(e) => {
+                                  const value = e.target.value as 'basic' | 'pro' | 'elite' | ''
+                                  e.target.value = ''
+                                  if (!value) return
+                                  if (!window.confirm(`Set ${row.fullName} to ${value}?`)) return
+                                  manageSubscription(row._id, 'set', value)
+                                }}
+                                className="rounded-lg border border-white/10 bg-[#0f0f0f] px-2 py-1 text-xs text-white disabled:opacity-50"
+                              >
+                                <option value="" disabled>
+                                  Set plan…
+                                </option>
+                                <option value="basic">Basic</option>
+                                <option value="pro">Pro</option>
+                                <option value="elite">Elite</option>
+                              </select>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                    {subscriptions.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-12 text-center text-[#a0a0a0]">
+                          No subscribers found
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
