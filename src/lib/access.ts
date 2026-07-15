@@ -24,9 +24,9 @@ export function getRoleHomePath(role?: string): string {
     case 'super_admin':
       return '/admin'
     case 'user':
-      return '/'
+      return '/dashboard'
     default:
-      return '/my-fitness'
+      return '/dashboard'
   }
 }
 
