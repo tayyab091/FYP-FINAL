@@ -1,30 +1,30 @@
 'use client'
 
 import { useAuth } from '@/hooks/useAuth'
-import { Shield } from 'lucide-react'
+import { Dumbbell } from 'lucide-react'
 import { AccessGate } from '@/components/shared/AccessGate'
 import { PageLoader } from '@/components/shared/PageLoader'
 import { RoleExerciseLibrary } from '@/components/shared/RoleExerciseLibrary'
 
-export default function AdminExercisesPage() {
+export default function GymOwnerExercisesPage() {
   const { user, isLoading: authLoading } = useAuth()
 
   if (authLoading) return <PageLoader />
-  if (!user || !['admin', 'super_admin'].includes(user.role)) {
+  if (!user || user.role !== 'gym_owner') {
     return (
       <AccessGate
-        icon={Shield}
-        title="Admin access only"
-        description="Exercise library management is restricted to platform administrators."
+        icon={Dumbbell}
+        title="Gym owner access only"
+        description="Exercise library tools are available inside the gym owner workspace."
       />
     )
   }
 
   return (
     <RoleExerciseLibrary
-      eyebrow="Content oversight"
+      eyebrow="Facility toolkit"
       title="Exercise Library"
-      description="Browse the full live exercise catalog. Audit content quality, muscle coverage, and equipment diversity."
+      description="Review the platform exercise catalog available to your trainers and members."
     />
   )
 }

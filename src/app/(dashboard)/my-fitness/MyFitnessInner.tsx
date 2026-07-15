@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
 import { WorkoutPlan, ProgressRecord, MealLog } from '@/types'
@@ -14,7 +15,6 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { chartTheme } from '@/lib/chart-theme'
 import { PageLoader } from '@/components/shared/PageLoader'
 import { SignInGate } from '@/components/shared/AccessGate'
-import { BackButton } from '@/components/shared/BackButton'
 import { GamificationBar } from '@/components/gamification/GamificationBar'
 import type { GamificationMeResponse } from '@/types/gamification'
 
@@ -62,6 +62,7 @@ export default function MyFitnessInner({
   planId: string | null
 }) {
   const { user, isLoading: authLoading } = useAuth()
+  const router = useRouter()
   const tab = ['workout', 'nutrition', 'progress'].includes(initialTab) ? initialTab : 'workout'
 
   const [plan, setPlan] = useState<WorkoutPlan | null>(null)
@@ -93,9 +94,19 @@ export default function MyFitnessInner({
     setActiveTab(tab)
   }, [tab])
 
+  const handleTabChange = (value: string) => {
+    setActiveTab(value)
+    const params = new URLSearchParams()
+    params.set('tab', value)
+    if (planId && value === 'workout') params.set('planId', planId)
+    router.replace(`/my-fitness?${params.toString()}`, { scroll: false })
+  }
+
   useEffect(() => {
-    if (planId) setActiveTab('workout')
-  }, [planId])
+    if (!planId) return
+    setActiveTab('workout')
+    router.replace(`/my-fitness?tab=workout&planId=${encodeURIComponent(planId)}`, { scroll: false })
+  }, [planId, router])
 
   const loadData = () => {
     setLoading(true)
@@ -269,40 +280,41 @@ export default function MyFitnessInner({
 
   return (
     <div className="min-h-screen overflow-x-hidden px-4 pb-28 pt-6 sm:px-6">
-      <div className="mx-auto max-w-6xl space-y-6 overflow-x-hidden py-8">
-        <BackButton label="Back" />
-        <div>
-          <p className="section-eyebrow">Performance Hub</p>
-          <h1 className="text-3xl font-black text-white md:text-4xl">My Fitness</h1>
-          <p className="mt-1 text-[#a0a0a0]">Train, fuel, and measure every win</p>
+      <div className="mx-auto max-w-6xl space-y-6 overflow-x-hidden">
+        <div className="page-hero px-6 py-8 sm:px-8">
+          <p className="eyebrow mb-2">Performance Hub</p>
+          <h1 className="display-title text-3xl md:text-4xl">My Fitness</h1>
+          <p className="mt-2 text-muted-foreground">Train, fuel, and measure every win</p>
         </div>
 
         <GamificationBar data={gamification} />
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="tile">
+        <div className="stat-card-grid">
+          <div className="tile min-h-[8.5rem]">
             <p className="text-xs uppercase tracking-wider text-[#a0a0a0]">Today&apos;s Calories</p>
             <p className="mt-2 text-3xl font-black text-primary">{meals?.totals.calories || 0}</p>
-            <p className="mt-1 text-xs text-[#a0a0a0]">kcal logged today</p>
+            <p className="mt-auto pt-2 text-xs text-[#a0a0a0]">kcal logged today</p>
           </div>
-          <div className="tile">
+          <div className="tile min-h-[8.5rem]">
             <p className="text-xs uppercase tracking-wider text-[#a0a0a0]">Active Plan</p>
             <p className="mt-2 truncate text-2xl font-black text-primary">{plan?.title || 'None'}</p>
-            {plan && (
-              <p className="mt-1 text-xs capitalize text-[#a0a0a0]">
+            {plan ? (
+              <p className="mt-auto pt-2 text-xs capitalize text-[#a0a0a0]">
                 {plan.difficulty} · {plan.durationWeeks}w · {plan.status}
               </p>
+            ) : (
+              <p className="mt-auto pt-2 text-xs text-[#a0a0a0]">Assign a plan via coaching</p>
             )}
           </div>
-          <div className="tile">
+          <div className="tile min-h-[8.5rem]">
             <p className="text-xs uppercase tracking-wider text-[#a0a0a0]">Streak</p>
             <p className="mt-2 text-3xl font-black text-primary">{workoutHistory?.streak ?? 0}</p>
-            <p className="mt-1 text-xs text-[#a0a0a0]">{workoutHistory?.totalCompleted ?? 0} total sessions</p>
+            <p className="mt-auto pt-2 text-xs text-[#a0a0a0]">{workoutHistory?.totalCompleted ?? 0} total sessions</p>
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-6 w-full justify-start overflow-x-auto">
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
+          <TabsList className="mb-6 grid w-full grid-cols-3 sm:inline-flex sm:w-auto">
             <TabsTrigger value="workout">Workout</TabsTrigger>
             <TabsTrigger value="nutrition">Nutrition</TabsTrigger>
             <TabsTrigger value="progress">Progress</TabsTrigger>
@@ -407,27 +419,29 @@ export default function MyFitnessInner({
                   </div>
                 )}
 
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:items-stretch">
                   {plan.weeklySchedule?.map((day) => {
                     const grouped = day.isRestDay ? {} : groupExercisesByBodyPart(day.exercises || [])
                     return (
-                      <div key={day.day} className="tile min-h-0">
+                      <div key={day.day} className="tile min-h-[10rem]">
                         <h3 className="mb-3 font-bold text-white">{day.day}</h3>
                         {day.isRestDay ? (
-                          <p className="text-sm text-[#a0a0a0]">Rest Day</p>
+                          <p className="mt-auto text-sm text-[#a0a0a0]">Rest Day</p>
                         ) : (
-                          Object.entries(grouped).map(([part, exercises]) => (
-                            <div key={part} className="mb-3 last:mb-0">
-                              <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-primary">{part}</p>
-                              <ul className="space-y-1">
-                                {exercises.map((ex, i) => (
-                                  <li key={i} className="text-sm text-[#a0a0a0]">
-                                    {ex.name} — {ex.sets} × {ex.reps}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          ))
+                          <div className="space-y-3">
+                            {Object.entries(grouped).map(([part, exercises]) => (
+                              <div key={part}>
+                                <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-primary">{part}</p>
+                                <ul className="space-y-1">
+                                  {exercises.map((ex, i) => (
+                                    <li key={i} className="text-sm text-[#a0a0a0]">
+                                      {ex.name} — {ex.sets} × {ex.reps}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ))}
+                          </div>
                         )}
                       </div>
                     )
@@ -487,8 +501,8 @@ export default function MyFitnessInner({
                 ) : (
                   <p className="py-8 text-center text-[#a0a0a0]">No meals logged today</p>
                 )}
-                <Link href="/nutrition" className="text-sm text-primary hover:underline">
-                  Browse recipes and full nutrition tools →
+                <Link href="/meal-plans" className="text-sm text-primary hover:underline">
+                  Open meal plans →
                 </Link>
               </div>
             )}

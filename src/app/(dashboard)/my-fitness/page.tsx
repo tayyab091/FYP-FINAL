@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import MyFitnessInner from './MyFitnessInner'
 import { PageLoader } from '@/components/shared/PageLoader'
