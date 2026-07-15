@@ -113,8 +113,8 @@ function GuestPage() {
             transition={{ ...easeTransition, delay: 0.5 }}
             className="flex flex-col sm:flex-row gap-4 justify-center"
           >
-            <Link href="/signup" className="btn-accent px-8 py-4 text-base font-bold">Get Started Free</Link>
-            <Link href="/coaching" className="px-8 py-4 rounded-full border border-white/10 bg-white/[.025] text-white hover:border-primary/40 hover:bg-primary/[.05] transition-all font-bold">
+            <Link href="/signup" className="btn-accent px-8 text-base">Get Started Free</Link>
+            <Link href="/coaching" className="btn-outline px-8 text-base">
               Browse Trainers
             </Link>
           </motion.div>
@@ -248,7 +248,7 @@ function GuestPage() {
               title="No featured trainers yet"
               description="Browse the marketplace to find verified coaches near you."
               action={
-                <Link href="/coaching" className="btn-accent px-6 py-2.5 text-sm">
+                <Link href="/coaching" className="btn-accent px-6 text-sm">
                   Find trainers
                 </Link>
               }
@@ -301,7 +301,7 @@ function GuestPage() {
                     </li>
                   ))}
                 </ul>
-                <Link href="/subscription" className={`block text-center py-3 rounded-full font-bold transition-colors ${p.highlight ? 'btn-accent' : 'border border-border hover:border-primary/50'}`}>
+                <Link href="/subscription" className={`w-full text-sm ${p.highlight ? 'btn-accent' : 'btn-outline'}`}>
                   Choose {p.name}
                 </Link>
               </div>
@@ -318,7 +318,7 @@ function GuestPage() {
             <h2 className="display-title text-3xl md:text-5xl mb-4">Ready to Transform?</h2>
             <p className="text-muted-foreground mb-2">Join thousands of Pakistanis achieving their fitness goals with T.E.S.T.</p>
             <p className="workout-label mb-8 text-primary/70">Show up · Stack wins · Repeat</p>
-            <Link href="/signup" className="btn-accent px-10 py-4 text-base font-bold inline-block">Start Your Journey</Link>
+            <Link href="/signup" className="btn-accent px-10 text-base">Start Your Journey</Link>
           </div>
         </FadeIn>
       </section>

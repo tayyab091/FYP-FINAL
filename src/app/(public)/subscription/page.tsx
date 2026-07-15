@@ -205,12 +205,12 @@ export default function SubscriptionPage() {
                 <button
                   onClick={() => openModal(plan.id)}
                   disabled={!!isCurrent || authLoading}
-                  className={`w-full py-3 rounded-full text-sm font-bold transition-all disabled:opacity-50 ${
+                  className={`w-full text-sm disabled:opacity-50 ${
                     plan.highlighted && !isCurrent
                       ? 'btn-accent'
                       : isCurrent
-                        ? 'bg-white/5 text-muted-foreground border border-white/10 cursor-default'
-                        : 'bg-white/10 text-white hover:bg-white/15 border border-white/10'
+                        ? 'btn-outline cursor-default opacity-60'
+                        : 'btn-outline'
                   }`}>
                   {authLoading ? 'Loading...' : getButtonLabel(plan)}
                 </button>
