@@ -135,7 +135,7 @@ export default function SubscriptionPage() {
   const selectedPlanDetails = PLANS.find(p => p.id === selectedPlan)
 
   return (
-    <div className="min-h-screen pt-28 pb-24 px-6">
+    <div className="min-h-screen pt-8 pb-24 px-6">
       <Suspense fallback={null}>
         <SubscriptionReturnHandler />
       </Suspense>

@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Activity } from 'lucide-react'
+import { shouldHideSiteFooter } from '@/lib/shell-routes'
 
 const links = [
   { label: 'Trainers', href: '/coaching' },
@@ -12,14 +13,9 @@ const links = [
   { label: 'Pricing', href: '/subscription' },
 ]
 
-const hideOn = [
-  '/admin', '/gym-owner', '/trainer-dashboard', '/my-fitness', '/chat', '/settings',
-  '/login', '/signup', '/register-trainer', '/register-gym-owner',
-]
-
 export function SiteFooter() {
   const pathname = usePathname()
-  if (hideOn.some((p) => pathname.startsWith(p))) return null
+  if (shouldHideSiteFooter(pathname)) return null
 
   return (
     <footer className="mt-auto border-t border-border py-12 px-6">

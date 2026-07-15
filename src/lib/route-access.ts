@@ -34,6 +34,7 @@ export const ROLE_ROUTE_RESTRICTIONS: ReadonlyArray<{
   { prefix: '/trainer-dashboard', roles: ['trainer'] },
   { prefix: '/gym-owner', roles: ['gym_owner'] },
   { prefix: '/my-fitness', roles: ['user'] },
+  { prefix: '/dashboard', roles: ['user'] },
 ]
 
 export function getRoleDashboardPath(role: string): string {
