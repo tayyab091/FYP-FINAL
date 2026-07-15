@@ -28,7 +28,7 @@ export function PageShell({
     <div
       className={cn(
         'mx-auto w-full px-4 sm:px-6',
-        variant === 'public' ? 'min-h-screen pb-28 pt-24' : 'pb-12 pt-8',
+        variant === 'public' ? 'min-h-screen pb-28 pt-8' : 'pb-12 pt-6',
         widths[width],
         className,
       )}
