@@ -17,10 +17,8 @@ import {
   Menu,
   MessageCircle,
   Radio,
-  ScanLine,
   Settings,
   Users,
-  Utensils,
   X,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
@@ -36,39 +34,28 @@ interface NavItem {
   exact?: boolean
 }
 
-const consumerExtras: NavItem[] = [
-  { label: 'Find Trainers', href: '/coaching', icon: Users },
-  { label: 'Exercise Library', href: '/exercises', icon: Dumbbell },
-  { label: 'AI Form Checker', href: '/exercise-check', icon: ScanLine },
-]
-
 const roleNavigation: Record<UserRole, NavItem[]> = {
   user: [
-    { label: 'Home', href: '/', icon: Home, exact: true },
+    { label: 'Home', href: '/dashboard', icon: Home, exact: true },
     { label: 'My Fitness', href: '/my-fitness', icon: LayoutDashboard },
-    { label: 'Meal Plans', href: '/meal-plans', icon: Utensils },
+    { label: 'Messages', href: '/chat', icon: MessageCircle },
     { label: 'Community', href: '/community', icon: Users },
     { label: 'Analytics', href: '/analytics', icon: BarChart3 },
-    { label: 'Live Sessions', href: '/live-sessions', icon: Radio },
-    { label: 'Nutrition', href: '/nutrition', icon: Apple },
-    { label: 'Messages', href: '/chat', icon: MessageCircle },
     { label: 'Settings', href: '/settings', icon: Settings },
-    ...consumerExtras,
   ],
   trainer: [
     { label: 'Home', href: '/trainer-dashboard', icon: Home, exact: true },
-    { label: 'Live Sessions', href: '/live-sessions', icon: Radio },
     { label: 'Messages', href: '/chat', icon: MessageCircle },
-    { label: 'Exercise Library', href: '/exercises', icon: Dumbbell },
-    { label: 'AI Form Checker', href: '/exercise-check', icon: ScanLine },
-    { label: 'Nutrition', href: '/nutrition', icon: Apple },
+    { label: 'Exercises', href: '/trainer-dashboard/exercises', icon: Dumbbell },
+    { label: 'Nutrition', href: '/trainer-dashboard/nutrition', icon: Apple },
+    { label: 'Live Sessions', href: '/live-sessions', icon: Radio },
     { label: 'Settings', href: '/settings', icon: Settings },
   ],
   gym_owner: [
     { label: 'Home', href: '/gym-owner', icon: Home, exact: true },
     { label: 'Messages', href: '/chat', icon: MessageCircle },
-    { label: 'Exercise Library', href: '/exercises', icon: Dumbbell },
-    { label: 'AI Form Checker', href: '/exercise-check', icon: ScanLine },
+    { label: 'Exercises', href: '/gym-owner/exercises', icon: Dumbbell },
+    { label: 'Nutrition', href: '/gym-owner/nutrition', icon: Apple },
     { label: 'Settings', href: '/settings', icon: Settings },
   ],
   admin: [
@@ -76,9 +63,9 @@ const roleNavigation: Record<UserRole, NavItem[]> = {
     { label: 'Users', href: '/admin?tab=users', icon: Users },
     { label: 'Trainers', href: '/admin?tab=trainers', icon: ClipboardList },
     { label: 'Gyms', href: '/admin?tab=gyms', icon: Building2 },
-    { label: 'Exercise Library', href: '/admin/exercises', icon: Dumbbell },
-    { label: 'AI Form Checker', href: '/exercise-check', icon: ScanLine },
-    { label: 'Audit Logs', href: '/admin?tab=audit', icon: Activity },
+    { label: 'Exercises', href: '/admin/exercises', icon: Dumbbell },
+    { label: 'Nutrition', href: '/admin/nutrition', icon: Apple },
+    { label: 'Audit', href: '/admin?tab=audit', icon: Activity },
     { label: 'Settings', href: '/settings', icon: Settings },
   ],
   super_admin: [
@@ -86,23 +73,28 @@ const roleNavigation: Record<UserRole, NavItem[]> = {
     { label: 'Users', href: '/admin?tab=users', icon: Users },
     { label: 'Trainers', href: '/admin?tab=trainers', icon: ClipboardList },
     { label: 'Gyms', href: '/admin?tab=gyms', icon: Building2 },
-    { label: 'Exercise Library', href: '/admin/exercises', icon: Dumbbell },
-    { label: 'AI Form Checker', href: '/exercise-check', icon: ScanLine },
-    { label: 'Audit Logs', href: '/admin?tab=audit', icon: Activity },
+    { label: 'Exercises', href: '/admin/exercises', icon: Dumbbell },
+    { label: 'Nutrition', href: '/admin/nutrition', icon: Apple },
+    { label: 'Audit', href: '/admin?tab=audit', icon: Activity },
     { label: 'Settings', href: '/settings', icon: Settings },
   ],
 }
 
 const pageTitles: Record<string, string> = {
-  '/': 'Home',
+  '/dashboard': 'Home',
   '/my-fitness': 'My Fitness',
   '/meal-plans': 'Meal Plans',
   '/community': 'Community',
   '/analytics': 'Analytics',
   '/trainer-dashboard': 'Trainer Dashboard',
+  '/trainer-dashboard/exercises': 'Exercise Library',
+  '/trainer-dashboard/nutrition': 'Nutrition Library',
   '/gym-owner': 'Gym Management',
+  '/gym-owner/exercises': 'Exercise Library',
+  '/gym-owner/nutrition': 'Nutrition Library',
   '/admin': 'Admin Console',
   '/admin/exercises': 'Exercise Library',
+  '/admin/nutrition': 'Nutrition Library',
   '/nutrition': 'Nutrition',
   '/exercises': 'Exercise Library',
   '/exercise-check': 'AI Form Checker',
@@ -116,7 +108,11 @@ const pageTitles: Record<string, string> = {
 function getPageTitle(pathname: string) {
   if (pathname.startsWith('/chat/')) return 'Conversation'
   if (pathname.startsWith('/coaching/')) return 'Trainer Profile'
-  return Object.entries(pageTitles).find(([path]) => pathname === path || pathname.startsWith(`${path}/`))?.[1] || 'Dashboard'
+  // Prefer longer/exact matches first
+  const match = Object.entries(pageTitles)
+    .sort((a, b) => b[0].length - a[0].length)
+    .find(([path]) => pathname === path || pathname.startsWith(`${path}/`))
+  return match?.[1] || 'Dashboard'
 }
 
 function isNavActive(pathname: string, item: NavItem, currentTab: string | null) {
@@ -124,8 +120,17 @@ function isNavActive(pathname: string, item: NavItem, currentTab: string | null)
     const tab = item.href.split('tab=')[1]
     return pathname === '/admin' && currentTab === tab
   }
-  if (item.href === '/admin' && item.label === 'Home') {
-    return pathname === '/admin' && !currentTab
+  if (item.href === '/admin' && item.exact) {
+    return pathname === '/admin' && (!currentTab || currentTab === 'overview')
+  }
+  if (item.href === '/trainer-dashboard' && item.exact) {
+    return pathname === '/trainer-dashboard'
+  }
+  if (item.href === '/gym-owner' && item.exact) {
+    return pathname === '/gym-owner'
+  }
+  if (item.href === '/dashboard' && item.exact) {
+    return pathname === '/dashboard'
   }
   if (item.exact) return pathname === item.href
   return pathname === item.href || pathname.startsWith(`${item.href}/`)

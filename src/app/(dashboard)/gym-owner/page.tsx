@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
 import { Trainer } from '@/types'
@@ -162,13 +163,30 @@ export default function GymOwnerPage() {
   return (
     <div className="min-h-screen pt-6 pb-12 px-4 sm:px-6">
       <div className="max-w-7xl mx-auto">
-        <div className="page-hero flex items-center justify-between mb-6 px-6 py-8 sm:px-8">
+        <div className="page-hero mb-6 flex flex-wrap items-start justify-between gap-4 px-6 py-8 sm:px-8">
           <div>
             <p className="eyebrow mb-2">Facility Workspace</p>
             <h1 className="display-title text-3xl md:text-4xl">{gymName}</h1>
             <p className="mt-2 text-muted-foreground">Manage your facility, trainers, and business performance.</p>
           </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/gym-owner/exercises" className="rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-white hover:border-primary/40">
+              Exercises
+            </Link>
+            <Link href="/gym-owner/nutrition" className="rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-white hover:border-primary/40">
+              Nutrition
+            </Link>
+            <Link href="/settings" className="rounded-xl border border-primary/30 px-4 py-2 text-sm font-bold text-primary hover:bg-primary/10">
+              Gym Settings
+            </Link>
+          </div>
         </div>
+
+        <StaggerChildren className="dashboard-grid cols-3 mb-8">
+          <StatCard label="Total Trainers" value={trainers.length} icon={Users} variant="primary" />
+          <StatCard label="Verified" value={verifiedCount} icon={Building2} variant="sky" />
+          <StatCard label="Avg Rating" value={avgRating} icon={Star} variant="amber" />
+        </StaggerChildren>
 
         <Tabs defaultValue="gym">
           <TabsList className="mb-8">

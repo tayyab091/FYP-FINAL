@@ -32,6 +32,9 @@ const BASE_TABS = [
   { id: 'account', label: 'Account', icon: '⚙️' },
 ]
 
+const ADMIN_TAB = { id: 'admin', label: 'Admin Controls', icon: '🛡' }
+const GYM_TAB = { id: 'gym', label: 'Facility', icon: '🏢' }
+
 export default function SettingsPage() {
   const { user, isLoading: authLoading, refreshUser, logout } = useAuth()
   const [tab, setTab] = useState('profile')
@@ -61,7 +64,11 @@ export default function SettingsPage() {
       ? [...BASE_TABS.slice(0, 1), { id: 'trainer', label: 'Coach Profile', icon: '🏋️' }, ...BASE_TABS.slice(1)]
       : user?.role === 'user'
         ? BASE_TABS
-        : BASE_TABS.filter((t) => t.id !== 'fitness')
+        : user?.role === 'gym_owner'
+          ? [...BASE_TABS.filter((t) => t.id !== 'fitness'), GYM_TAB]
+          : user && ['admin', 'super_admin'].includes(user.role)
+            ? [...BASE_TABS.filter((t) => t.id !== 'fitness'), ADMIN_TAB]
+            : BASE_TABS.filter((t) => t.id !== 'fitness')
 
   useEffect(() => {
     if (!user) return
@@ -464,6 +471,97 @@ export default function SettingsPage() {
                   </div>
                   <span className="badge-accent text-xs">Active</span>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {tab === 'admin' && (
+            <div className="space-y-4">
+              <div className="tile space-y-5">
+                <div>
+                  <h2 className="text-xl font-bold text-white">Admin Controls</h2>
+                  <p className="mt-1 text-sm text-[#a0a0a0]">
+                    Elite platform tools for verification, content, audit, and subscriptions
+                  </p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {[
+                    { href: '/admin', label: 'Admin Console', desc: 'Overview and KPIs' },
+                    { href: '/admin?tab=users', label: 'User & Role Management', desc: 'Suspend, inspect accounts' },
+                    { href: '/admin?tab=verifications', label: 'Verification Queue', desc: 'Trainers and gyms' },
+                    { href: '/admin?tab=audit', label: 'Audit Logs', desc: 'Security trail' },
+                    { href: '/admin?tab=subscriptions', label: 'Subscription Stats', desc: 'Plan distribution' },
+                    { href: '/admin/exercises', label: 'Exercise Content', desc: 'Catalog oversight' },
+                    { href: '/admin/nutrition', label: 'Nutrition Content', desc: 'Meal library oversight' },
+                    { href: '/coaching', label: 'Public Site Preview', desc: 'Browse as visitors do' },
+                  ].map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className="rounded-xl border border-white/10 bg-white/[.03] p-4 transition-colors hover:border-primary/40"
+                    >
+                      <p className="font-bold text-white">{item.label}</p>
+                      <p className="mt-1 text-xs text-[#a0a0a0]">{item.desc}</p>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+              <div className="tile space-y-4">
+                <div>
+                  <h3 className="font-bold text-white">Notification Control</h3>
+                  <p className="mt-1 text-sm text-[#a0a0a0]">Broadcast-style preferences for admin alerts</p>
+                </div>
+                {[
+                  { label: 'New trainer applications', desc: 'Alert when trainers request verification' },
+                  { label: 'Gym verification queue', desc: 'Alert when gyms submit documents' },
+                  { label: 'User suspension events', desc: 'Track moderation activity' },
+                  { label: 'Subscription upgrades', desc: 'Monitor plan changes' },
+                ].map((pref) => (
+                  <div key={pref.label} className="flex items-center justify-between border-b border-white/5 py-3 last:border-0">
+                    <div>
+                      <p className="text-sm font-medium text-white">{pref.label}</p>
+                      <p className="text-xs text-[#a0a0a0]">{pref.desc}</p>
+                    </div>
+                    <button type="button" className="relative h-6 w-11 flex-shrink-0 rounded-full bg-[#00ff87] transition-colors">
+                      <div className="absolute right-1 top-1 h-4 w-4 rounded-full bg-black" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="tile space-y-3 border-amber-500/20 bg-amber-500/5">
+                <p className="text-sm font-bold text-amber-300">Safe admin tools</p>
+                <p className="text-xs text-[#a0a0a0]">
+                  Destructive seed and wipe actions stay CLI/env-gated. Use the admin console APIs for day-to-day moderation instead of raw database resets.
+                </p>
+                <Link href="/admin?tab=audit" className="inline-flex text-sm font-bold text-primary hover:underline">
+                  Review recent admin actions →
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {tab === 'gym' && (
+            <div className="tile space-y-5">
+              <div>
+                <h2 className="text-xl font-bold text-white">Facility Privileges</h2>
+                <p className="mt-1 text-sm text-[#a0a0a0]">Shortcuts for gym operations and content review</p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {[
+                  { href: '/gym-owner', label: 'Gym Dashboard', desc: 'Trainers and facility profile' },
+                  { href: '/gym-owner/exercises', label: 'Exercise Library', desc: 'Catalog for your coaches' },
+                  { href: '/gym-owner/nutrition', label: 'Nutrition Library', desc: 'Meal recommendations' },
+                  { href: '/chat', label: 'Messages', desc: 'Talk with trainers' },
+                ].map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="rounded-xl border border-white/10 bg-white/[.03] p-4 transition-colors hover:border-primary/40"
+                  >
+                    <p className="font-bold text-white">{item.label}</p>
+                    <p className="mt-1 text-xs text-[#a0a0a0]">{item.desc}</p>
+                  </Link>
+                ))}
               </div>
             </div>
           )}

@@ -2,20 +2,23 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
 import { AccessGate } from '@/components/shared/AccessGate'
 import { PageLoader } from '@/components/shared/PageLoader'
-import { Shield } from 'lucide-react'
+import { ArrowLeft, Shield } from 'lucide-react'
+
+const VALID_TABS = ['overview', 'users', 'trainers', 'gyms', 'verifications', 'audit', 'subscriptions'] as const
 
 const SECTIONS = [
-  { id: 'overview', label: 'Overview', icon: '📊' },
-  { id: 'users', label: 'Users', icon: '👥' },
-  { id: 'trainers', label: 'Trainers', icon: '🏋️' },
-  { id: 'gyms', label: 'Gyms', icon: '🏢' },
-  { id: 'verifications', label: 'Pending Verifications', icon: '⏳' },
-  { id: 'audit', label: 'Audit Logs', icon: '📋' },
-  { id: 'subscriptions', label: 'Subscriptions', icon: '💳' },
+  { id: 'overview', label: 'Overview' },
+  { id: 'users', label: 'Users' },
+  { id: 'trainers', label: 'Trainers' },
+  { id: 'gyms', label: 'Gyms' },
+  { id: 'verifications', label: 'Verifications' },
+  { id: 'audit', label: 'Audit' },
+  { id: 'subscriptions', label: 'Subscriptions' },
 ]
 
 interface AdminStats {
@@ -65,14 +68,21 @@ interface AuditLog {
 
 export default function AdminPageClient() {
   const { user, isLoading: authLoading } = useAuth()
-  const [active, setActive] = useState('overview')
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const tabParam = searchParams.get('tab') || 'overview'
+  const active = VALID_TABS.includes(tabParam as (typeof VALID_TABS)[number]) ? tabParam : 'overview'
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [users, setUsers] = useState<AdminUser[]>([])
   const [trainers, setTrainers] = useState<AdminTrainer[]>([])
   const [gyms, setGyms] = useState<AdminGym[]>([])
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
   const [loading, setLoading] = useState(true)
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+
+  const setActive = (id: string) => {
+    if (id === 'overview') router.replace('/admin')
+    else router.replace(`/admin?tab=${id}`)
+  }
 
   useEffect(() => {
     if (!user || !['admin', 'super_admin'].includes(user.role)) return
@@ -192,56 +202,60 @@ export default function AdminPageClient() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#080e0a]">
-      <aside
-        className={`${sidebarOpen ? 'w-60' : 'w-16'} flex flex-shrink-0 flex-col border-r border-white/5 bg-[#0a1a0f] transition-all duration-300`}
-      >
-        <div className="flex items-center justify-between border-b border-white/5 p-4">
-          {sidebarOpen && <span className="gradient-text text-lg font-black">Admin Panel</span>}
-          <button type="button" onClick={() => setSidebarOpen(!sidebarOpen)} className="text-[#a0a0a0] hover:text-white">
-            {sidebarOpen ? '◀' : '▶'}
-          </button>
+    <div className="min-h-screen px-4 pb-24 pt-6 sm:px-6">
+      <div className="mx-auto max-w-6xl space-y-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="section-eyebrow">Platform Control</p>
+            <h1 className="text-3xl font-black text-white">Admin Console</h1>
+            <p className="mt-1 text-[#a0a0a0]">Users, verifications, content, and subscriptions</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/admin/exercises"
+              className="rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-white hover:border-primary/40"
+            >
+              Exercises
+            </Link>
+            <Link
+              href="/admin/nutrition"
+              className="rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-white hover:border-primary/40"
+            >
+              Nutrition
+            </Link>
+            <Link
+              href="/coaching"
+              className="inline-flex items-center gap-2 rounded-xl border border-primary/30 px-4 py-2 text-sm font-bold text-primary hover:bg-primary/10"
+            >
+              <ArrowLeft className="size-4" />
+              Back to site
+            </Link>
+          </div>
         </div>
-        <nav className="flex-1 space-y-1 p-3">
+
+        <div className="flex gap-2 overflow-x-auto pb-1">
           {SECTIONS.map((s) => (
             <button
               key={s.id}
               type="button"
               onClick={() => setActive(s.id)}
-              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
+              className={`relative flex-shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${
                 active === s.id
-                  ? 'border border-[#00ff87]/20 bg-[#00ff87]/15 text-[#00ff87]'
+                  ? 'bg-primary/[.12] text-primary shadow-[inset_0_0_0_1px_rgba(34,245,154,.15)]'
                   : 'text-[#a0a0a0] hover:bg-white/5 hover:text-white'
               }`}
             >
-              <span className="flex-shrink-0 text-base">{s.icon}</span>
-              {sidebarOpen && (
-                <>
-                  <span>{s.label}</span>
-                  {s.id === 'verifications' && pendingCount > 0 && (
-                    <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
-                      {pendingCount}
-                    </span>
-                  )}
-                </>
+              {s.label}
+              {s.id === 'verifications' && pendingCount > 0 && (
+                <span className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                  {pendingCount}
+                </span>
               )}
             </button>
           ))}
-        </nav>
-        <div className="border-t border-white/5 p-4">
-          <Link
-            href="/"
-            className={`flex items-center gap-3 text-sm text-[#a0a0a0] transition-colors hover:text-white ${!sidebarOpen && 'justify-center'}`}
-          >
-            <span>🏠</span>
-            {sidebarOpen && 'Back to site'}
-          </Link>
         </div>
-      </aside>
 
-      <main className="flex-1 overflow-auto pb-24">
-        <div className="max-w-6xl p-6">
-          {loading && <p className="text-sm text-[#a0a0a0]">Loading admin data...</p>}
+        {loading && <p className="text-sm text-[#a0a0a0]">Loading admin data...</p>}
 
           {active === 'overview' && (
             <div className="space-y-6">
@@ -653,8 +667,7 @@ export default function AdminPageClient() {
               </div>
             </div>
           )}
-        </div>
-      </main>
+      </div>
     </div>
   )
 }
