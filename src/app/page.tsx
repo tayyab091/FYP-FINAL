@@ -70,7 +70,7 @@ function GuestPage() {
     <div className="min-h-screen text-white pb-24">
       <ScrollProgress />
       {/* Hero */}
-      <section className="relative pt-28 pb-14 px-4 sm:px-6 overflow-hidden">
+      <section className="relative pt-8 pb-14 px-4 sm:px-6 overflow-hidden">
         <div className="page-hero max-w-6xl mx-auto relative px-6 py-20 text-center sm:px-10 md:py-28 gym-floor">
           <div className="absolute -top-24 left-1/2 h-52 w-52 -translate-x-1/2 rounded-full bg-primary/15 blur-3xl animate-energy-pulse" />
           <motion.div

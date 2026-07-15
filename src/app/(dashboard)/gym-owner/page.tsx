@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
 import { Trainer } from '@/types'
@@ -31,8 +32,19 @@ interface GymDetails {
   verificationStatus?: string
 }
 
+const GYM_TABS = ['gym', 'trainers', 'analytics'] as const
+type GymTab = (typeof GYM_TABS)[number]
+
+function isGymTab(value: string | null): value is GymTab {
+  return GYM_TABS.includes(value as GymTab)
+}
+
 export default function GymOwnerPage() {
   const { user, isLoading: authLoading } = useAuth()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const tabParam = searchParams.get('tab')
+  const activeTab: GymTab = isGymTab(tabParam) ? tabParam : 'gym'
   const [trainers, setTrainers] = useState<Trainer[]>([])
   const [loading, setLoading] = useState(true)
   const [trainerEmail, setTrainerEmail] = useState('')
@@ -47,6 +59,15 @@ export default function GymOwnerPage() {
     email: '',
     logo: '',
   })
+
+  const setTab = (value: string) => {
+    const next = isGymTab(value) ? value : 'gym'
+    const params = new URLSearchParams(searchParams.toString())
+    if (next === 'gym') params.delete('tab')
+    else params.set('tab', next)
+    const qs = params.toString()
+    router.replace(qs ? `/gym-owner?${qs}` : '/gym-owner', { scroll: false })
+  }
 
   const loadTrainers = () => {
     setLoading(true)
@@ -188,9 +209,9 @@ export default function GymOwnerPage() {
           <StatCard label="Avg Rating" value={avgRating} icon={Star} variant="amber" />
         </StaggerChildren>
 
-        <Tabs defaultValue="gym">
+        <Tabs value={activeTab} onValueChange={setTab}>
           <TabsList className="mb-8">
-            {['gym', 'trainers', 'analytics'].map(t => (
+            {GYM_TABS.map((t) => (
               <TabsTrigger key={t} value={t} className="capitalize">
                 {t === 'gym' ? 'My Gym' : t === 'trainers' ? 'My Trainers' : 'Analytics'}
               </TabsTrigger>

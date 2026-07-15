@@ -18,6 +18,7 @@ import {
   MessageCircle,
   Radio,
   Settings,
+  UtensilsCrossed,
   Users,
   X,
 } from 'lucide-react'
@@ -38,24 +39,29 @@ const roleNavigation: Record<UserRole, NavItem[]> = {
   user: [
     { label: 'Home', href: '/dashboard', icon: Home, exact: true },
     { label: 'My Fitness', href: '/my-fitness', icon: LayoutDashboard },
+    { label: 'Meal Plans', href: '/meal-plans', icon: UtensilsCrossed },
+    { label: 'Nutrition', href: '/my-fitness?tab=nutrition', icon: Apple },
     { label: 'Messages', href: '/chat', icon: MessageCircle },
     { label: 'Community', href: '/community', icon: Users },
     { label: 'Analytics', href: '/analytics', icon: BarChart3 },
+    { label: 'Live Sessions', href: '/live-sessions', icon: Radio },
     { label: 'Settings', href: '/settings', icon: Settings },
   ],
   trainer: [
-    { label: 'Home', href: '/trainer-dashboard', icon: Home, exact: true },
+    { label: 'Dashboard', href: '/trainer-dashboard', icon: Home, exact: true },
     { label: 'Messages', href: '/chat', icon: MessageCircle },
     { label: 'Exercises', href: '/trainer-dashboard/exercises', icon: Dumbbell },
     { label: 'Nutrition', href: '/trainer-dashboard/nutrition', icon: Apple },
+    { label: 'Meal Plans', href: '/meal-plans', icon: UtensilsCrossed },
     { label: 'Live Sessions', href: '/live-sessions', icon: Radio },
     { label: 'Settings', href: '/settings', icon: Settings },
   ],
   gym_owner: [
-    { label: 'Home', href: '/gym-owner', icon: Home, exact: true },
-    { label: 'Messages', href: '/chat', icon: MessageCircle },
+    { label: 'Dashboard', href: '/gym-owner', icon: Home, exact: true },
+    { label: 'Trainers', href: '/gym-owner?tab=trainers', icon: Users },
     { label: 'Exercises', href: '/gym-owner/exercises', icon: Dumbbell },
     { label: 'Nutrition', href: '/gym-owner/nutrition', icon: Apple },
+    { label: 'Messages', href: '/chat', icon: MessageCircle },
     { label: 'Settings', href: '/settings', icon: Settings },
   ],
   admin: [
@@ -116,9 +122,15 @@ function getPageTitle(pathname: string) {
 }
 
 function isNavActive(pathname: string, item: NavItem, currentTab: string | null) {
-  if (item.href.includes('?tab=')) {
-    const tab = item.href.split('tab=')[1]
-    return pathname === '/admin' && currentTab === tab
+  if (item.href.includes('?')) {
+    const [base, query] = item.href.split('?')
+    const tab = new URLSearchParams(query).get('tab')
+    if (tab) {
+      return pathname === base && currentTab === tab
+    }
+  }
+  if (item.href === '/my-fitness') {
+    return pathname.startsWith('/my-fitness') && currentTab !== 'nutrition'
   }
   if (item.href === '/admin' && item.exact) {
     return pathname === '/admin' && (!currentTab || currentTab === 'overview')
@@ -127,7 +139,7 @@ function isNavActive(pathname: string, item: NavItem, currentTab: string | null)
     return pathname === '/trainer-dashboard'
   }
   if (item.href === '/gym-owner' && item.exact) {
-    return pathname === '/gym-owner'
+    return pathname === '/gym-owner' && (!currentTab || currentTab === 'gym')
   }
   if (item.href === '/dashboard' && item.exact) {
     return pathname === '/dashboard'
@@ -147,9 +159,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex h-full flex-col bg-[#090c0a]/96 backdrop-blur-2xl">
-      <div className="flex h-20 items-center border-b border-white/[.06] px-5">
+      <div className="flex h-16 items-center border-b border-white/[.06] px-5">
         <Link href={homePath} onClick={onNavigate} className="flex items-center gap-2.5">
-          <span className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[0_0_30px_rgba(34,245,154,.2)]">
+          <span className="flex size-8 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[0_0_30px_rgba(34,245,154,.2)]">
             <Activity className="size-4.5" strokeWidth={2.7} />
           </span>
           <span className="font-heading text-lg font-black tracking-[-.045em] text-white">T.E.S.T.</span>
@@ -247,24 +259,30 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </Suspense>
       </aside>
 
-      <header className="fixed inset-x-0 top-0 z-40 flex h-[4.5rem] items-center justify-between border-b border-white/[.06] bg-[#080b09]/82 px-4 backdrop-blur-2xl lg:left-72 lg:px-8">
+      <header className="fixed inset-x-0 top-0 z-50 flex h-16 items-center justify-between border-b border-white/[.09] bg-[#070908]/92 px-4 backdrop-blur-2xl lg:left-72 lg:px-8">
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
-            className="rounded-xl border border-white/[.09] bg-white/[.03] p-2 text-[#aaa] hover:text-white lg:hidden"
+            className="flex size-10 items-center justify-center rounded-xl border border-primary/25 bg-primary/[.08] text-primary shadow-[0_0_20px_rgba(34,245,154,.12)] lg:hidden"
             aria-label="Open dashboard navigation"
           >
             <Menu className="h-5 w-5" />
           </button>
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary/65">T.E.S.T. Workspace</p>
-            <h1 className="font-heading text-base font-bold tracking-tight text-white">{pageTitle}</h1>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary/70">T.E.S.T. Workspace</p>
+            <h1 className="truncate font-heading text-base font-bold tracking-tight text-white">{pageTitle}</h1>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Link
+            href="/"
+            className="hidden rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-white/[.04] hover:text-white sm:inline-flex"
+          >
+            Back to site
+          </Link>
           <NotificationBell />
-          <div className="hidden items-center gap-2 text-xs text-[#666] sm:flex">
+          <div className="hidden items-center gap-2 text-xs text-[#666] md:flex">
             <span className="h-2 w-2 animate-pulse rounded-full bg-primary shadow-[0_0_10px_rgba(34,245,154,.7)]" />
             Secure session
           </div>
@@ -295,7 +313,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </div>
       )}
 
-      <div className="min-h-screen bg-[radial-gradient(circle_at_70%_-10%,rgba(34,245,154,.055),transparent_32rem)] pt-[4.5rem] lg:pl-72">
+      <div className="min-h-screen bg-[radial-gradient(circle_at_70%_-10%,rgba(34,245,154,.055),transparent_32rem)] pt-16 lg:pl-72">
         {children}
       </div>
     </div>
