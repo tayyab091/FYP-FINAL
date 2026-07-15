@@ -317,7 +317,7 @@ export default function CoachingPage() {
             description="Try adjusting your filters or search term"
             action={
               <button onClick={() => { setSpecialty('All'); setCountry('All'); setSearch('') }}
-                className="bg-primary text-black px-6 py-2.5 rounded-full text-sm font-bold">
+                className="btn-accent px-6 text-sm">
                 Clear Filters
               </button>
             }

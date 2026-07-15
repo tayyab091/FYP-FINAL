@@ -129,21 +129,93 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .btn-accent {
-  background: linear-gradient(135deg, #55ffb1, #22f59a);
-  color: #03130b;
-  font-weight: 800;
-  border-radius: 9999px;
-  transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+  --btn-glow: 0 0 0 1px rgba(34, 245, 154, .28),
+    0 8px 28px rgba(34, 245, 154, .28),
+    0 2px 0 rgba(255, 255, 255, .2) inset;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  animation: pulse-glow 3s ease-in-out infinite;
+  gap: .4rem;
+  min-height: 2.75rem;
+  padding: .7rem 1.35rem;
+  border: 0;
+  border-radius: 1rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .22), transparent 42%),
+    linear-gradient(135deg, #55ffb1 0%, #22f59a 48%, #00ff87 100%);
+  color: #03130b;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-decoration: none;
+  box-shadow: var(--btn-glow);
+  transition:
+    transform .22s cubic-bezier(.22, 1, .36, 1),
+    box-shadow .22s ease,
+    filter .22s ease;
 }
 .btn-accent:hover {
-  filter: brightness(1.04);
+  filter: brightness(1.06) saturate(1.05);
   transform: translateY(-2px);
-  box-shadow: 0 12px 35px rgba(34,245,154,.38);
-  animation: none;
+  box-shadow:
+    0 0 0 1px rgba(34, 245, 154, .4),
+    0 14px 40px rgba(34, 245, 154, .42),
+    0 2px 0 rgba(255, 255, 255, .28) inset;
+}
+.btn-accent:active {
+  transform: translateY(0);
+  filter: brightness(.98);
+  box-shadow:
+    0 0 0 1px rgba(34, 245, 154, .3),
+    0 6px 18px rgba(34, 245, 154, .28),
+    0 1px 0 rgba(255, 255, 255, .15) inset;
+}
+.btn-accent:disabled,
+.btn-accent[aria-disabled="true"] {
+  opacity: .5;
+  cursor: not-allowed;
+  transform: none;
+  filter: none;
+  box-shadow: none;
+}
+.btn-accent.btn-sm {
+  min-height: 2.25rem;
+  padding: .4rem .9rem;
+  border-radius: .75rem;
+  font-size: .8125rem;
+  letter-spacing: .03em;
+}
+
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  min-height: 2.75rem;
+  padding: .7rem 1.35rem;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, .03);
+  color: #f4f7f5;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-decoration: none;
+  transition:
+    transform .22s cubic-bezier(.22, 1, .36, 1),
+    border-color .22s ease,
+    background .22s ease,
+    box-shadow .22s ease,
+    color .22s ease;
+}
+.btn-outline:hover {
+  border-color: rgba(34, 245, 154, .45);
+  background: rgba(34, 245, 154, .08);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .28), 0 0 24px rgba(34, 245, 154, .1);
+}
+.btn-outline:active {
+  transform: translateY(0);
+  background: rgba(34, 245, 154, .12);
 }
 
 .page-shell {
