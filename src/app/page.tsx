@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/hooks/useAuth'
 import { Trainer } from '@/types'
@@ -326,13 +326,20 @@ function GuestPage() {
   )
 }
 
-export default function HomePage() {
+function HomeLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
+}
+
+function HomePageContent() {
   const { user, isLoading } = useAuth()
   const router = useRouter()
-  const [allowMarketing] = useState(() => {
-    if (typeof window === 'undefined') return false
-    return new URLSearchParams(window.location.search).get('marketing') === '1'
-  })
+  const searchParams = useSearchParams()
+  // `?marketing=1` lets any logged-in role view the public landing without role redirect.
+  const allowMarketing = searchParams.get('marketing') === '1'
 
   useEffect(() => {
     if (isLoading || !user || allowMarketing) return
@@ -353,12 +360,16 @@ export default function HomePage() {
   }, [isLoading, user, router, allowMarketing])
 
   if (isLoading || (user && !allowMarketing)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
+    return <HomeLoading />
   }
 
   return <GuestPage />
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={<HomeLoading />}>
+      <HomePageContent />
+    </Suspense>
+  )
 }
