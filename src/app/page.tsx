@@ -147,11 +147,11 @@ function GuestPage() {
             <div className="absolute left-0 right-0 top-1/2 hidden h-1 -translate-y-1/2 bg-gradient-to-r from-transparent via-primary/30 to-transparent md:block" />
             <StaggerChildren className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {JOURNEY_LEVELS.map((lvl) => (
-                <div key={lvl.level} className="elite-panel interactive-lift card-athletic rounded-2xl p-6 text-center relative">
+                <div key={lvl.level} className="elite-panel interactive-lift card-athletic flex h-full min-h-[12rem] flex-col rounded-2xl p-6 text-center relative">
                   <FitnessBadge variant="pr" className="mb-3">LVL {lvl.level}</FitnessBadge>
                   <h3 className="text-lg font-bold text-white">{lvl.title}</h3>
                   <p className="text-primary text-sm font-bold mt-1">{lvl.xp} XP</p>
-                  <p className="text-muted-foreground text-xs mt-2">{lvl.desc}</p>
+                  <p className="text-muted-foreground text-xs mt-2 flex-1">{lvl.desc}</p>
                 </div>
               ))}
             </StaggerChildren>
@@ -170,12 +170,12 @@ function GuestPage() {
             {ACHIEVEMENTS.map((a) => {
               const Icon = a.icon
               return (
-                <div key={a.id} className="glass interactive-lift card-athletic rounded-2xl p-5">
+                <div key={a.id} className="glass interactive-lift card-athletic flex h-full min-h-[11rem] flex-col rounded-2xl p-5">
                   <div className="mb-3 flex size-11 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
                     <Icon className="size-5" />
                   </div>
                   <h3 className="font-bold text-white">{a.label}</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">{a.desc}</p>
+                  <p className="mt-1 flex-1 text-sm text-muted-foreground">{a.desc}</p>
                 </div>
               )
             })}
@@ -215,12 +215,12 @@ function GuestPage() {
             {FEATURES.map(f => {
               const Icon = f.icon
               return (
-              <div key={f.title} className="elite-panel interactive-lift card-athletic rounded-2xl p-6">
+              <div key={f.title} className="elite-panel interactive-lift card-athletic flex h-full min-h-[12rem] flex-col rounded-2xl p-6">
                 <div className="mb-4 flex size-11 items-center justify-center rounded-xl border border-primary/15 bg-primary/[.08] text-primary">
                   <Icon className="size-5" strokeWidth={2.2} />
                 </div>
                 <h3 className="font-bold text-lg mb-2">{f.title}</h3>
-                <p className="text-muted-foreground text-sm">{f.desc}</p>
+                <p className="text-muted-foreground text-sm flex-1">{f.desc}</p>
               </div>
             )})}
           </StaggerChildren>
@@ -329,9 +329,13 @@ function GuestPage() {
 export default function HomePage() {
   const { user, isLoading } = useAuth()
   const router = useRouter()
+  const [allowMarketing] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return new URLSearchParams(window.location.search).get('marketing') === '1'
+  })
 
   useEffect(() => {
-    if (isLoading || !user) return
+    if (isLoading || !user || allowMarketing) return
     switch (user.role) {
       case 'admin':
       case 'super_admin':
@@ -346,9 +350,9 @@ export default function HomePage() {
       default:
         router.replace('/dashboard')
     }
-  }, [isLoading, user, router])
+  }, [isLoading, user, router, allowMarketing])
 
-  if (isLoading || user) {
+  if (isLoading || (user && !allowMarketing)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />

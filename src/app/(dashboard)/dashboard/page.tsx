@@ -85,7 +85,7 @@ export default function DashboardPage() {
   const todaySchedule = plan?.weeklySchedule?.find((d) => d.day.toLowerCase() === today.toLowerCase())
 
   const quickActions = [
-    { href: '/nutrition', icon: Apple, label: 'Log Meal' },
+    { href: '/my-fitness?tab=nutrition', icon: Apple, label: 'Log Meal' },
     { href: '/coaching', icon: Users, label: 'Find Trainer' },
     { href: '/exercises', icon: Dumbbell, label: 'Browse Exercises' },
     { href: '/community', icon: MessageCircle, label: 'Community' },

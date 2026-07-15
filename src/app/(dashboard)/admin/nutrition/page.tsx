@@ -4,9 +4,9 @@ import { useAuth } from '@/hooks/useAuth'
 import { Shield } from 'lucide-react'
 import { AccessGate } from '@/components/shared/AccessGate'
 import { PageLoader } from '@/components/shared/PageLoader'
-import { RoleExerciseLibrary } from '@/components/shared/RoleExerciseLibrary'
+import { RoleNutritionLibrary } from '@/components/shared/RoleNutritionLibrary'
 
-export default function AdminExercisesPage() {
+export default function AdminNutritionPage() {
   const { user, isLoading: authLoading } = useAuth()
 
   if (authLoading) return <PageLoader />
@@ -15,16 +15,16 @@ export default function AdminExercisesPage() {
       <AccessGate
         icon={Shield}
         title="Admin access only"
-        description="Exercise library management is restricted to platform administrators."
+        description="Meal library management is restricted to platform administrators."
       />
     )
   }
 
   return (
-    <RoleExerciseLibrary
+    <RoleNutritionLibrary
       eyebrow="Content oversight"
-      title="Exercise Library"
-      description="Browse the full live exercise catalog. Audit content quality, muscle coverage, and equipment diversity."
+      title="Nutrition Library"
+      description="Browse and audit the live meal catalog used across nutrition tools, meal plans, and user logging."
     />
   )
 }
