@@ -60,7 +60,7 @@ export function Navbar() {
         }`}
       >
         <div className="mx-auto flex h-full max-w-6xl items-center gap-3 px-4 sm:px-6">
-          <Link href="/" className="group flex shrink-0 items-center gap-2.5">
+          <Link href={user ? '/?marketing=1' : '/'} className="group flex shrink-0 items-center gap-2.5">
             <motion.span
               whileHover={reduceMotion ? {} : { scale: 1.05, rotate: -4 }}
               className="flex size-8 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[0_0_28px_rgba(34,245,154,.22)]"

@@ -220,6 +220,13 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             <p className="truncate text-[11px] capitalize text-[#666]">{role.replace('_', ' ')}</p>
           </div>
         </div>
+        <Link
+          href="/?marketing=1"
+          onClick={onNavigate}
+          className="mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-white/[.04] hover:text-white lg:hidden"
+        >
+          Back to site
+        </Link>
         <button
           type="button"
           onClick={() => void logout()}
@@ -276,8 +283,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
-            href="/"
-            className="hidden rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-white/[.04] hover:text-white sm:inline-flex"
+            href="/?marketing=1"
+            className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-white/[.04] hover:text-white"
           >
             Back to site
           </Link>
