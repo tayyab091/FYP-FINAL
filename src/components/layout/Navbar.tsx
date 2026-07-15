@@ -130,7 +130,7 @@ export function Navbar() {
                 >
                   Sign In
                 </Link>
-                <Link href="/signup" className="btn-accent gap-1.5 px-4 py-2 text-sm">
+                <Link href="/signup" className="btn-accent btn-sm gap-1.5 px-4">
                   Get Started <ArrowUpRight className="size-3.5" />
                 </Link>
               </>
@@ -139,7 +139,7 @@ export function Navbar() {
 
           <div className="ml-auto flex items-center gap-2 md:hidden">
             {!isLoading && !user && (
-              <Link href="/signup" className="btn-accent px-3 py-1.5 text-xs">
+              <Link href="/signup" className="btn-accent btn-sm px-3.5">
                 Join
               </Link>
             )}
@@ -257,14 +257,14 @@ export function Navbar() {
                     <Link
                       href="/login"
                       onClick={() => setMenuOpen(false)}
-                      className="block rounded-xl border border-border py-3 text-center text-sm font-medium text-white"
+                      className="btn-outline w-full text-sm"
                     >
                       Sign In
                     </Link>
                     <Link
                       href="/signup"
                       onClick={() => setMenuOpen(false)}
-                      className="btn-accent block py-3 text-center font-bold"
+                      className="btn-accent w-full text-sm"
                     >
                       Get Started Free
                     </Link>
