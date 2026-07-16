@@ -5,8 +5,8 @@ This app does **not** run a persistent Socket.io server (incompatible with Verce
 | Concern | Service |
 |---------|---------|
 | Chat + typing + notification push | **Pusher** private channels |
-| Live training video | **Daily.co** rooms (scheduling/gating in our DB) |
-| Chat image storage | **Vercel Blob** |
+| Live training video | **Jitsi Meet** (`meet.jit.si`) rooms (scheduling/gating in our DB) |
+| Chat image storage | **Cloudinary** |
 
 ## Channels
 

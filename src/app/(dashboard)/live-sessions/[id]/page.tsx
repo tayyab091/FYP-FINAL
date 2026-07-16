@@ -1,9 +1,8 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import DailyIframe, { type DailyCall } from '@daily-co/daily-js'
 import { Radio, ExternalLink } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
@@ -14,7 +13,8 @@ interface LiveSessionDetail {
   _id: string
   title: string
   roomId: string
-  dailyRoomUrl?: string
+  meetingProvider?: string
+  meetingUrl?: string
   status: string
   trainerId: string
   participantIds: string[]
@@ -33,9 +33,6 @@ export default function LiveSessionRoomPage() {
   const [session, setSession] = useState<LiveSessionDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [joined, setJoined] = useState(false)
-  const [callError, setCallError] = useState('')
-  const callFrameRef = useRef<DailyCall | null>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!user || !id) return
@@ -77,54 +74,6 @@ export default function LiveSessionRoomPage() {
     }
   }, [user, id])
 
-  useEffect(() => {
-    if (!joined || !session?.dailyRoomUrl || !containerRef.current) return
-
-    let destroyed = false
-
-    try {
-      const existing = DailyIframe.getCallInstance()
-      if (existing) {
-        existing.destroy().catch(() => {})
-      }
-
-      const call = DailyIframe.createFrame(containerRef.current, {
-        iframeStyle: {
-          width: '100%',
-          height: '100%',
-          border: '0',
-          borderRadius: '1rem',
-        },
-        showLeaveButton: true,
-        showFullscreenButton: true,
-      })
-      callFrameRef.current = call
-
-      call.on('error', (event) => {
-        setCallError(event?.errorMsg || 'Daily.co call error')
-      })
-
-      void call.join({ url: session.dailyRoomUrl }).catch((error: unknown) => {
-        if (!destroyed) {
-          setCallError(error instanceof Error ? error.message : 'Failed to join Daily room')
-        }
-      })
-    } catch (error) {
-      setCallError(error instanceof Error ? error.message : 'Failed to start Daily call')
-    }
-
-    return () => {
-      destroyed = true
-      const call = callFrameRef.current
-      callFrameRef.current = null
-      if (call) {
-        void call.leave().finally(() => {
-          void call.destroy()
-        })
-      }
-    }
-  }, [joined, session?.dailyRoomUrl])
-
   if (authLoading || loading) return <PageLoader />
   if (!user) return <SignInGate redirectLabel="Sign in to join live sessions" />
   if (!isElite(user)) {
@@ -157,22 +106,22 @@ export default function LiveSessionRoomPage() {
     <div className="mx-auto max-w-6xl px-4 py-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="eyebrow mb-1">Live session · Daily.co</p>
+          <p className="eyebrow mb-1">Live session · {session.meetingProvider === 'daily' ? 'Daily.co' : 'Jitsi Meet'}</p>
           <h1 className="display-title text-2xl md:text-3xl">{session.title}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             with {session.trainer?.fullName || 'Coach'} · {session.status}
           </p>
         </div>
         <div className="flex gap-2">
-          {session.dailyRoomUrl && (
+          {session.meetingUrl && (
             <a
-              href={session.dailyRoomUrl}
+              href={session.meetingUrl}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm hover:border-primary/40"
             >
               <ExternalLink className="size-4" />
-              Open in Daily
+              Open in new tab
             </a>
           )}
           <Link href="/live-sessions" className="rounded-xl border border-border px-3 py-2 text-sm hover:border-primary/40">
@@ -181,19 +130,16 @@ export default function LiveSessionRoomPage() {
         </div>
       </div>
 
-      {callError && (
-        <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-          {callError}
-        </div>
-      )}
-
-      {!session.dailyRoomUrl ? (
+      {!session.meetingUrl ? (
         <div className="rounded-2xl border border-border bg-card/40 p-8 text-center text-muted-foreground">
-          This session has no Daily.co room URL. Ask the trainer to recreate it with DAILY_API_KEY configured.
+          This session has no meeting URL yet. Ask the trainer to recreate it.
         </div>
       ) : (
-        <div
-          ref={containerRef}
+        <iframe
+          key={`${session._id}:${joined ? 'joined' : 'preview'}`}
+          src={session.meetingUrl}
+          title={session.title}
+          allow="camera; microphone; fullscreen; display-capture; autoplay"
           className="aspect-video w-full overflow-hidden rounded-2xl border border-border bg-black"
         />
       )}
