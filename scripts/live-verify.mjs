@@ -203,14 +203,14 @@ if (convId) {
   record('Chat typing', 'POST typing', [200, 204], r)
 }
 
-// Chat upload (Blob optional)
+// Chat upload (Cloudinary optional)
 r = await api('POST', '/api/chat/upload', { note: 'no file' })
 record(
   'Image upload',
   'POST /api/chat/upload without file',
   (a) => [400, 401, 415, 500, 503].includes(a.status),
   r,
-  'BLOB_READ_WRITE_TOKEN may be unset',
+  'Cloudinary env vars may be unset',
 )
 
 // Nutrition analyze (GET-only)
@@ -278,7 +278,7 @@ await loginAs('user1@test.com', 'User@123')
 r = await api('POST', '/api/meal-plans', {})
 record('Meal plan generate', 'POST meal-plans', [200, 201, 403, 500], r)
 
-// Live session create — Elite member forbidden; trainer + Daily required
+// Live session create — Elite member forbidden; trainer creates Jitsi-backed room
 await loginAs('user3@test.com', 'User@123')
 r = await api('GET', '/api/live-sessions')
 record('Live sessions elite', 'GET as elite', 200, r)
@@ -298,9 +298,9 @@ r = await api('POST', '/api/live-sessions', {
 record(
   'Live session create (trainer)',
   'POST as trainer',
-  (a) => [201, 503, 502].includes(a.status),
+  201,
   r,
-  'DAILY_API_KEY required for 201',
+  'Jitsi room should be created without extra env vars',
 )
 
 // Payments PAUSED — only read plan status
