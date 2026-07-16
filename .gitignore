@@ -12,3 +12,6 @@ coverage/
 playwright-report/
 test-results/
 e2e/screenshots/
+docs/_verify_raw.json
+docs/_verify_summary.json
+tsconfig.tsbuildinfo
