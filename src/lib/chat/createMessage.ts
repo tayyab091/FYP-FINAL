@@ -82,7 +82,7 @@ export async function createMessage(input: CreateMessageInput) {
   let trimmed = content.trim()
   if (type === 'image') {
     if (!isSafeHttpUrl(trimmed, true)) {
-      throw new ChatError(400, 'Image content must be a valid https URL (Vercel Blob)')
+      throw new ChatError(400, 'Image content must be a valid https URL (Cloudinary)')
     }
     if (trimmed.length > 2048) {
       throw new ChatError(400, 'Image URL is too long')
