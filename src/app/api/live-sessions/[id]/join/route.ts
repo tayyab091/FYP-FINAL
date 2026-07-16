@@ -59,8 +59,9 @@ export async function POST(
       session: {
         _id: session._id.toString(),
         roomId: session.roomId,
-        dailyRoomUrl: session.dailyRoomUrl,
-        dailyRoomName: session.dailyRoomName,
+        meetingProvider: session.meetingProvider || (session.dailyRoomUrl ? 'daily' : 'jitsi'),
+        meetingUrl: session.meetingUrl || session.dailyRoomUrl || '',
+        meetingRoomName: session.meetingRoomName || session.dailyRoomName || '',
         title: session.title,
         status: session.status,
         trainerId: session.trainerId.toString(),

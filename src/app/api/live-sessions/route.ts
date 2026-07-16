@@ -6,7 +6,7 @@ import LiveSession from '@/models/LiveSession'
 import User from '@/models/User'
 import Trainer from '@/models/Trainer'
 import Relationship from '@/models/Relationship'
-import { createDailyRoom, isDailyConfigured } from '@/lib/daily'
+import { createJitsiRoom, isJitsiConfigured } from '@/lib/jitsi'
 import { createNotification } from '@/lib/notifications'
 import { normalizePlan, canAccessLiveSessions } from '@/lib/subscription'
 import { liveSessionCreateSchema, parseJsonBody } from '@/lib/validation'
@@ -81,23 +81,13 @@ export async function POST(req: NextRequest) {
 
     await connectDB()
 
-    if (!isDailyConfigured()) {
-      return NextResponse.json(
-        { message: 'Live video requires DAILY_API_KEY (Daily.co)' },
-        { status: 503 },
-      )
+    if (!isJitsiConfigured()) {
+      return NextResponse.json({ message: 'Live video is not configured' }, { status: 503 })
     }
 
     const roomId = randomUUID()
-    const expUnix = Math.floor(scheduledAt.getTime() / 1000) + durationMinutes * 60 + 3600
 
-    let dailyRoom: { name: string; url: string }
-    try {
-      dailyRoom = await createDailyRoom({ name: `live-${roomId}`, expUnix })
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to create Daily room'
-      return NextResponse.json({ message }, { status: 502 })
-    }
+    const jitsiRoom = createJitsiRoom({ name: `live-${roomId}` })
 
     const session = await LiveSession.create({
       trainerId: tokenUser.userId,
@@ -108,8 +98,9 @@ export async function POST(req: NextRequest) {
       participantIds: [],
       status: 'scheduled',
       roomId,
-      dailyRoomName: dailyRoom.name,
-      dailyRoomUrl: dailyRoom.url,
+      meetingProvider: 'jitsi',
+      meetingRoomName: jitsiRoom.name,
+      meetingUrl: jitsiRoom.embedUrl,
     })
 
     // Notify Elite clients with an active coaching relationship
