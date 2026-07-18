@@ -300,9 +300,24 @@ export default function ChatConversationPage() {
                       <p className="break-words font-medium">{msg.attachedPlan?.title || msg.content}</p>
                       {msg.attachedPlan && (
                         <p className="mt-1 text-xs opacity-70">
+                          {msg.attachedPlan.goal ? `${String(msg.attachedPlan.goal).replace(/_/g, ' ')} · ` : ''}
                           {msg.attachedPlan.durationWeeks} weeks · {msg.attachedPlan.difficulty}
                         </p>
                       )}
+                      <Link
+                        href={
+                          msg.attachedPlan?._id
+                            ? `/my-fitness?tab=workout&planId=${msg.attachedPlan._id}`
+                            : '/my-fitness?tab=workout'
+                        }
+                        className={`mt-3 inline-flex rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
+                          isMine
+                            ? 'bg-black/20 text-black hover:bg-black/30'
+                            : 'bg-primary/20 text-primary hover:bg-primary/30'
+                        }`}
+                      >
+                        Open Plan
+                      </Link>
                     </div>
                   ) : msg.type === 'image' && typeof msg.content === 'string' && /^https:\/\//i.test(msg.content) ? (
                     // eslint-disable-next-line @next/next/no-img-element

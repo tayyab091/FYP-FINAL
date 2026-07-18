@@ -34,6 +34,7 @@ export const ROLE_ROUTE_RESTRICTIONS: ReadonlyArray<{
   { prefix: '/trainer-dashboard', roles: ['trainer'] },
   { prefix: '/gym-owner', roles: ['gym_owner'] },
   { prefix: '/my-fitness', roles: ['user'] },
+  { prefix: '/dashboard', roles: ['user'] },
 ]
 
 export function getRoleDashboardPath(role: string): string {
@@ -46,7 +47,7 @@ export function getRoleDashboardPath(role: string): string {
     case 'super_admin':
       return '/admin'
     case 'user':
-      return '/my-fitness'
+      return '/dashboard'
     default:
       return '/dashboard'
   }
