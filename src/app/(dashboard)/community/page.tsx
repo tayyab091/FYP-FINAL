@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { canAccessCommunityForUser } from '@/lib/access'
 import { PageLoader } from '@/components/shared/PageLoader'
 import { AccessGate, SignInGate } from '@/components/shared/AccessGate'
+import { BackButton } from '@/components/shared/BackButton'
 import { FadeIn } from '@/components/motion'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -166,6 +167,7 @@ export default function CommunityPage() {
   return (
     <div className="min-h-screen pt-6 pb-28 px-4 sm:px-6">
       <div className="mx-auto max-w-2xl">
+        <BackButton />
         <FadeIn>
           <div className="page-hero mb-6 px-6 py-8 sm:px-8 gym-floor">
             <p className="eyebrow mb-2">Member Circle</p>

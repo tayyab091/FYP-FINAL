@@ -36,7 +36,7 @@ export default function MealDetailPage() {
 
   if (!meal) {
     return (
-      <div className="min-h-screen pt-28 pb-24 flex items-center justify-center px-4">
+      <div className="min-h-screen pt-8 pb-24 flex items-center justify-center px-4">
         <div className="text-center">
           <h1 className="text-xl font-bold text-white mb-4">Recipe not found</h1>
           <Link href="/nutrition" className="text-primary hover:underline inline-flex items-center gap-1">
@@ -48,7 +48,7 @@ export default function MealDetailPage() {
   }
 
   return (
-    <div className="min-h-screen pt-28 pb-24 px-4 sm:px-6">
+    <div className="min-h-screen pt-8 pb-24 px-4 sm:px-6">
       <div className="max-w-4xl mx-auto">
         <Link href="/nutrition" className="text-muted-foreground text-sm hover:text-primary mb-6 inline-flex items-center gap-1">
           <ArrowLeft className="size-4" /> All recipes

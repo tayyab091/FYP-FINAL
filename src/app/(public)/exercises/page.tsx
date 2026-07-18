@@ -49,6 +49,23 @@ const DEFAULT_FILTERS: Filters = {
   search: '',
 }
 
+const BODY_PARTS = [
+  { label: 'All', value: '' },
+  { label: '💪 Upper Body', value: 'upper' },
+  { label: '🦵 Lower Body', value: 'lower' },
+  { label: '🎯 Core', value: 'core' },
+  { label: '🏃 Cardio', value: 'cardio' },
+  { label: '🔄 Full Body', value: 'full' },
+]
+
+const BODY_PART_MUSCLES: Record<string, string[]> = {
+  upper: ['Chest', 'Back', 'Shoulders', 'Arms'],
+  lower: ['Legs'],
+  core: ['Core'],
+  cardio: ['Cardio'],
+  full: ['Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core', 'Cardio'],
+}
+
 const DIFFICULTY_COLORS: Record<string, string> = {
   Beginner: 'bg-green-500/20 text-green-400 border-green-500/30',
   Intermediate: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
@@ -188,6 +205,7 @@ function FilterSelect({
 
 export default function ExercisesPage() {
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
+  const [bodyPartCategory, setBodyPartCategory] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [meta, setMeta] = useState<ExerciseMeta | null>(null)
@@ -202,6 +220,23 @@ export default function ExercisesPage() {
     const t = setTimeout(() => setDebouncedSearch(filters.search), 300)
     return () => clearTimeout(t)
   }, [filters.search])
+
+  const selectBodyPart = (value: string) => {
+    setBodyPartCategory(value)
+    if (!value || value === 'full') {
+      setFilters((f) => ({ ...f, muscle: 'All' }))
+      return
+    }
+    const muscles = BODY_PART_MUSCLES[value] || []
+    setFilters((f) => ({ ...f, muscle: muscles[0] || 'All' }))
+  }
+
+  const filteredExercises = useMemo(() => {
+    if (!bodyPartCategory || bodyPartCategory === 'full') return exercises
+    const allowed = BODY_PART_MUSCLES[bodyPartCategory] || []
+    if (!allowed.length) return exercises
+    return exercises.filter((ex) => allowed.includes(ex.muscle))
+  }, [exercises, bodyPartCategory])
 
   const buildQuery = useCallback(
     (pageNum: number) => {
@@ -272,7 +307,7 @@ export default function ExercisesPage() {
   }
 
   return (
-    <div className="min-h-screen pt-28 pb-24">
+    <div className="min-h-screen pt-8 pb-24">
       <div className="max-w-6xl mx-auto px-6">
         <FadeIn>
           <div className="page-hero mb-6 px-6 py-10 sm:px-10 md:py-14 gym-floor">
@@ -293,10 +328,35 @@ export default function ExercisesPage() {
             <span className="font-medium text-white">Filters</span>
             {!loading && (
               <span className="ml-auto text-xs">
-                Showing <span className="text-primary font-semibold">{total.toLocaleString()}</span>
+                Showing <span className="text-primary font-semibold">{filteredExercises.length.toLocaleString()}</span>
                 {catalogTotal > 0 && <> of {catalogTotal.toLocaleString()} exercises</>}
               </span>
             )}
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {BODY_PARTS.map((bp) => {
+              const display = bp.value === '' ? 'All'
+                : bp.value === 'upper' ? 'Upper Body'
+                : bp.value === 'lower' ? 'Lower Body'
+                : bp.value === 'core' ? 'Core'
+                : bp.value === 'cardio' ? 'Cardio'
+                : 'Full Body'
+              return (
+                <button
+                  key={bp.label}
+                  type="button"
+                  onClick={() => selectBodyPart(bp.value)}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    bodyPartCategory === bp.value
+                      ? 'border-primary/40 bg-primary/15 text-primary filter-pill-active'
+                      : 'border-white/10 text-muted-foreground hover:border-primary/30 hover:text-white'
+                  }`}
+                >
+                  {display}
+                </button>
+              )
+            })}
           </div>
 
           <div className="relative">
@@ -379,7 +439,7 @@ export default function ExercisesPage() {
                 layout
                 className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr"
               >
-                {exercises.map((e) => (
+                {filteredExercises.map((e) => (
                   <ExerciseCard key={e.id} exercise={e} />
                 ))}
               </motion.div>

@@ -220,7 +220,7 @@ export default function CoachingPage() {
   }
 
   return (
-    <div className="min-h-screen pt-28 pb-24">
+    <div className="min-h-screen pt-8 pb-24">
       <FadeIn>
         <div className="page-hero max-w-6xl mx-4 px-6 py-10 sm:mx-6 sm:px-10 md:mx-auto md:py-14 gym-floor">
           <p className="eyebrow mb-3">Trainer Marketplace</p>
@@ -317,7 +317,7 @@ export default function CoachingPage() {
             description="Try adjusting your filters or search term"
             action={
               <button onClick={() => { setSpecialty('All'); setCountry('All'); setSearch('') }}
-                className="bg-primary text-black px-6 py-2.5 rounded-full text-sm font-bold">
+                className="btn-accent px-6 text-sm">
                 Clear Filters
               </button>
             }

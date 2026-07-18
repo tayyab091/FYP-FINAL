@@ -1,10 +1,17 @@
 import User from '@/models/User'
+import type { PlanId } from '@/lib/plans'
 import { createNotification } from '@/lib/notifications'
 import {
   normalizePlan,
   resolveSubscriptionFromUser,
   type ResolvedSubscription,
 } from '@/lib/subscription'
+
+export function addMonths(date: Date, months: number): Date {
+  const next = new Date(date)
+  next.setMonth(next.getMonth() + months)
+  return next
+}
 
 /** Downgrade expired paid plans in the database and return the effective subscription. */
 export async function syncUserSubscription(userId: string): Promise<ResolvedSubscription | null> {
@@ -53,8 +60,7 @@ export async function activateUserPlan(userId: string, plan: 'pro' | 'elite') {
   }
 
   const startDate = new Date()
-  const endDate = new Date(startDate)
-  endDate.setMonth(endDate.getMonth() + 1)
+  const endDate = addMonths(startDate, 1)
 
   const user = await User.findByIdAndUpdate(
     userId,
@@ -81,4 +87,75 @@ export async function activateUserPlan(userId: string, plan: 'pro' | 'elite') {
   }
 
   return user
+}
+
+/** Admin: assign a plan (manual / support). Default term is 1 month for paid plans. */
+export async function adminAssignSubscription(
+  userId: string,
+  plan: PlanId,
+  months = 1,
+) {
+  const startDate = new Date()
+  const term = Math.max(1, Math.min(36, Math.floor(months) || 1))
+  const subscription =
+    plan === 'basic'
+      ? { plan: 'basic' as const, status: 'active' as const, startDate, endDate: undefined }
+      : {
+          plan,
+          status: 'active' as const,
+          startDate,
+          endDate: addMonths(startDate, term),
+        }
+
+  return User.findByIdAndUpdate(
+    userId,
+    { subscription },
+    { new: true, runValidators: true },
+  ).select('-password')
+}
+
+/** Admin: revoke paid access — basic + inactive (canceled), clear end date. */
+export async function adminRevokeSubscription(userId: string) {
+  const existing = await User.findById(userId).select('subscription')
+  if (!existing) return null
+
+  return User.findByIdAndUpdate(
+    userId,
+    {
+      subscription: {
+        plan: 'basic',
+        status: 'inactive',
+        startDate: existing.subscription?.startDate || new Date(),
+        endDate: undefined,
+      },
+    },
+    { new: true, runValidators: true },
+  ).select('-password')
+}
+
+/** Admin: renew/extend — push endDate by N months, keep current plan. */
+export async function adminExtendSubscription(userId: string, months = 1) {
+  const existing = await User.findById(userId).select('subscription')
+  if (!existing) return null
+
+  const plan = normalizePlan(existing.subscription?.plan)
+  const term = Math.max(1, Math.min(36, Math.floor(months) || 1))
+  const now = new Date()
+  const currentEnd = existing.subscription?.endDate
+    ? new Date(existing.subscription.endDate)
+    : null
+  const base = currentEnd && currentEnd > now ? currentEnd : now
+
+  return User.findByIdAndUpdate(
+    userId,
+    {
+      subscription: {
+        plan,
+        status: 'active',
+        startDate: existing.subscription?.startDate || now,
+        endDate: addMonths(base, term),
+      },
+    },
+    { new: true, runValidators: true },
+  ).select('-password')
 }
