@@ -259,11 +259,22 @@ export default function TrainerDashboardPage() {
   return (
     <div className="min-h-screen pt-6 pb-12 px-4 sm:px-6">
       <div className="max-w-7xl mx-auto">
-        <div className="page-hero flex items-center justify-between mb-6 px-6 py-8 sm:px-8">
+        <div className="page-hero mb-6 flex flex-wrap items-start justify-between gap-4 px-6 py-8 sm:px-8">
           <div>
             <p className="eyebrow mb-2">Coaching Workspace</p>
             <h1 className="display-title text-3xl md:text-4xl">Welcome, {user.fullName.split(' ')[0]}</h1>
             <p className="mt-2 text-muted-foreground">Manage clients, programs, and every coaching conversation.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/trainer-dashboard/exercises" className="rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-white hover:border-primary/40">
+              Exercises
+            </Link>
+            <Link href="/trainer-dashboard/nutrition" className="rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-white hover:border-primary/40">
+              Nutrition
+            </Link>
+            <Link href="/chat" className="btn-accent px-4 py-2 text-sm font-bold">
+              Open Messages
+            </Link>
           </div>
         </div>
 
@@ -284,29 +295,96 @@ export default function TrainerDashboardPage() {
                   <StatCard label="Pending Requests" value={requests.length} icon={ClipboardList} variant="amber" />
                   <StatCard label="Active Plans" value={activePlanCount} icon={Dumbbell} variant="sky" />
                 </StaggerChildren>
-                <div>
-                  <h2 className="mb-3 text-lg font-bold">Recent Messages</h2>
-                  {conversations.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No conversations yet.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {conversations.slice(0, 3).map((conversation) => (
-                        <Link
-                          key={conversation._id}
-                          href={`/chat/${conversation._id}`}
-                          className="flex items-center justify-between rounded-xl border border-border bg-card/60 p-4 hover:border-primary/30"
-                        >
+
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {[
+                    { href: '/chat', label: 'Message Clients', desc: `${conversations.filter((c) => c.unreadCount > 0).length} unread` },
+                    { href: '/trainer-dashboard/exercises', label: 'Exercise Library', desc: 'Build programs' },
+                    { href: '/trainer-dashboard/nutrition', label: 'Meal Catalog', desc: 'Recommend foods' },
+                    { href: '/live-sessions', label: 'Live Sessions', desc: 'Host remote coaching' },
+                  ].map((action) => (
+                    <Link
+                      key={action.label}
+                      href={action.href}
+                      className="tile interactive-lift min-h-[7.5rem] justify-between"
+                    >
+                      <p className="font-bold text-white">{action.label}</p>
+                      <p className="text-xs text-muted-foreground">{action.desc}</p>
+                    </Link>
+                  ))}
+                </div>
+
+                {requests.length > 0 && (
+                  <div className="tile border-amber-500/20 bg-amber-500/5">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="font-bold text-amber-300">Pending coaching requests</p>
+                        <p className="mt-1 text-sm text-muted-foreground">{requests.length} athlete{requests.length === 1 ? '' : 's'} waiting for a response</p>
+                      </div>
+                      <Badge className="bg-amber-500/20 text-amber-300">{requests.length} new</Badge>
+                    </div>
+                    <div className="mt-4 space-y-2">
+                      {requests.slice(0, 3).map((req) => (
+                        <div key={req._id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/5 bg-black/20 p-3">
                           <div>
-                            <div className="font-medium">{conversation.otherUser?.fullName}</div>
-                            <div className="text-sm text-muted-foreground">{conversation.lastMessage || 'No messages yet'}</div>
+                            <p className="font-medium text-white">{req.userId?.fullName}</p>
+                            <p className="text-xs text-muted-foreground">{req.userId?.email}</p>
                           </div>
-                          {conversation.unreadCount > 0 && (
-                            <Badge className="bg-primary text-black">{conversation.unreadCount}</Badge>
-                          )}
-                        </Link>
+                          <div className="flex gap-2">
+                            <Button size="sm" onClick={() => handleAccept(req._id)} className="bg-primary text-black hover:brightness-95">Accept</Button>
+                            <Button size="sm" variant="outline" onClick={() => handleDecline(req._id)}>Decline</Button>
+                          </div>
+                        </div>
                       ))}
                     </div>
-                  )}
+                  </div>
+                )}
+
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <div className="tile min-h-[240px]">
+                    <h2 className="mb-3 text-lg font-bold">Active Clients</h2>
+                    {clients.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No active clients yet. Accept requests to get started.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {clients.slice(0, 5).map((client) => (
+                          <div key={client._id} className="flex items-center justify-between rounded-xl border border-border bg-card/40 p-3">
+                            <div>
+                              <p className="font-medium text-white">{client.userId?.fullName}</p>
+                              <p className="text-xs text-muted-foreground">{client.userId?.email}</p>
+                            </div>
+                            <Button size="sm" variant="outline" onClick={() => { setSelectedClient(client); setPlanModalOpen(true) }}>
+                              Plan
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="tile min-h-[240px]">
+                    <h2 className="mb-3 text-lg font-bold">Recent Messages</h2>
+                    {conversations.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No conversations yet.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {conversations.slice(0, 5).map((conversation) => (
+                          <Link
+                            key={conversation._id}
+                            href={`/chat/${conversation._id}`}
+                            className="flex items-center justify-between rounded-xl border border-border bg-card/40 p-3 hover:border-primary/30"
+                          >
+                            <div>
+                              <div className="font-medium">{conversation.otherUser?.fullName}</div>
+                              <div className="text-sm text-muted-foreground">{conversation.lastMessage || 'No messages yet'}</div>
+                            </div>
+                            {conversation.unreadCount > 0 && (
+                              <Badge className="bg-primary text-black">{conversation.unreadCount}</Badge>
+                            )}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}

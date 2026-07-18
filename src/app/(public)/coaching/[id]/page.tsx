@@ -199,7 +199,7 @@ export default function TrainerDetailPage() {
 
   if (!trainer) {
     return (
-      <div className="min-h-screen pt-28 pb-24 flex items-center justify-center">
+      <div className="min-h-screen pt-8 pb-24 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-xl font-bold text-white mb-4">Trainer not found</h1>
           <Link href="/coaching" className="text-primary hover:underline">← Back to coaching</Link>
@@ -217,7 +217,7 @@ export default function TrainerDetailPage() {
   const hasUserReview = Boolean(reviewsData?.currentUserReview)
 
   return (
-    <div className="min-h-screen pt-28 pb-24 px-4 sm:px-6">
+    <div className="min-h-screen pt-8 pb-24 px-4 sm:px-6">
       <div className="max-w-5xl mx-auto">
         <Link href="/coaching" className="text-muted-foreground text-sm hover:text-primary mb-6 inline-block">
           ← All trainers

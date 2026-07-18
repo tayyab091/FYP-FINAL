@@ -1,9 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { toast } from 'sonner'
-import { BarChart3, Flame, Scale, Utensils, Dumbbell } from 'lucide-react'
 import {
   LineChart,
   Line,
@@ -14,231 +12,267 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
 } from 'recharts'
 import { useAuth } from '@/hooks/useAuth'
 import { canAccessAnalyticsForUser } from '@/lib/access'
-import { chartTheme } from '@/lib/chart-theme'
 import { PageLoader } from '@/components/shared/PageLoader'
 import { AccessGate, SignInGate } from '@/components/shared/AccessGate'
-import { FadeIn, StaggerChildren, CountUp } from '@/components/motion'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
+import { BackButton } from '@/components/shared/BackButton'
+import { BarChart3 } from 'lucide-react'
 
-interface AnalyticsSummary {
-  periodDays: number
-  summary: {
-    workoutCount: number
-    streak: number
-    avgDailyCalories: number
-    weightChange: number | null
-    latestWeight: number | null
+interface AnalyticsPayload {
+  summary?: {
+    workoutCount?: number
+    streak?: number
+    avgDailyCalories?: number
   }
-  charts: {
-    weightTrend: Array<{ date: string; label: string; weight: number }>
-    weeklyWorkouts: Array<{ week: string; label: string; workouts: number }>
-    dailyCalories: Array<{ date: string; label: string; calories: number }>
+  charts?: {
+    weightTrend?: Array<{ label: string; weight: number }>
+    weeklyWorkouts?: Array<{ label: string; week?: string; workouts: number }>
   }
-  correlationInsight: string
+  totalWorkouts?: number
+  avgCalories?: number
+  streak?: number
+  totalXP?: number
+  avgProtein?: number
+  avgCarbs?: number
+  avgFat?: number
+  longestStreak?: number
+  maxCaloriesBurned?: number
+  monthlyWorkouts?: number
+  totalMealsLogged?: number
+  weeklyWorkouts?: Array<{ day: string; workouts: number }>
 }
 
 export default function AnalyticsPage() {
   const { user, isLoading: authLoading } = useAuth()
-  const [data, setData] = useState<AnalyticsSummary | null>(null)
+  const [summary, setSummary] = useState<AnalyticsPayload | null>(null)
+  const [progress, setProgress] = useState<Array<{ date: string; weight?: number }>>([])
+  const [mealToday, setMealToday] = useState<{ totals?: { protein?: number; carbs?: number; fat?: number } } | null>(null)
+  const [gamification, setGamification] = useState<{ xp?: number; streak?: number } | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const loadSummary = useCallback(async () => {
-    setLoading(true)
-    try {
-      const res = await fetch('/api/analytics/summary')
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.message || 'Failed to load analytics')
-      setData(json)
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Analytics failed')
-      setData(null)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
   useEffect(() => {
-    if (user && canAccessAnalyticsForUser(user)) loadSummary()
-  }, [user, loadSummary])
+    if (!user || !canAccessAnalyticsForUser(user)) {
+      setLoading(false)
+      return
+    }
+
+    const controllers = [new AbortController(), new AbortController(), new AbortController(), new AbortController()]
+    const timers = controllers.map((c) => setTimeout(() => c.abort(), 8000))
+
+    Promise.all([
+      fetch('/api/analytics/summary', { signal: controllers[0].signal }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      fetch('/api/tracking/progress', { signal: controllers[1].signal }).then((r) => (r.ok ? r.json() : [])).catch(() => []),
+      fetch('/api/tracking/meal-logs/today', { signal: controllers[2].signal }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      fetch('/api/gamification/me', { signal: controllers[3].signal }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+    ])
+      .then(([sum, prog, meals, game]) => {
+        setSummary(sum)
+        setProgress(Array.isArray(prog) ? prog : [])
+        setMealToday(meals)
+        setGamification(game)
+      })
+      .finally(() => {
+        setLoading(false)
+        timers.forEach(clearTimeout)
+      })
+
+    return () => controllers.forEach((c) => c.abort())
+  }, [user])
+
+  const MACRO_COLORS = ['#00ff87', '#00d4ff', '#ff6b6b', '#ffd93d']
 
   if (authLoading) return <PageLoader />
   if (!user) return <SignInGate redirectLabel="Sign in for analytics" />
-
   if (!canAccessAnalyticsForUser(user)) {
     return (
       <AccessGate
         icon={BarChart3}
         title="Pro feature"
         description="Advanced analytics are available on Pro and Elite. Upgrade to unlock 30-day workout, nutrition, and weight insights."
-        action={<Link href="/subscription" className="btn-accent px-8 py-3 text-sm">Upgrade plan</Link>}
+        action={
+          <Link href="/subscription" className="btn-accent px-8 py-3 text-sm">
+            Upgrade plan
+          </Link>
+        }
       />
     )
   }
 
-  const summary = data?.summary
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-6xl space-y-4 px-4 py-8">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="tile skeleton h-40" />
+        ))}
+      </div>
+    )
+  }
+
+  const totalWorkouts = summary?.summary?.workoutCount ?? summary?.totalWorkouts ?? 0
+  const avgCalories = summary?.summary?.avgDailyCalories ?? summary?.avgCalories ?? 0
+  const streak = summary?.summary?.streak ?? gamification?.streak ?? summary?.streak ?? 0
+  const totalXP = summary?.totalXP ?? gamification?.xp ?? 0
+
+  const macroData = [
+    { name: 'Protein', value: summary?.avgProtein ?? mealToday?.totals?.protein ?? 0 },
+    { name: 'Carbs', value: summary?.avgCarbs ?? mealToday?.totals?.carbs ?? 0 },
+    { name: 'Fat', value: summary?.avgFat ?? mealToday?.totals?.fat ?? 0 },
+  ].map((m) => ({ ...m, value: Math.round(Number(m.value) || 0) }))
+
+  const weightData =
+    summary?.charts?.weightTrend?.map((p) => ({ date: p.label, weight: p.weight })) ||
+    progress
+      .filter((p) => typeof p.weight === 'number')
+      .map((p) => ({
+        date: new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        weight: p.weight as number,
+      }))
+
+  const workoutData =
+    summary?.charts?.weeklyWorkouts?.map((w) => ({ day: w.label, workouts: w.workouts })) ||
+    summary?.weeklyWorkouts || [
+      { day: 'Mon', workouts: 0 },
+      { day: 'Tue', workouts: 0 },
+      { day: 'Wed', workouts: 0 },
+      { day: 'Thu', workouts: 0 },
+      { day: 'Fri', workouts: 0 },
+      { day: 'Sat', workouts: 0 },
+      { day: 'Sun', workouts: 0 },
+    ]
 
   return (
-    <div className="min-h-screen pt-6 pb-28 px-4 sm:px-6">
-      <div className="mx-auto max-w-7xl">
-        <FadeIn>
-          <div className="page-hero mb-6 px-6 py-8 sm:px-8 gym-floor">
-            <p className="eyebrow mb-2">Performance Intel</p>
-            <h1 className="display-title text-3xl md:text-4xl">Advanced Analytics</h1>
-            <p className="mt-2 text-muted-foreground">
-              Last 30 days of training volume, nutrition averages, and weight trend.
+    <div className="mx-auto max-w-6xl px-4 py-8 pb-28">
+      <BackButton />
+      <div className="mb-8">
+        <p className="section-eyebrow">Your Performance</p>
+        <h1 className="text-3xl font-black text-white">Analytics</h1>
+        <p className="mt-1 text-[#a0a0a0]">Track every metric of your fitness journey</p>
+      </div>
+
+      <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
+        {[
+          { label: 'Total Workouts', value: totalWorkouts, icon: '🏋️', color: '#00ff87' },
+          { label: 'Avg Daily Calories', value: `${avgCalories} kcal`, icon: '🔥', color: '#ff6b6b' },
+          { label: 'Current Streak', value: `${streak} days`, icon: '⚡', color: '#ffd93d' },
+          { label: 'Total XP Earned', value: totalXP, icon: '🏆', color: '#00d4ff' },
+        ].map((stat) => (
+          <div key={stat.label} className="tile">
+            <span className="mb-3 text-2xl">{stat.icon}</span>
+            <p className="text-2xl font-black" style={{ color: stat.color }}>
+              {stat.value}
             </p>
+            <p className="mt-1 text-xs text-[#a0a0a0]">{stat.label}</p>
           </div>
-        </FadeIn>
+        ))}
+      </div>
 
-        {loading || !data ? (
-          <Skeleton className="h-48 bg-muted" />
-        ) : (
-          <>
-            <StaggerChildren className="dashboard-grid cols-4 mb-6">
-              <Card className="card-athletic interactive-lift">
-                <CardHeader>
-                  <CardTitle className="workout-label flex items-center gap-2 text-muted-foreground">
-                    <Dumbbell className="size-3.5" /> Workouts
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-black text-primary">
-                    <CountUp value={summary?.workoutCount || 0} />
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="card-athletic interactive-lift">
-                <CardHeader>
-                  <CardTitle className="workout-label flex items-center gap-2 text-muted-foreground">
-                    <Flame className="size-3.5" /> Streak
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-black text-primary">
-                    <CountUp value={summary?.streak || 0} />
-                    <span className="ml-1 text-sm font-medium text-muted-foreground">days</span>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="card-athletic interactive-lift">
-                <CardHeader>
-                  <CardTitle className="workout-label flex items-center gap-2 text-muted-foreground">
-                    <Utensils className="size-3.5" /> Avg calories
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-black text-primary">
-                    <CountUp value={summary?.avgDailyCalories || 0} />
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="card-athletic interactive-lift">
-                <CardHeader>
-                  <CardTitle className="workout-label flex items-center gap-2 text-muted-foreground">
-                    <Scale className="size-3.5" /> Weight Δ
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-black text-primary">
-                    {summary?.weightChange == null
-                      ? '—'
-                      : `${summary.weightChange > 0 ? '+' : ''}${summary.weightChange} kg`}
-                  </div>
-                  {summary?.latestWeight != null && (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Latest {summary.latestWeight} kg
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            </StaggerChildren>
-
-            <Card className="elite-panel mb-6 border-white/[.08]">
-              <CardContent className="py-5 text-sm leading-relaxed text-[#c8d0cb]">
-                {data.correlationInsight}
-              </CardContent>
-            </Card>
-
-            <div className="grid gap-6 lg:grid-cols-2">
-              <Card className="elite-panel border-white/[.08]">
-                <CardHeader>
-                  <CardTitle className="text-base">Weight trend</CardTitle>
-                </CardHeader>
-                <CardContent className="h-64">
-                  {data.charts.weightTrend.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No weight logs in the last 30 days.</p>
-                  ) : (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={data.charts.weightTrend}>
-                        <CartesianGrid stroke={chartTheme.grid} strokeDasharray="3 3" />
-                        <XAxis dataKey="label" stroke={chartTheme.axis} tick={{ fontSize: 11 }} />
-                        <YAxis stroke={chartTheme.axis} tick={{ fontSize: 11 }} domain={['auto', 'auto']} />
-                        <Tooltip
-                          contentStyle={chartTheme.tooltip}
-                          labelStyle={{ color: '#fff' }}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="weight"
-                          stroke={chartTheme.primary}
-                          strokeWidth={2.5}
-                          dot={{ r: 3, fill: chartTheme.primary }}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card className="elite-panel border-white/[.08]">
-                <CardHeader>
-                  <CardTitle className="text-base">Weekly workouts</CardTitle>
-                </CardHeader>
-                <CardContent className="h-64">
-                  {data.charts.weeklyWorkouts.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No completed workouts yet.</p>
-                  ) : (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={data.charts.weeklyWorkouts}>
-                        <CartesianGrid stroke={chartTheme.grid} strokeDasharray="3 3" />
-                        <XAxis dataKey="label" stroke={chartTheme.axis} tick={{ fontSize: 11 }} />
-                        <YAxis stroke={chartTheme.axis} tick={{ fontSize: 11 }} allowDecimals={false} />
-                        <Tooltip contentStyle={chartTheme.tooltip} labelStyle={{ color: '#fff' }} />
-                        <Bar dataKey="workouts" fill={chartTheme.primary} radius={[8, 8, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card className="elite-panel border-white/[.08] lg:col-span-2">
-                <CardHeader>
-                  <CardTitle className="text-base">Daily calories</CardTitle>
-                </CardHeader>
-                <CardContent className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={data.charts.dailyCalories}>
-                      <CartesianGrid stroke={chartTheme.grid} strokeDasharray="3 3" />
-                      <XAxis
-                        dataKey="label"
-                        stroke={chartTheme.axis}
-                        tick={{ fontSize: 10 }}
-                        interval="preserveStartEnd"
-                      />
-                      <YAxis stroke={chartTheme.axis} tick={{ fontSize: 11 }} />
-                      <Tooltip contentStyle={chartTheme.tooltip} labelStyle={{ color: '#fff' }} />
-                      <Bar dataKey="calories" fill={chartTheme.secondary} radius={[6, 6, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
+      <div className="mb-6 grid gap-6 md:grid-cols-2">
+        <div className="tile min-h-[280px]">
+          <p className="section-eyebrow">Body Weight</p>
+          <h3 className="mb-4 font-bold text-white">Weight Progress</h3>
+          {weightData.length > 1 ? (
+            <ResponsiveContainer width="100%" height={180}>
+              <LineChart data={weightData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                <XAxis dataKey="date" tick={{ fill: '#a0a0a0', fontSize: 11 }} />
+                <YAxis tick={{ fill: '#a0a0a0', fontSize: 11 }} unit="kg" />
+                <Tooltip
+                  contentStyle={{
+                    background: '#0e1a14',
+                    border: '1px solid rgba(0,255,135,0.2)',
+                    borderRadius: 12,
+                    color: '#fff',
+                  }}
+                />
+                <Line type="monotone" dataKey="weight" stroke="#00ff87" strokeWidth={2.5} dot={{ fill: '#00ff87', r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex flex-1 items-center justify-center text-sm text-[#a0a0a0]">
+              Log your weight in My Fitness to see your progress chart
             </div>
-          </>
-        )}
+          )}
+        </div>
+
+        <div className="tile min-h-[280px]">
+          <p className="section-eyebrow">Training Volume</p>
+          <h3 className="mb-4 font-bold text-white">This Week&apos;s Workouts</h3>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={workoutData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+              <XAxis dataKey="day" tick={{ fill: '#a0a0a0', fontSize: 11 }} />
+              <YAxis tick={{ fill: '#a0a0a0', fontSize: 11 }} />
+              <Tooltip
+                contentStyle={{
+                  background: '#0e1a14',
+                  border: '1px solid rgba(0,255,135,0.2)',
+                  borderRadius: 12,
+                  color: '#fff',
+                }}
+              />
+              <Bar dataKey="workouts" fill="#00ff87" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <div className="tile min-h-[240px]">
+          <p className="section-eyebrow">Nutrition</p>
+          <h3 className="mb-4 font-bold text-white">Average Macro Split</h3>
+          {macroData.some((m) => m.value > 0) ? (
+            <div className="flex items-center gap-6">
+              <ResponsiveContainer width={160} height={160}>
+                <PieChart>
+                  <Pie data={macroData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3} dataKey="value">
+                    {macroData.map((_, i) => (
+                      <Cell key={i} fill={MACRO_COLORS[i]} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="space-y-3">
+                {macroData.map((m, i) => (
+                  <div key={m.name} className="flex items-center gap-3">
+                    <div className="h-3 w-3 flex-shrink-0 rounded-full" style={{ background: MACRO_COLORS[i] }} />
+                    <span className="text-sm text-[#a0a0a0]">{m.name}</span>
+                    <span className="ml-auto text-sm font-bold text-white">{m.value}g</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-1 items-center justify-center text-sm text-[#a0a0a0]">
+              Log meals to see your macro breakdown
+            </div>
+          )}
+        </div>
+
+        <div className="tile min-h-[240px]">
+          <p className="section-eyebrow">Achievements</p>
+          <h3 className="mb-4 font-bold text-white">Personal Bests</h3>
+          <div className="space-y-3">
+            {[
+              { label: 'Longest Streak', value: `${summary?.longestStreak ?? streak} days`, icon: '🔥' },
+              { label: 'Most Calories Burned', value: `${summary?.maxCaloriesBurned || 0} kcal`, icon: '💪' },
+              { label: 'Workouts This Month', value: summary?.monthlyWorkouts ?? totalWorkouts, icon: '📅' },
+              { label: 'Meals Logged', value: summary?.totalMealsLogged || 0, icon: '🥗' },
+            ].map((pb) => (
+              <div key={pb.label} className="flex items-center justify-between border-b border-white/5 py-2 last:border-0">
+                <div className="flex items-center gap-3">
+                  <span>{pb.icon}</span>
+                  <span className="text-sm text-[#a0a0a0]">{pb.label}</span>
+                </div>
+                <span className="text-sm font-bold text-white">{pb.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   )
