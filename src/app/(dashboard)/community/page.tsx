@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { Heart, MessageCircle, Send, Users } from 'lucide-react'
+import { Heart, MessageCircle, Send, Trophy, Users } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { canAccessCommunityForUser } from '@/lib/access'
 import { PageLoader } from '@/components/shared/PageLoader'
@@ -12,6 +12,7 @@ import { FadeIn } from '@/components/motion'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import type { LeaderboardEntry } from '@/types/gamification'
 
 interface CommunityPostItem {
   _id: string
@@ -34,7 +35,9 @@ interface CommunityCommentItem {
 export default function CommunityPage() {
   const { user, isLoading: authLoading } = useAuth()
   const [posts, setPosts] = useState<CommunityPostItem[]>([])
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(true)
   const [compose, setCompose] = useState('')
   const [posting, setPosting] = useState(false)
   const [expanded, setExpanded] = useState<string | null>(null)
@@ -58,9 +61,26 @@ export default function CommunityPage() {
     }
   }, [])
 
+  const loadLeaderboard = useCallback(async () => {
+    setLoadingLeaderboard(true)
+    try {
+      const res = await fetch('/api/gamification/me?leaderboard=true')
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || 'Failed to load leaderboard')
+      setLeaderboard(Array.isArray(data.leaderboard) ? data.leaderboard : [])
+    } catch {
+      setLeaderboard([])
+    } finally {
+      setLoadingLeaderboard(false)
+    }
+  }, [])
+
   useEffect(() => {
-    if (user && canAccessCommunityForUser(user)) loadPosts()
-  }, [user, loadPosts])
+    if (user && canAccessCommunityForUser(user)) {
+      loadPosts()
+      loadLeaderboard()
+    }
+  }, [user, loadPosts, loadLeaderboard])
 
   const handlePost = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -177,6 +197,56 @@ export default function CommunityPage() {
             </p>
           </div>
         </FadeIn>
+
+        <Card className="elite-panel mb-6 border-white/[.08]">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Trophy className="size-4 text-primary" />
+              XP Leaderboard
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingLeaderboard ? (
+              <div className="space-y-2">
+                <Skeleton className="h-12 bg-muted" />
+                <Skeleton className="h-12 bg-muted" />
+                <Skeleton className="h-12 bg-muted" />
+              </div>
+            ) : leaderboard.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                No rankings yet — complete workouts and log meals to climb the board.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {leaderboard.map((entry) => (
+                  <div
+                    key={entry.userId}
+                    className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 ${
+                      entry.isCurrentUser
+                        ? 'border-emerald-500/40 bg-emerald-500/15'
+                        : 'border-white/[.06] bg-black/20'
+                    }`}
+                  >
+                    <span className="w-6 text-center text-sm font-bold text-muted-foreground">
+                      {entry.rank}
+                    </span>
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-xs font-bold text-primary">
+                      {entry.initials}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-white">
+                        {entry.fullName}
+                        {entry.isCurrentUser ? ' (you)' : ''}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Level {entry.level}</p>
+                    </div>
+                    <span className="text-sm font-bold text-primary">{entry.xp} XP</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <Card className="elite-panel mb-6 border-white/[.08]">
           <CardHeader>
