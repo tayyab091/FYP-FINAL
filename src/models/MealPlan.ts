@@ -21,13 +21,16 @@ const MealDaySchema = new Schema({
 
 const MealPlanSchema = new Schema({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  trainerId: { type: Schema.Types.ObjectId, ref: 'Trainer' },
+  relationshipId: { type: Schema.Types.ObjectId, ref: 'Relationship' },
   title: { type: String, required: true },
   goal: {
     type: String,
-    enum: ['weight_loss', 'muscle_gain', 'endurance', 'flexibility', 'general_fitness'],
+    enum: ['weight_loss', 'muscle_gain', 'maintenance', 'endurance', 'flexibility', 'general_fitness'],
     default: 'general_fitness',
   },
   dailyCalories: { type: Number, required: true },
+  durationDays: { type: Number, default: 7 },
   days: [MealDaySchema],
   status: {
     type: String,

@@ -7,7 +7,12 @@ import { syncUserSubscription } from '@/lib/subscription-server'
 import { generateMealPlan } from '@/lib/meal-plan-generator'
 import MealPlan from '@/models/MealPlan'
 import User from '@/models/User'
-import { mealPlanGenerateSchema, parseJsonBody } from '@/lib/validation'
+import Trainer from '@/models/Trainer'
+import Relationship from '@/models/Relationship'
+import {
+  mealPlanAssignSchema,
+  mealPlanGenerateSchema,
+} from '@/lib/validation'
 
 async function assertMealPlanAccess(userId: string, role: string) {
   if (bypassesSubscriptionGate(role)) return null
@@ -22,15 +27,52 @@ async function assertMealPlanAccess(userId: string, role: string) {
   return null
 }
 
+function buildDaysFromMeals(
+  meals: Array<{
+    mealType: string
+    name: string
+    calories: number
+    protein: number
+    carbs: number
+    fat: number
+    notes?: string
+  }>,
+  durationDays: number,
+) {
+  return Array.from({ length: durationDays }, (_, i) => ({
+    day: `Day ${i + 1}`,
+    meals: meals.map((m) => ({
+      mealType: m.mealType,
+      name: m.name,
+      calories: m.calories || 0,
+      protein: m.protein || 0,
+      carbs: m.carbs || 0,
+      fat: m.fat || 0,
+      notes: m.notes || '',
+    })),
+  }))
+}
+
 export async function GET(req: NextRequest) {
   try {
     const tokenUser = await getUser(req)
     if (!tokenUser) return NextResponse.json({ message: 'Not authenticated' }, { status: 401 })
 
+    await connectDB()
+
+    if (tokenUser.role === 'trainer') {
+      const trainer = await Trainer.findOne({ userId: tokenUser.userId }).select('_id')
+      if (!trainer) return NextResponse.json([])
+      const plans = await MealPlan.find({ trainerId: trainer._id })
+        .populate('userId', 'fullName email')
+        .sort({ updatedAt: -1 })
+        .lean()
+      return NextResponse.json(plans)
+    }
+
     const denied = await assertMealPlanAccess(tokenUser.userId, tokenUser.role)
     if (denied) return denied
 
-    await connectDB()
     const plans = await MealPlan.find({ userId: tokenUser.userId })
       .sort({ updatedAt: -1 })
       .lean()
@@ -46,12 +88,80 @@ export async function POST(req: NextRequest) {
     const tokenUser = await getUser(req)
     if (!tokenUser) return NextResponse.json({ message: 'Not authenticated' }, { status: 401 })
 
+    await connectDB()
+
+    // Peek raw body to decide trainer-assign vs member self-generate
+    const raw = await req.json().catch(() => null)
+    if (!raw || typeof raw !== 'object') {
+      return NextResponse.json({ message: 'Invalid JSON body' }, { status: 400 })
+    }
+
+    const isTrainerAssign =
+      tokenUser.role === 'trainer' && typeof (raw as { userId?: unknown }).userId === 'string'
+
+    if (isTrainerAssign) {
+      const parsed = mealPlanAssignSchema.safeParse(raw)
+      if (!parsed.success) {
+        return NextResponse.json(
+          { message: parsed.error.issues[0]?.message || 'Invalid meal plan' },
+          { status: 400 },
+        )
+      }
+      const body = parsed.data
+
+      const trainer = await Trainer.findOne({ userId: tokenUser.userId })
+      if (!trainer) return NextResponse.json({ message: 'Trainer profile not found' }, { status: 404 })
+
+      const relationshipQuery: Record<string, unknown> = {
+        userId: body.userId,
+        trainerId: trainer._id,
+        status: 'active',
+      }
+      if (body.relationshipId) relationshipQuery._id = body.relationshipId
+
+      const relationship = await Relationship.findOne(relationshipQuery)
+      if (!relationship) {
+        return NextResponse.json({ message: 'Active client relationship required' }, { status: 403 })
+      }
+
+      const dailyCalories =
+        body.dailyCalories ??
+        Math.round(body.meals.reduce((sum, m) => sum + (m.calories || 0), 0))
+
+      const days = buildDaysFromMeals(body.meals, body.durationDays)
+
+      await MealPlan.updateMany(
+        { userId: body.userId, status: 'active' },
+        { status: 'draft' },
+      )
+
+      const plan = await MealPlan.create({
+        userId: body.userId,
+        trainerId: trainer._id,
+        relationshipId: relationship._id,
+        title: body.title,
+        goal: body.goal,
+        durationDays: body.durationDays,
+        dailyCalories: Math.max(800, dailyCalories),
+        days,
+        status: 'active',
+        preferenceNotes: body.preferenceNotes || '',
+      })
+
+      return NextResponse.json(plan, { status: 201 })
+    }
+
+    // Member self-generate (Pro/Elite)
     const denied = await assertMealPlanAccess(tokenUser.userId, tokenUser.role)
     if (denied) return denied
 
-    await connectDB()
-    const parsed = await parseJsonBody(req, mealPlanGenerateSchema)
-    if ('error' in parsed) return parsed.error
+    const parsed = mealPlanGenerateSchema.safeParse(raw)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { message: parsed.error.issues[0]?.message || 'Invalid request' },
+        { status: 400 },
+      )
+    }
     const body = parsed.data
 
     const profile = await User.findById(tokenUser.userId)

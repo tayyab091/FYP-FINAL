@@ -1,9 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { Sparkles, Trash2, CheckCircle2, Pencil, Utensils } from 'lucide-react'
+import { ChevronDown, Sparkles, Utensils } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { canAccessMealPlansForUser } from '@/lib/access'
 import { PageLoader } from '@/components/shared/PageLoader'
@@ -12,7 +12,6 @@ import { FadeIn } from '@/components/motion'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { FormSelect } from '@/components/ui/form-select'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -34,6 +33,7 @@ interface MealPlan {
   dailyCalories: number
   status: 'draft' | 'active'
   preferenceNotes?: string
+  trainerId?: string
   days: Array<{ day: string; meals: MealItem[] }>
   createdAt?: string
 }
@@ -41,19 +41,31 @@ interface MealPlan {
 const GOALS = [
   { value: 'weight_loss', label: 'Weight loss' },
   { value: 'muscle_gain', label: 'Muscle gain' },
+  { value: 'maintenance', label: 'Maintenance' },
   { value: 'endurance', label: 'Endurance' },
   { value: 'flexibility', label: 'Flexibility' },
   { value: 'general_fitness', label: 'General fitness' },
 ]
+
+const MEAL_ORDER = ['breakfast', 'lunch', 'dinner', 'snack']
+
+function dayCalories(meals: MealItem[]) {
+  return meals.reduce((sum, m) => sum + (m.calories || 0), 0)
+}
+
+function sortMeals(meals: MealItem[]) {
+  return [...meals].sort(
+    (a, b) => MEAL_ORDER.indexOf(a.mealType) - MEAL_ORDER.indexOf(b.mealType),
+  )
+}
 
 export default function MealPlansPage() {
   const { user, isLoading: authLoading } = useAuth()
   const [plans, setPlans] = useState<MealPlan[]>([])
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [editingTitle, setEditingTitle] = useState('')
-  const [saving, setSaving] = useState(false)
+  const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({})
+  const [showGenerate, setShowGenerate] = useState(false)
   const [form, setForm] = useState({ goal: 'general_fitness', preferenceNotes: '' })
 
   const loadPlans = useCallback(async () => {
@@ -75,11 +87,15 @@ export default function MealPlansPage() {
     if (user && canAccessMealPlansForUser(user)) loadPlans()
   }, [user, loadPlans])
 
-  const selected = plans.find((p) => p._id === selectedId) || null
+  const activePlan = useMemo(
+    () => plans.find((p) => p.status === 'active') || plans[0] || null,
+    [plans],
+  )
 
   useEffect(() => {
-    if (selected) setEditingTitle(selected.title)
-  }, [selected])
+    if (!activePlan?.days?.length) return
+    setExpandedDays({ [activePlan.days[0].day]: true })
+  }, [activePlan?._id])
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -93,7 +109,7 @@ export default function MealPlansPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.message || 'Failed to generate')
       toast.success('Meal plan generated')
-      setSelectedId(data._id)
+      setShowGenerate(false)
       await loadPlans()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Generation failed')
@@ -102,57 +118,8 @@ export default function MealPlansPage() {
     }
   }
 
-  const handleActivate = async (id: string) => {
-    setSaving(true)
-    try {
-      const res = await fetch(`/api/meal-plans/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'active' }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.message || 'Failed to activate')
-      toast.success('Plan activated')
-      await loadPlans()
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Activate failed')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleSaveTitle = async () => {
-    if (!selected || !editingTitle.trim()) return
-    setSaving(true)
-    try {
-      const res = await fetch(`/api/meal-plans/${selected._id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: editingTitle.trim() }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.message || 'Failed to save')
-      toast.success('Plan updated')
-      await loadPlans()
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Save failed')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this meal plan?')) return
-    try {
-      const res = await fetch(`/api/meal-plans/${id}`, { method: 'DELETE' })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.message || 'Failed to delete')
-      toast.success('Plan deleted')
-      if (selectedId === id) setSelectedId(null)
-      await loadPlans()
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Delete failed')
-    }
+  const toggleDay = (day: string) => {
+    setExpandedDays((prev) => ({ ...prev, [day]: !prev[day] }))
   }
 
   if (authLoading) return <PageLoader />
@@ -171,183 +138,179 @@ export default function MealPlansPage() {
 
   return (
     <div className="min-h-screen pt-6 pb-28 px-4 sm:px-6">
-      <div className="max-w-7xl mx-auto">
+      <div className="mx-auto max-w-4xl">
         <FadeIn>
           <div className="page-hero mb-6 px-6 py-8 sm:px-8 gym-floor">
             <p className="eyebrow mb-2">Nutrition OS</p>
-            <h1 className="display-title text-3xl md:text-4xl">Personalized Meal Plans</h1>
+            <h1 className="display-title text-3xl md:text-4xl">Meal Plans</h1>
             <p className="mt-2 text-muted-foreground">
-              Generate a weekly menu from your goals, calories, and preferences — then activate the one you want to follow.
+              Follow your trainer-assigned plan — or generate one if you&apos;re on Pro/Elite.
             </p>
           </div>
         </FadeIn>
 
-        <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
+        {loading ? (
+          <div className="space-y-4">
+            <Skeleton className="h-28 bg-muted" />
+            <Skeleton className="h-24 bg-muted" />
+            <Skeleton className="h-24 bg-muted" />
+            <Skeleton className="h-24 bg-muted" />
+          </div>
+        ) : !activePlan ? (
+          <Card className="elite-panel border-white/[.08]">
+            <CardContent className="flex flex-col items-center gap-4 py-14 text-center">
+              <Utensils className="size-10 text-muted-foreground" />
+              <div>
+                <p className="text-base font-semibold text-white">
+                  No meal plan yet. Ask your trainer to create one.
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Or generate a personalized plan yourself if your subscription allows.
+                </p>
+              </div>
+              <div className="flex flex-wrap justify-center gap-3">
+                <Link href="/coaching" className="btn-accent px-6 py-2.5 text-sm font-bold">
+                  Find a trainer
+                </Link>
+                <Button type="button" variant="outline" onClick={() => setShowGenerate(true)}>
+                  Self-generate
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
           <div className="space-y-6">
             <Card className="elite-panel border-white/[.08]">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Utensils className="size-4 text-primary" />
-                  Generate plan
-                </CardTitle>
+              <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
+                <div>
+                  <CardTitle className="text-xl text-white">{activePlan.title}</CardTitle>
+                  <p className="mt-1 text-sm capitalize text-muted-foreground">
+                    {activePlan.goal.replace(/_/g, ' ')} · {activePlan.dailyCalories} kcal / day
+                    {activePlan.trainerId ? ' · Assigned by trainer' : ' · Self-generated'}
+                  </p>
+                </div>
+                <Badge variant={activePlan.status === 'active' ? 'default' : 'secondary'} className="capitalize">
+                  {activePlan.status}
+                </Badge>
               </CardHeader>
-              <CardContent>
-                <form onSubmit={handleGenerate} className="space-y-4">
-                  <div>
-                    <Label htmlFor="goal">Goal</Label>
-                    <FormSelect
-                      id="goal"
-                      value={form.goal}
-                      onChange={(e) => setForm((f) => ({ ...f, goal: e.target.value }))}
-                      className="mt-1.5"
-                    >
-                      {GOALS.map((g) => (
-                        <option key={g.value} value={g.value}>{g.label}</option>
-                      ))}
-                    </FormSelect>
-                  </div>
-                  <div>
-                    <Label htmlFor="prefs">Preference notes</Label>
-                    <textarea
-                      id="prefs"
-                      value={form.preferenceNotes}
-                      onChange={(e) => setForm((f) => ({ ...f, preferenceNotes: e.target.value }))}
-                      rows={3}
-                      placeholder="e.g. high protein, no shellfish, vegetarian dinners…"
-                      className="mt-1.5 w-full rounded-xl border border-white/[.09] bg-black/20 px-3.5 py-2 text-sm text-foreground outline-none focus-visible:border-primary/45 focus-visible:ring-3 focus-visible:ring-ring/15"
-                    />
-                  </div>
-                  <Button type="submit" disabled={generating} className="w-full">
-                    {generating ? 'Generating…' : 'Generate meal plan'}
-                  </Button>
-                </form>
-              </CardContent>
             </Card>
 
-            <Card className="elite-panel border-white/[.08]">
-              <CardHeader>
-                <CardTitle className="text-base">Your plans</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {loading ? (
-                  <Skeleton className="h-20 bg-muted" />
-                ) : plans.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No plans yet — generate your first one.</p>
-                ) : (
-                  plans.map((plan) => (
+            <div className="space-y-3">
+              {activePlan.days?.map((day) => {
+                const total = dayCalories(day.meals)
+                const target = activePlan.dailyCalories || 1
+                const percent = Math.min(100, Math.round((total / target) * 100))
+                const open = Boolean(expandedDays[day.day])
+
+                return (
+                  <div
+                    key={day.day}
+                    className="overflow-hidden rounded-2xl border border-white/[.08] bg-black/20"
+                  >
                     <button
-                      key={plan._id}
                       type="button"
-                      onClick={() => setSelectedId(plan._id)}
-                      className={`w-full rounded-xl border px-3 py-3 text-left transition-colors ${
-                        selectedId === plan._id
-                          ? 'border-primary/40 bg-primary/10'
-                          : 'border-white/[.08] bg-black/20 hover:border-white/[.14]'
-                      }`}
+                      onClick={() => toggleDay(day.day)}
+                      className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left"
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <p className="text-sm font-semibold text-white">{plan.title}</p>
-                          <p className="mt-0.5 text-xs text-muted-foreground capitalize">
-                            {plan.goal.replace(/_/g, ' ')} · {plan.dailyCalories} kcal
-                          </p>
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <h3 className="font-bold text-white">{day.day}</h3>
+                          <span className="text-xs text-muted-foreground">
+                            {total} / {target} kcal
+                          </span>
                         </div>
-                        <Badge variant={plan.status === 'active' ? 'default' : 'secondary'} className="capitalize">
-                          {plan.status}
-                        </Badge>
+                        <div className="h-2 overflow-hidden rounded-full bg-[#1a1a1a]">
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{
+                              width: `${percent}%`,
+                              background: 'linear-gradient(90deg, #00ff87, #00d4ff)',
+                            }}
+                          />
+                        </div>
                       </div>
+                      <ChevronDown
+                        className={`size-5 shrink-0 text-muted-foreground transition-transform ${
+                          open ? 'rotate-180' : ''
+                        }`}
+                      />
                     </button>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-          </div>
 
-          <Card className="elite-panel border-white/[.08] min-h-[420px]">
+                    {open && (
+                      <div className="space-y-2 border-t border-white/[.06] px-4 py-4">
+                        {sortMeals(day.meals).map((meal, idx) => (
+                          <div
+                            key={`${day.day}-${meal.mealType}-${idx}`}
+                            className="rounded-xl border border-white/[.06] bg-black/25 px-3 py-3"
+                          >
+                            <p className="text-[10px] font-bold uppercase tracking-wide text-primary">
+                              {meal.mealType}
+                            </p>
+                            <p className="mt-0.5 text-sm font-medium text-white">{meal.name}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {meal.calories} kcal · P {meal.protein}g · C {meal.carbs}g · F {meal.fat}g
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <Button type="button" variant="outline" size="sm" onClick={() => setShowGenerate((v) => !v)}>
+                {showGenerate ? 'Hide generator' : 'Generate another plan'}
+              </Button>
+              <Link href="/coaching" className="text-sm text-primary hover:underline self-center">
+                Ask your trainer
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {showGenerate && (
+          <Card className="elite-panel mt-6 border-white/[.08]">
             <CardHeader>
-              <CardTitle className="text-base">
-                {selected ? 'Plan detail' : 'Select a plan'}
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Utensils className="size-4 text-primary" />
+                Generate plan
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {!selected ? (
-                <p className="text-sm text-muted-foreground">Choose a plan from the list or generate a new one.</p>
-              ) : (
-                <div className="space-y-5">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-                    <div className="flex-1">
-                      <Label htmlFor="title">Title</Label>
-                      <Input
-                        id="title"
-                        value={editingTitle}
-                        onChange={(e) => setEditingTitle(e.target.value)}
-                        className="mt-1.5"
-                      />
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button type="button" variant="secondary" size="sm" disabled={saving} onClick={handleSaveTitle}>
-                        <Pencil className="size-3.5" />
-                        Save
-                      </Button>
-                      {selected.status !== 'active' && (
-                        <Button type="button" size="sm" disabled={saving} onClick={() => handleActivate(selected._id)}>
-                          <CheckCircle2 className="size-3.5" />
-                          Activate
-                        </Button>
-                      )}
-                      <Button type="button" variant="destructive" size="sm" onClick={() => handleDelete(selected._id)}>
-                        <Trash2 className="size-3.5" />
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                    <span className="rounded-lg border border-white/[.08] px-2.5 py-1 capitalize">
-                      {selected.goal.replace(/_/g, ' ')}
-                    </span>
-                    <span className="rounded-lg border border-white/[.08] px-2.5 py-1">
-                      {selected.dailyCalories} kcal / day
-                    </span>
-                    <span className="rounded-lg border border-white/[.08] px-2.5 py-1 capitalize">
-                      {selected.status}
-                    </span>
-                  </div>
-
-                  {selected.preferenceNotes && (
-                    <p className="text-sm text-muted-foreground">
-                      Preferences: {selected.preferenceNotes}
-                    </p>
-                  )}
-
-                  <div className="space-y-4">
-                    {selected.days?.map((day) => (
-                      <div key={day.day} className="rounded-xl border border-white/[.08] bg-black/15 p-4">
-                        <h3 className="mb-3 text-sm font-bold text-primary">{day.day}</h3>
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          {day.meals.map((meal, idx) => (
-                            <div key={`${day.day}-${idx}`} className="rounded-lg border border-white/[.06] px-3 py-2">
-                              <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                                {meal.mealType}
-                              </p>
-                              <p className="text-sm font-medium text-white">{meal.name}</p>
-                              <p className="mt-1 text-xs text-muted-foreground">
-                                {meal.calories} kcal · P {meal.protein}g · C {meal.carbs}g · F {meal.fat}g
-                              </p>
-                              {meal.notes && (
-                                <p className="mt-1 text-[11px] text-muted-foreground/80">{meal.notes}</p>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+              <form onSubmit={handleGenerate} className="space-y-4">
+                <div>
+                  <Label htmlFor="goal">Goal</Label>
+                  <FormSelect
+                    id="goal"
+                    value={form.goal}
+                    onChange={(e) => setForm((f) => ({ ...f, goal: e.target.value }))}
+                    className="mt-1.5"
+                  >
+                    {GOALS.map((g) => (
+                      <option key={g.value} value={g.value}>{g.label}</option>
                     ))}
-                  </div>
+                  </FormSelect>
                 </div>
-              )}
+                <div>
+                  <Label htmlFor="prefs">Preference notes</Label>
+                  <textarea
+                    id="prefs"
+                    value={form.preferenceNotes}
+                    onChange={(e) => setForm((f) => ({ ...f, preferenceNotes: e.target.value }))}
+                    rows={3}
+                    placeholder="e.g. high protein, no shellfish, vegetarian dinners…"
+                    className="mt-1.5 w-full rounded-xl border border-white/[.09] bg-black/20 px-3.5 py-2 text-sm text-foreground outline-none focus-visible:border-primary/45 focus-visible:ring-3 focus-visible:ring-ring/15"
+                  />
+                </div>
+                <Button type="submit" disabled={generating} className="w-full">
+                  {generating ? 'Generating…' : 'Generate meal plan'}
+                </Button>
+              </form>
             </CardContent>
           </Card>
-        </div>
+        )}
       </div>
     </div>
   )
