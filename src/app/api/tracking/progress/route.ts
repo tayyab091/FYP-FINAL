@@ -32,7 +32,12 @@ export async function POST(req: NextRequest) {
     if ('error' in parsed) return parsed.error
 
     await connectDB()
-    const { weight, bodyFat, chest, waist, hips, notes } = parsed.data
+    const { weight, bodyFat, chest, waist, hips, notes, date: dateRaw } = parsed.data
+    const date = dateRaw ? new Date(dateRaw) : new Date()
+    if (Number.isNaN(date.getTime())) {
+      return NextResponse.json({ message: 'Invalid date' }, { status: 400 })
+    }
+
     const record = await ProgressRecord.create({
       userId: tokenUser.userId,
       weight,
@@ -41,6 +46,7 @@ export async function POST(req: NextRequest) {
       waist,
       hips,
       notes: notes || '',
+      date,
     })
     return NextResponse.json(record, { status: 201 })
   } catch {

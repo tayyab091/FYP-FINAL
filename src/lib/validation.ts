@@ -294,6 +294,7 @@ export const progressBodySchema = z.object({
   waist: z.number().min(0).max(500).optional(),
   hips: z.number().min(0).max(500).optional(),
   notes: optionalPlainTextSchema(1000),
+  date: z.string().min(1).max(64).optional(),
 })
 
 export const gymOwnerTrainerActionSchema = z.object({
@@ -391,6 +392,23 @@ export const workoutPlanCreateSchema = z.object({
   weeklySchedule: z.array(z.unknown()).max(14).optional().default([]),
 })
 
+export const workoutLogStartSchema = z.object({
+  planId: objectIdSchema('planId'),
+  date: z.string().min(1).max(64).optional(),
+  exercises: z
+    .array(
+      z.object({
+        name: plainTextSchema(120, 1),
+        setsCompleted: z.number().int().min(0).max(100).optional(),
+        repsCompleted: optionalPlainTextSchema(40),
+        notes: optionalPlainTextSchema(500),
+      }),
+    )
+    .max(100)
+    .optional()
+    .default([]),
+})
+
 export const workoutCompleteSchema = z.object({
   exercises: z
     .array(
@@ -413,6 +431,28 @@ export const mealPlanGenerateSchema = z.object({
   preferenceNotes: optionalPlainTextSchema(1000),
   title: optionalPlainTextSchema(120),
   dailyCalories: z.number().int().min(800).max(6000).optional(),
+})
+
+const mealItemSchema = z.object({
+  mealType: z.enum(['breakfast', 'lunch', 'dinner', 'snack']),
+  name: plainTextSchema(120, 1),
+  calories: z.number().min(0).max(5000).default(0),
+  protein: z.number().min(0).max(500).default(0),
+  carbs: z.number().min(0).max(500).default(0),
+  fat: z.number().min(0).max(500).default(0),
+  notes: optionalPlainTextSchema(500),
+})
+
+/** Trainer assigns a full meal plan to an active client. */
+export const mealPlanAssignSchema = z.object({
+  userId: objectIdSchema('userId'),
+  relationshipId: objectIdSchema('relationshipId').optional(),
+  title: plainTextSchema(120, 1),
+  goal: z.enum(['weight_loss', 'muscle_gain', 'maintenance', 'endurance', 'flexibility', 'general_fitness']),
+  durationDays: z.number().int().min(1).max(31).default(7),
+  dailyCalories: z.number().int().min(800).max(6000).optional(),
+  meals: z.array(mealItemSchema).min(1).max(8),
+  preferenceNotes: optionalPlainTextSchema(1000),
 })
 
 export const mealPlanUpdateSchema = z.object({
