@@ -190,6 +190,10 @@ export const profileUpdateSchema = z.object({
 
 export const communityPostSchema = z.object({
   content: plainTextSchema(2000, 1),
+  category: z
+    .enum(['Motivation', 'Question', 'Achievement', 'Workout'])
+    .optional()
+    .default('Motivation'),
 })
 
 export const communityCommentSchema = z.object({
@@ -378,8 +382,9 @@ export const gymUpdateSchema = z.object({
 export const liveSessionCreateSchema = z.object({
   title: plainTextSchema(120, 3),
   scheduledAt: z.string().min(1).max(64),
-  durationMinutes: z.number().int().min(15).max(240).optional().default(60),
+  durationMinutes: z.union([z.literal(30), z.literal(45), z.literal(60)]).optional().default(60),
   maxParticipants: z.number().int().min(1).max(100).optional().default(20),
+  clientId: objectIdSchema('clientId').optional(),
 })
 
 export const workoutPlanCreateSchema = z.object({
