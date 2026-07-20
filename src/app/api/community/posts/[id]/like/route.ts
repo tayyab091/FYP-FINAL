@@ -6,6 +6,7 @@ import { bypassesSubscriptionGate } from '@/lib/access'
 import { normalizePlan, canAccessCommunity } from '@/lib/subscription'
 import { syncUserSubscription } from '@/lib/subscription-server'
 import { createNotification } from '@/lib/notifications'
+import { publishCommunityPostLiked } from '@/lib/realtime'
 import CommunityPost from '@/models/CommunityPost'
 import User from '@/models/User'
 import { parseObjectIdParam } from '@/lib/validation'
@@ -67,10 +68,15 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       }).catch(() => {})
     }
 
-    return NextResponse.json({
+    const payload = {
+      postId: id,
       likedByMe: !alreadyLiked,
       likeCount: post.likes.length,
-    })
+    }
+
+    await publishCommunityPostLiked(payload).catch(() => {})
+
+    return NextResponse.json(payload)
   } catch {
     return NextResponse.json({ message: 'Server error' }, { status: 500 })
   }
