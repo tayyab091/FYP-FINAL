@@ -106,7 +106,7 @@ export default function LiveSessionRoomPage() {
     <div className="mx-auto max-w-6xl px-4 py-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="eyebrow mb-1">Live session · {session.meetingProvider === 'daily' ? 'Daily.co' : 'Jitsi Meet'}</p>
+          <p className="eyebrow mb-1">Live session · Jitsi Meet</p>
           <h1 className="display-title text-2xl md:text-3xl">{session.title}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             with {session.trainer?.fullName || 'Coach'} · {session.status}
