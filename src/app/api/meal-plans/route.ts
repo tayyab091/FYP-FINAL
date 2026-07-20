@@ -13,6 +13,7 @@ import {
   mealPlanAssignSchema,
   mealPlanGenerateSchema,
 } from '@/lib/validation'
+import { createNotification } from '@/lib/notifications'
 
 async function assertMealPlanAccess(userId: string, role: string) {
   if (bypassesSubscriptionGate(role)) return null
@@ -147,6 +148,20 @@ export async function POST(req: NextRequest) {
         status: 'active',
         preferenceNotes: body.preferenceNotes || '',
       })
+
+      try {
+        const trainerUser = await User.findById(tokenUser.userId).select('fullName').lean()
+        const trainerName = trainerUser?.fullName || 'Your trainer'
+        await createNotification({
+          userId: body.userId,
+          title: 'Meal plan assigned',
+          message: `${trainerName} assigned you “${body.title}”`,
+          type: 'workout',
+          link: '/meal-plans',
+        })
+      } catch (notifyError) {
+        console.error('Meal plan notify error:', notifyError)
+      }
 
       return NextResponse.json(plan, { status: 201 })
     }

@@ -4,9 +4,22 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Pusher from 'pusher-js'
-import { Bell, CheckCheck, MessageCircle, UserPlus, Info } from 'lucide-react'
+import {
+  Bell,
+  CheckCheck,
+  CreditCard,
+  Dumbbell,
+  Info,
+  MessageCircle,
+  Settings,
+  UserPlus,
+} from 'lucide-react'
 import type { AppNotification } from '@/types'
 import { useAuth } from '@/hooks/useAuth'
+
+const FETCH_LIMIT = 10
+const POLL_MS = 60_000
+const FETCH_TIMEOUT_MS = 8_000
 
 function formatTime(dateStr: string) {
   const date = new Date(dateStr)
@@ -24,8 +37,14 @@ function typeIcon(type: AppNotification['type']) {
   switch (type) {
     case 'chat':
       return MessageCircle
+    case 'workout':
+      return Dumbbell
     case 'trainer':
       return UserPlus
+    case 'payment':
+      return CreditCard
+    case 'system':
+      return Settings
     case 'community':
       return MessageCircle
     default:
@@ -41,23 +60,36 @@ export function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+  const abortRef = useRef<AbortController | null>(null)
 
   const fetchNotifications = useCallback(async () => {
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+
     try {
-      const res = await fetch('/api/notifications?limit=8')
+      const res = await fetch(`/api/notifications?limit=${FETCH_LIMIT}`, {
+        signal: controller.signal,
+      })
       if (!res.ok) return
       const data = await res.json()
       setNotifications(Array.isArray(data.notifications) ? data.notifications : [])
       setUnreadCount(typeof data.unreadCount === 'number' ? data.unreadCount : 0)
     } catch {
-      // ignore fetch errors silently for bell polling
+      // ignore fetch errors / aborts silently for bell polling
+    } finally {
+      clearTimeout(timeoutId)
     }
   }, [])
 
   useEffect(() => {
     void fetchNotifications()
-    const interval = setInterval(() => void fetchNotifications(), 30000)
-    return () => clearInterval(interval)
+    const interval = setInterval(() => void fetchNotifications(), POLL_MS)
+    return () => {
+      clearInterval(interval)
+      abortRef.current?.abort()
+    }
   }, [fetchNotifications])
 
   useEffect(() => {
@@ -77,7 +109,7 @@ export function NotificationBell() {
       if (!notification?._id) return
       setNotifications((prev) => {
         if (prev.some((item) => item._id === notification._id)) return prev
-        return [notification, ...prev].slice(0, 8)
+        return [notification, ...prev].slice(0, FETCH_LIMIT)
       })
       if (!notification.isRead) {
         setUnreadCount((prev) => prev + 1)
@@ -169,7 +201,7 @@ export function NotificationBell() {
           <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
               <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                No notifications yet
+                You&apos;re all caught up!
               </div>
             ) : (
               notifications.map((notification) => {
