@@ -2,23 +2,33 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { Heart, MessageCircle, Send, Trophy, Users } from 'lucide-react'
+import Pusher from 'pusher-js'
+import { Activity, Heart, MessageCircle, Send, Trophy, Users } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { canAccessCommunityForUser } from '@/lib/access'
 import { PageLoader } from '@/components/shared/PageLoader'
 import { AccessGate, SignInGate } from '@/components/shared/AccessGate'
 import { BackButton } from '@/components/shared/BackButton'
+import { UserAvatar } from '@/components/shared/UserAvatar'
 import { FadeIn } from '@/components/motion'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { FormSelect } from '@/components/ui/form-select'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { LeaderboardEntry } from '@/types/gamification'
+
+const CATEGORIES = ['Motivation', 'Question', 'Achievement', 'Workout'] as const
+type PostCategory = (typeof CATEGORIES)[number]
 
 interface CommunityPostItem {
   _id: string
   authorId: string
   authorName: string
+  authorImage?: string
+  authorRole?: string
   content: string
+  category?: PostCategory | string
   likeCount: number
   likedByMe: boolean
   commentCount: number
@@ -32,19 +42,43 @@ interface CommunityCommentItem {
   createdAt: string
 }
 
+interface CommunityStats {
+  totalPosts: number
+  totalMembers: number
+  mostActiveToday: string
+  mostActiveTodayPosts: number
+}
+
+function roleLabel(role?: string) {
+  if (role === 'trainer') return 'Trainer'
+  if (role === 'gym_owner') return 'Gym Owner'
+  if (role === 'admin' || role === 'super_admin') return 'Admin'
+  return 'User'
+}
+
+function isPusherClientConfigured() {
+  return Boolean(
+    process.env.NEXT_PUBLIC_PUSHER_KEY && process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
+  )
+}
+
 export default function CommunityPage() {
   const { user, isLoading: authLoading } = useAuth()
   const [posts, setPosts] = useState<CommunityPostItem[]>([])
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
+  const [stats, setStats] = useState<CommunityStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(true)
+  const [loadingStats, setLoadingStats] = useState(true)
   const [compose, setCompose] = useState('')
+  const [category, setCategory] = useState<PostCategory>('Motivation')
   const [posting, setPosting] = useState(false)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [comments, setComments] = useState<Record<string, CommunityCommentItem[]>>({})
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({})
   const [loadingComments, setLoadingComments] = useState<string | null>(null)
   const [submittingComment, setSubmittingComment] = useState<string | null>(null)
+  const [likingIds, setLikingIds] = useState<Set<string>>(new Set())
 
   const loadPosts = useCallback(async () => {
     setLoading(true)
@@ -75,12 +109,73 @@ export default function CommunityPage() {
     }
   }, [])
 
+  const loadStats = useCallback(async () => {
+    setLoadingStats(true)
+    try {
+      const res = await fetch('/api/community/stats')
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || 'Failed to load stats')
+      setStats({
+        totalPosts: data.totalPosts ?? 0,
+        totalMembers: data.totalMembers ?? 0,
+        mostActiveToday: data.mostActiveToday || '—',
+        mostActiveTodayPosts: data.mostActiveTodayPosts ?? 0,
+      })
+    } catch {
+      setStats(null)
+    } finally {
+      setLoadingStats(false)
+    }
+  }, [])
+
   useEffect(() => {
     if (user && canAccessCommunityForUser(user)) {
       loadPosts()
       loadLeaderboard()
+      loadStats()
     }
-  }, [user, loadPosts, loadLeaderboard])
+  }, [user, loadPosts, loadLeaderboard, loadStats])
+
+  useEffect(() => {
+    if (!user || !canAccessCommunityForUser(user) || !isPusherClientConfigured()) return
+
+    const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
+      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+    })
+    const channel = pusher.subscribe('community')
+
+    channel.bind('new-post', (data: { post?: CommunityPostItem }) => {
+      const post = data?.post
+      if (!post?._id) return
+      let didAdd = false
+      setPosts((prev) => {
+        if (prev.some((p) => p._id === post._id)) return prev
+        didAdd = true
+        return [post, ...prev]
+      })
+      if (didAdd) {
+        setStats((s) => (s ? { ...s, totalPosts: s.totalPosts + 1 } : s))
+      }
+    })
+
+    channel.bind(
+      'post-liked',
+      (data: { postId?: string; likeCount?: number }) => {
+        if (!data?.postId || typeof data.likeCount !== 'number') return
+        setPosts((prev) =>
+          prev.map((p) =>
+            p._id === data.postId ? { ...p, likeCount: data.likeCount! } : p,
+          ),
+        )
+      },
+    )
+
+    return () => {
+      channel.unbind_all()
+      pusher.unsubscribe('community')
+      pusher.disconnect()
+    }
+  }, [user])
 
   const handlePost = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -90,13 +185,20 @@ export default function CommunityPage() {
       const res = await fetch('/api/community/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: compose.trim() }),
+        body: JSON.stringify({ content: compose.trim(), category }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.message || 'Failed to post')
       setCompose('')
-      toast.success('Posted to community')
-      await loadPosts()
+      setCategory('Motivation')
+      setPosts((prev) => {
+        if (prev.some((p) => p._id === data._id)) return prev
+        return [data as CommunityPostItem, ...prev]
+      })
+      setStats((prev) =>
+        prev ? { ...prev, totalPosts: prev.totalPosts + 1 } : prev,
+      )
+      toast.success('Post shared!')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Post failed')
     } finally {
@@ -105,6 +207,21 @@ export default function CommunityPage() {
   }
 
   const toggleLike = async (postId: string) => {
+    if (likingIds.has(postId)) return
+
+    const snapshot = posts.find((p) => p._id === postId)
+    if (!snapshot) return
+
+    const nextLiked = !snapshot.likedByMe
+    const nextCount = Math.max(0, snapshot.likeCount + (nextLiked ? 1 : -1))
+
+    setLikingIds((prev) => new Set(prev).add(postId))
+    setPosts((prev) =>
+      prev.map((p) =>
+        p._id === postId ? { ...p, likedByMe: nextLiked, likeCount: nextCount } : p,
+      ),
+    )
+
     try {
       const res = await fetch(`/api/community/posts/${postId}/like`, { method: 'POST' })
       const data = await res.json()
@@ -117,7 +234,20 @@ export default function CommunityPage() {
         ),
       )
     } catch (error) {
+      setPosts((prev) =>
+        prev.map((p) =>
+          p._id === postId
+            ? { ...p, likedByMe: snapshot.likedByMe, likeCount: snapshot.likeCount }
+            : p,
+        ),
+      )
       toast.error(error instanceof Error ? error.message : 'Like failed')
+    } finally {
+      setLikingIds((prev) => {
+        const next = new Set(prev)
+        next.delete(postId)
+        return next
+      })
     }
   }
 
@@ -164,6 +294,7 @@ export default function CommunityPage() {
           p._id === postId ? { ...p, commentCount: (p.commentCount || 0) + 1 } : p,
         ),
       )
+      toast.success('Comment added')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Comment failed')
     } finally {
@@ -186,7 +317,7 @@ export default function CommunityPage() {
 
   return (
     <div className="min-h-screen pt-6 pb-28 px-4 sm:px-6">
-      <div className="mx-auto max-w-2xl">
+      <div className="mx-auto max-w-6xl">
         <BackButton />
         <FadeIn>
           <div className="page-hero mb-6 px-6 py-8 sm:px-8 gym-floor">
@@ -198,164 +329,259 @@ export default function CommunityPage() {
           </div>
         </FadeIn>
 
-        <Card className="elite-panel mb-6 border-white/[.08]">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Trophy className="size-4 text-primary" />
-              XP Leaderboard
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loadingLeaderboard ? (
-              <div className="space-y-2">
-                <Skeleton className="h-12 bg-muted" />
-                <Skeleton className="h-12 bg-muted" />
-                <Skeleton className="h-12 bg-muted" />
-              </div>
-            ) : leaderboard.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">
-                No rankings yet — complete workouts and log meals to climb the board.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {leaderboard.map((entry) => (
-                  <div
-                    key={entry.userId}
-                    className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 ${
-                      entry.isCurrentUser
-                        ? 'border-emerald-500/40 bg-emerald-500/15'
-                        : 'border-white/[.06] bg-black/20'
-                    }`}
-                  >
-                    <span className="w-6 text-center text-sm font-bold text-muted-foreground">
-                      {entry.rank}
-                    </span>
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-xs font-bold text-primary">
-                      {entry.initials}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-white">
-                        {entry.fullName}
-                        {entry.isCurrentUser ? ' (you)' : ''}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Level {entry.level}</p>
-                    </div>
-                    <span className="text-sm font-bold text-primary">{entry.xp} XP</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="elite-panel mb-6 border-white/[.08]">
-          <CardHeader>
-            <CardTitle className="text-base">Compose</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handlePost} className="space-y-3">
-              <textarea
-                value={compose}
-                onChange={(e) => setCompose(e.target.value)}
-                rows={3}
-                maxLength={2000}
-                placeholder="What's on your mind — PR, tip, or check-in?"
-                className="w-full rounded-xl border border-white/[.09] bg-black/20 px-3.5 py-2 text-sm text-foreground outline-none focus-visible:border-primary/45 focus-visible:ring-3 focus-visible:ring-ring/15"
-              />
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">{compose.length}/2000</span>
-                <Button type="submit" disabled={posting} size="sm">
-                  <Send className="size-3.5" />
-                  {posting ? 'Posting…' : 'Post'}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-
-        <div className="space-y-4">
-          {loading ? (
-            <Skeleton className="h-32 bg-muted" />
-          ) : posts.length === 0 ? (
-            <Card className="elite-panel border-white/[.08]">
-              <CardContent className="py-10 text-center text-sm text-muted-foreground">
-                No posts yet — start the conversation.
-              </CardContent>
-            </Card>
-          ) : (
-            posts.map((post) => (
-              <Card key={post._id} className="elite-panel border-white/[.08]">
-                <CardContent className="pt-5">
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-white">{post.authorName}</p>
-                    <time className="text-[11px] text-muted-foreground">
-                      {new Date(post.createdAt).toLocaleString()}
-                    </time>
-                  </div>
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-[#c8d0cb]">
-                    {post.content}
-                  </p>
-                  <div className="mt-4 flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => toggleLike(post._id)}
-                      className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${
-                        post.likedByMe
-                          ? 'bg-primary/15 text-primary'
-                          : 'bg-white/[.04] text-muted-foreground hover:text-white'
-                      }`}
-                    >
-                      <Heart className={`size-3.5 ${post.likedByMe ? 'fill-primary' : ''}`} />
-                      {post.likeCount}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => toggleComments(post._id)}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-white/[.04] px-2.5 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:text-white"
-                    >
-                      <MessageCircle className="size-3.5" />
-                      {post.commentCount}
-                    </button>
-                  </div>
-
-                  {expanded === post._id && (
-                    <div className="mt-4 space-y-3 border-t border-white/[.06] pt-4">
-                      {loadingComments === post._id ? (
-                        <Skeleton className="h-12 bg-muted" />
-                      ) : (comments[post._id] || []).length === 0 ? (
-                        <p className="text-xs text-muted-foreground">No comments yet.</p>
-                      ) : (
-                        (comments[post._id] || []).map((c) => (
-                          <div key={c._id} className="rounded-lg bg-black/20 px-3 py-2">
-                            <p className="text-xs font-semibold text-primary">{c.authorName}</p>
-                            <p className="mt-0.5 text-sm text-[#c8d0cb]">{c.content}</p>
-                          </div>
-                        ))
-                      )}
-                      <div className="flex gap-2">
-                        <input
-                          value={commentDrafts[post._id] || ''}
-                          onChange={(e) =>
-                            setCommentDrafts((prev) => ({ ...prev, [post._id]: e.target.value }))
-                          }
-                          placeholder="Add a comment…"
-                          className="h-10 flex-1 rounded-xl border border-white/[.09] bg-black/20 px-3 text-sm outline-none focus-visible:border-primary/45"
-                        />
-                        <Button
-                          type="button"
-                          size="sm"
-                          disabled={submittingComment === post._id}
-                          onClick={() => submitComment(post._id)}
-                        >
-                          Reply
-                        </Button>
-                      </div>
-                    </div>
-                  )}
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+          {/* Left — feed */}
+          <div className="min-w-0 space-y-4">
+            {loading ? (
+              <>
+                <Skeleton className="h-36 rounded-xl bg-muted" />
+                <Skeleton className="h-36 rounded-xl bg-muted" />
+                <Skeleton className="h-36 rounded-xl bg-muted" />
+              </>
+            ) : posts.length === 0 ? (
+              <Card className="elite-panel border-white/[.08]">
+                <CardContent className="py-12 text-center text-sm text-muted-foreground">
+                  🏃 Be the first to post in the community!
                 </CardContent>
               </Card>
-            ))
-          )}
+            ) : (
+              posts.map((post) => (
+                <Card key={post._id} className="elite-panel border-white/[.08]">
+                  <CardContent className="pt-5">
+                    <div className="mb-3 flex items-start gap-3">
+                      <UserAvatar
+                        name={post.authorName}
+                        image={post.authorImage || undefined}
+                        size="sm"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-semibold text-white">{post.authorName}</p>
+                          <Badge
+                            variant="outline"
+                            className="h-5 border-primary/25 bg-primary/10 px-2 text-[10px] text-primary"
+                          >
+                            {roleLabel(post.authorRole)}
+                          </Badge>
+                          {post.category ? (
+                            <Badge
+                              variant="secondary"
+                              className="h-5 px-2 text-[10px] text-muted-foreground"
+                            >
+                              {post.category}
+                            </Badge>
+                          ) : null}
+                        </div>
+                        <time className="text-[11px] text-muted-foreground">
+                          {new Date(post.createdAt).toLocaleString()}
+                        </time>
+                      </div>
+                    </div>
+
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-[#c8d0cb]">
+                      {post.content}
+                    </p>
+
+                    <div className="mt-4 flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => toggleLike(post._id)}
+                        disabled={likingIds.has(post._id)}
+                        className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                          post.likedByMe
+                            ? 'bg-primary/15 text-primary'
+                            : 'bg-white/[.04] text-muted-foreground hover:text-white'
+                        }`}
+                      >
+                        <Heart className={`size-3.5 ${post.likedByMe ? 'fill-primary' : ''}`} />
+                        {post.likeCount}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => toggleComments(post._id)}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-white/[.04] px-2.5 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:text-white"
+                      >
+                        <MessageCircle className="size-3.5" />
+                        {post.commentCount}
+                        <span className="ml-0.5 hidden sm:inline">Comments</span>
+                      </button>
+                    </div>
+
+                    {expanded === post._id && (
+                      <div className="mt-4 space-y-3 border-t border-white/[.06] pt-4">
+                        {loadingComments === post._id ? (
+                          <Skeleton className="h-12 bg-muted" />
+                        ) : (comments[post._id] || []).length === 0 ? (
+                          <p className="text-xs text-muted-foreground">No comments yet.</p>
+                        ) : (
+                          (comments[post._id] || []).map((c) => (
+                            <div key={c._id} className="rounded-lg bg-black/20 px-3 py-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-xs font-semibold text-primary">{c.authorName}</p>
+                                <time className="text-[10px] text-muted-foreground">
+                                  {new Date(c.createdAt).toLocaleString()}
+                                </time>
+                              </div>
+                              <p className="mt-0.5 text-sm text-[#c8d0cb]">{c.content}</p>
+                            </div>
+                          ))
+                        )}
+                        <div className="flex gap-2">
+                          <input
+                            value={commentDrafts[post._id] || ''}
+                            onChange={(e) =>
+                              setCommentDrafts((prev) => ({
+                                ...prev,
+                                [post._id]: e.target.value,
+                              }))
+                            }
+                            placeholder="Add a comment…"
+                            className="h-10 flex-1 rounded-xl border border-white/[.09] bg-black/20 px-3 text-sm outline-none focus-visible:border-primary/45"
+                          />
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={submittingComment === post._id}
+                            onClick={() => submitComment(post._id)}
+                          >
+                            Reply
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+
+          {/* Right — create + stats + leaderboard */}
+          <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+            <Card className="elite-panel border-white/[.08]">
+              <CardHeader>
+                <CardTitle className="text-base">Share with the community</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handlePost} className="space-y-3">
+                  <textarea
+                    value={compose}
+                    onChange={(e) => setCompose(e.target.value)}
+                    rows={4}
+                    maxLength={2000}
+                    placeholder="Share a workout win, ask for advice, or motivate others..."
+                    className="w-full rounded-xl border border-white/[.09] bg-black/20 px-3.5 py-2 text-sm text-foreground outline-none focus-visible:border-primary/45 focus-visible:ring-3 focus-visible:ring-ring/15"
+                  />
+                  <FormSelect
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value as PostCategory)}
+                    aria-label="Post category"
+                  >
+                    {CATEGORIES.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </FormSelect>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-muted-foreground">{compose.length}/2000</span>
+                    <Button type="submit" disabled={posting} size="sm">
+                      <Send className="size-3.5" />
+                      {posting ? 'Posting…' : 'Post'}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+
+            <Card className="elite-panel border-white/[.08]">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Activity className="size-4 text-primary" />
+                  Community Stats
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingStats ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-10 bg-muted" />
+                    <Skeleton className="h-10 bg-muted" />
+                    <Skeleton className="h-10 bg-muted" />
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between rounded-xl border border-white/[.06] bg-black/20 px-3 py-2.5">
+                      <span className="text-xs text-muted-foreground">Total Posts</span>
+                      <span className="text-sm font-bold text-white">
+                        {stats?.totalPosts ?? 0}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between rounded-xl border border-white/[.06] bg-black/20 px-3 py-2.5">
+                      <span className="text-xs text-muted-foreground">Total Members</span>
+                      <span className="text-sm font-bold text-white">
+                        {stats?.totalMembers ?? 0}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between rounded-xl border border-white/[.06] bg-black/20 px-3 py-2.5">
+                      <span className="text-xs text-muted-foreground">Most Active Today</span>
+                      <span className="max-w-[50%] truncate text-right text-sm font-bold text-primary">
+                        {stats?.mostActiveToday || '—'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="elite-panel border-white/[.08]">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Trophy className="size-4 text-primary" />
+                  XP Leaderboard
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingLeaderboard ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-12 bg-muted" />
+                    <Skeleton className="h-12 bg-muted" />
+                    <Skeleton className="h-12 bg-muted" />
+                  </div>
+                ) : leaderboard.length === 0 ? (
+                  <p className="py-4 text-center text-sm text-muted-foreground">
+                    No rankings yet — complete workouts and log meals to climb the board.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {leaderboard.map((entry) => (
+                      <div
+                        key={entry.userId}
+                        className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 ${
+                          entry.isCurrentUser
+                            ? 'border-emerald-500/40 bg-emerald-500/15'
+                            : 'border-white/[.06] bg-black/20'
+                        }`}
+                      >
+                        <span className="w-6 text-center text-sm font-bold text-muted-foreground">
+                          {entry.rank}
+                        </span>
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-xs font-bold text-primary">
+                          {entry.initials}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-white">
+                            {entry.fullName}
+                            {entry.isCurrentUser ? ' (you)' : ''}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Level {entry.level}</p>
+                        </div>
+                        <span className="text-sm font-bold text-primary">{entry.xp} XP</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </aside>
         </div>
       </div>
     </div>
