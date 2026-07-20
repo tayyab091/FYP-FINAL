@@ -150,9 +150,15 @@ export async function createMessage(input: CreateMessageInput) {
       .map((recipientId: string) =>
         createNotification({
           userId: recipientId,
-          title: `New message from ${senderName}`,
-          message: preview,
-          type: 'chat',
+          title:
+            type === 'workout_plan'
+              ? 'Workout plan assigned'
+              : `New message from ${senderName}`,
+          message:
+            type === 'workout_plan'
+              ? `${senderName} sent you a workout plan`
+              : preview,
+          type: type === 'workout_plan' ? 'workout' : 'chat',
           link: `/chat/${conversationId}`,
         }),
       ),
