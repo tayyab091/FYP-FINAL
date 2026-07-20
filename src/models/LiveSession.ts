@@ -3,6 +3,8 @@ import mongoose, { Schema } from 'mongoose'
 const LiveSessionSchema = new Schema(
   {
     trainerId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    /** Assigned client for 1:1 sessions (optional for legacy group sessions). */
+    clientId: { type: Schema.Types.ObjectId, ref: 'User', index: true, default: null },
     title: { type: String, required: true, trim: true },
     scheduledAt: { type: Date, required: true, index: true },
     durationMinutes: { type: Number, required: true, min: 15, max: 240, default: 60 },
