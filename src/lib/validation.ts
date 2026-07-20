@@ -226,7 +226,7 @@ export const trainerProfileSchema = z.object({
 
 export const reviewSchema = z.object({
   rating: z.number().int().min(1).max(5),
-  comment: plainTextSchema(1000, 1),
+  comment: plainTextSchema(1000, 20),
 })
 
 export const registerTrainerSchema = z.object({
