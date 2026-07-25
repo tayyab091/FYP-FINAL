@@ -23,6 +23,9 @@ export function rateLimit(
   limit: number,
   windowMs: number,
 ): NextResponse | null {
+  if (process.env.PLAYWRIGHT === '1' || process.env.PLAYWRIGHT_TEST === '1') {
+    return null
+  }
   const key = clientKey(req, scope)
   const now = Date.now()
   const existing = buckets.get(key)

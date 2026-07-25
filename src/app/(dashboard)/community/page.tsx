@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
 import { toast } from 'sonner'
 import Pusher from 'pusher-js'
 import { Activity, Heart, MessageCircle, Send, Trophy, Users } from 'lucide-react'
@@ -324,7 +325,10 @@ export default function CommunityPage() {
             <p className="eyebrow mb-2">Member Circle</p>
             <h1 className="display-title text-3xl md:text-4xl">Community Feed</h1>
             <p className="mt-2 text-muted-foreground">
-              Share wins, ask questions, and cheer on other members.
+              Share wins, ask questions, and cheer on other members.{' '}
+              <Link href="/leaderboard" className="text-primary font-semibold hover:underline">
+                View leaderboard →
+              </Link>
             </p>
           </div>
         </FadeIn>

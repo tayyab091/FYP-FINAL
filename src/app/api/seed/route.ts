@@ -52,6 +52,11 @@ export async function POST(req: NextRequest) {
       { fullName: 'Usman Malik', email: 'usman@test.com', specialty: ['Bodybuilding', 'Nutrition'], country: 'Pakistan', bio: 'Former national bodybuilding champion.', isFeatured: false, profileImage: 'https://randomuser.me/api/portraits/men/3.jpg', rating: 4.7 },
       { fullName: 'Fatima Rizvi', email: 'fatima@test.com', specialty: ['HIIT', 'Cardio'], country: 'Pakistan', bio: 'Specializing in HIIT and postnatal fitness.', isFeatured: false, profileImage: 'https://randomuser.me/api/portraits/women/4.jpg', rating: 4.9 },
       { fullName: 'Bilal Ahmed', email: 'bilal@test.com', specialty: ['CrossFit'], country: 'Pakistan', bio: 'CrossFit Level 2 certified trainer.', isFeatured: false, profileImage: 'https://randomuser.me/api/portraits/men/5.jpg', rating: 4.6 },
+      { fullName: 'Zara Malik', email: 'zara.trainer@test.com', specialty: ['Yoga', 'Mindfulness'], country: 'Pakistan', bio: 'Holistic wellness coach combining yoga and strength.', isFeatured: false, profileImage: 'https://randomuser.me/api/portraits/women/6.jpg', rating: 4.8 },
+      { fullName: 'Hassan Sheikh', email: 'hassan@test.com', specialty: ['Nutrition', 'Weight Loss'], country: 'Pakistan', bio: 'Certified nutritionist and weight loss coach. 300+ transformations in 4 years.', isFeatured: false, profileImage: 'https://randomuser.me/api/portraits/men/7.jpg', rating: 4.7 },
+      { fullName: 'Ayesha Tariq', email: 'ayesha@test.com', specialty: ['Pilates', 'Flexibility'], country: 'Pakistan', bio: 'Pilates instructor and flexibility specialist. Online and in-person sessions.', isFeatured: false, profileImage: 'https://randomuser.me/api/portraits/women/8.jpg', rating: 4.8 },
+      { fullName: 'Kamran Butt', email: 'kamran@test.com', specialty: ['Strength Training', 'Powerlifting'], country: 'UAE', bio: 'Elite powerlifting coach based in Dubai. Trained national-level athletes.', isFeatured: false, profileImage: 'https://randomuser.me/api/portraits/men/9.jpg', rating: 4.9 },
+      { fullName: 'Sana Mirza', email: 'sana@test.com', specialty: ['HIIT', 'Cardio', 'Dance Fitness'], country: 'Pakistan', bio: 'High energy HIIT and dance fitness instructor. Makes every session fun!', isFeatured: false, profileImage: 'https://randomuser.me/api/portraits/women/10.jpg', rating: 4.8 },
     ]
 
     for (const t of trainersData) {

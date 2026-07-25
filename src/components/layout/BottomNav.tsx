@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Suspense } from 'react'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
-import { Home, LayoutDashboard, MessageCircle, Users, UtensilsCrossed } from 'lucide-react'
+import { Home, LayoutDashboard, MessageCircle, Trophy, Users } from 'lucide-react'
 import { isAuthPath } from '@/lib/shell-routes'
 
 function BottomNavInner() {
@@ -29,6 +29,7 @@ function BottomNavInner() {
     pathname.startsWith('/chat') ||
     pathname.startsWith('/analytics') ||
     pathname.startsWith('/meal-plans') ||
+    pathname.startsWith('/leaderboard') ||
     pathname.startsWith('/live-sessions') ||
     pathname.startsWith('/notifications') ||
     pathname.startsWith('/settings')
@@ -44,10 +45,10 @@ function BottomNavInner() {
       active: pathname.startsWith('/my-fitness'),
     },
     {
-      href: '/meal-plans',
-      icon: UtensilsCrossed,
-      label: 'Meals',
-      active: pathname.startsWith('/meal-plans'),
+      href: '/leaderboard',
+      icon: Trophy,
+      label: 'Ranks',
+      active: pathname.startsWith('/leaderboard'),
     },
     {
       href: '/community',
