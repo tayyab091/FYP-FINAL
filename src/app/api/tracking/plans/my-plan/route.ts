@@ -15,10 +15,10 @@ export async function GET(req: NextRequest) {
     const plan = await WorkoutPlan.findOne({
       userId: tokenUser.userId,
       status: { $in: ['active', 'draft'] },
-    }).sort({ createdAt: -1 }).lean()
+    }).sort({ updatedAt: -1 }).lean()
 
     if (!plan) return NextResponse.json({ plan: null })
-    return NextResponse.json(plan)
+    return NextResponse.json({ plan })
   } catch {
     return NextResponse.json({ message: 'Server error' }, { status: 500 })
   }

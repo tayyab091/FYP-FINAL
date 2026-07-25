@@ -102,24 +102,21 @@ export default function SubscriptionPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.message)
 
-      if (data.mode === 'stripe' && data.url) {
+      if (data.url) {
         window.location.href = data.url
         return
       }
 
-      const simRes = await fetch('/api/subscription', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: selectedPlan, simulatedPayment: true }),
-      })
-      const simData = await simRes.json()
-      if (!simRes.ok) throw new Error(simData.message)
+      if (data.simulated || data.success) {
+        await refreshUser()
+        const planName = PLANS.find((p) => p.id === selectedPlan)?.name || 'Pro'
+        toast.success(`Plan activated! Welcome to ${planName}!`)
+        setModalOpen(false)
+        setSelectedPlan(null)
+        return
+      }
 
-      await refreshUser()
-      const planName = PLANS.find(p => p.id === selectedPlan)?.name || 'Pro'
-      toast.success(`Payment simulated! ${planName} activated.`)
-      setModalOpen(false)
-      setSelectedPlan(null)
+      throw new Error(data.message || 'Payment failed')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Payment failed')
     } finally {
