@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getUser } from '@/lib/auth'
+import { aiChatSchema, parseJsonBody } from '@/lib/validation'
+import { rateLimitAi } from '@/lib/rate-limit'
 
 interface ChatHistoryItem {
   role?: string
@@ -7,24 +10,23 @@ interface ChatHistoryItem {
 
 export async function POST(req: NextRequest) {
   try {
-    const { message, history = [] } = await req.json()
-    if (typeof message !== 'string' || !message.trim()) {
-      return NextResponse.json({ message: 'Message is required' }, { status: 400 })
+    const limited = rateLimitAi(req)
+    if (limited) return limited
+
+    const tokenUser = await getUser(req)
+    if (!tokenUser) {
+      return NextResponse.json({ message: 'Not authenticated' }, { status: 401 })
     }
-    if (message.length > 1000) {
-      return NextResponse.json({ message: 'Message is too long' }, { status: 400 })
-    }
-    const safeHistory = Array.isArray(history)
-      ? history.slice(-6).filter(
-          (item: ChatHistoryItem) =>
-            typeof item?.content === 'string' && item.content.length <= 1000,
-        )
-      : []
+
+    const parsed = await parseJsonBody(req, aiChatSchema)
+    if ('error' in parsed) return parsed.error
+
+    const { message, history } = parsed.data
+    const safeHistory = history.slice(-6)
 
     const GEMINI_KEY = process.env.GEMINI_API_KEY
 
     if (!GEMINI_KEY || GEMINI_KEY === 'PASTE_GEMINI_KEY_HERE') {
-      // Smart fallback responses when no API key
       const lower = message.toLowerCase()
       let reply = ''
 
@@ -51,7 +53,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ reply })
     }
 
-    // Use Gemini API
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
       {
@@ -65,19 +66,19 @@ export async function POST(req: NextRequest) {
               Keep answers concise (3-5 sentences max), practical, and encouraging.
               When relevant, use Pakistani food examples (chicken biryani, daal, roti, paratha, nihari, haleem).
               Do NOT answer questions unrelated to fitness or nutrition.
-              Do NOT provide medical diagnoses. Suggest consulting a doctor for medical concerns.`
-            }]
+              Do NOT provide medical diagnoses. Suggest consulting a doctor for medical concerns.`,
+            }],
           },
           contents: [
             ...safeHistory.map((m: ChatHistoryItem) => ({
-              role: m.role === 'assistant' ? 'model' : 'user',
-              parts: [{ text: m.content }]
+              role: m.role === 'assistant' || m.role === 'model' ? 'model' : 'user',
+              parts: [{ text: m.content }],
             })),
-            { role: 'user', parts: [{ text: message }] }
+            { role: 'user', parts: [{ text: message }] },
           ],
-          generationConfig: { maxOutputTokens: 300, temperature: 0.7 }
-        })
-      }
+          generationConfig: { maxOutputTokens: 300, temperature: 0.7 },
+        }),
+      },
     )
 
     const data = await res.json()

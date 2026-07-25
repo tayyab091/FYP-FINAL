@@ -29,7 +29,11 @@ export async function GET(
         ...session,
         _id: session._id.toString(),
         trainerId: session.trainerId.toString(),
+        clientId: session.clientId ? session.clientId.toString() : null,
         participantIds: (session.participantIds || []).map((pid: { toString(): string }) => pid.toString()),
+        meetingProvider: session.meetingProvider || (session.dailyRoomUrl ? 'daily' : 'jitsi'),
+        meetingRoomName: session.meetingRoomName || session.dailyRoomName || '',
+        meetingUrl: session.meetingUrl || session.dailyRoomUrl || '',
         trainer: trainer
           ? { fullName: trainer.fullName, profileImage: trainer.profileImage }
           : null,

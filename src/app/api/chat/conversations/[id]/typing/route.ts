@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getUser } from '@/lib/auth'
 import { assertCanChat, ChatError } from '@/lib/chat/createMessage'
 import { publishTyping } from '@/lib/realtime'
+import { parseJsonBody, parseObjectIdParam, typingSchema } from '@/lib/validation'
 
 export async function POST(
   req: NextRequest,
@@ -13,13 +14,23 @@ export async function POST(
       return NextResponse.json({ message: 'Not authenticated' }, { status: 401 })
     }
 
-    const { id } = await params
-    await assertCanChat(id, tokenUser.userId)
+    const { id: rawId } = await params
+    const idResult = parseObjectIdParam(rawId, 'conversation id')
+    if ('error' in idResult) return idResult.error
 
-    const body = await req.json().catch(() => ({}))
-    const isTyping = Boolean(body?.isTyping)
+    await assertCanChat(idResult.id, tokenUser.userId)
 
-    await publishTyping(id, { userId: tokenUser.userId, isTyping })
+    let isTyping = true
+    try {
+      const parsed = await parseJsonBody(req, typingSchema)
+      if (!('error' in parsed)) {
+        isTyping = parsed.data.isTyping !== false
+      }
+    } catch {
+      isTyping = true
+    }
+
+    await publishTyping(idResult.id, { userId: tokenUser.userId, isTyping })
     return NextResponse.json({ ok: true })
   } catch (error) {
     if (error instanceof ChatError) {

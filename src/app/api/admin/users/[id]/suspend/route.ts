@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/mongodb'
 import User from '@/models/User'
 import AuditLog from '@/models/AuditLog'
 import { getUser } from '@/lib/auth'
+import { parseJsonBody, parseObjectIdParam, suspendSchema } from '@/lib/validation'
 
 export async function PUT(
   req: NextRequest,
@@ -15,14 +16,16 @@ export async function PUT(
       return NextResponse.json({ message: 'Admin access required' }, { status: 403 })
     }
 
-    const { id } = await params
-    const { suspend } = await req.json()
-    if (typeof suspend !== 'boolean') {
-      return NextResponse.json({ message: 'suspend must be a boolean' }, { status: 400 })
-    }
+    const { id: rawId } = await params
+    const idResult = parseObjectIdParam(rawId, 'user id')
+    if ('error' in idResult) return idResult.error
+
+    const parsed = await parseJsonBody(req, suspendSchema)
+    if ('error' in parsed) return parsed.error
+    const { suspend } = parsed.data
 
     await connectDB()
-    const target = await User.findById(id).select('fullName email role isSuspended')
+    const target = await User.findById(idResult.id).select('fullName email role isSuspended')
     if (!target) return NextResponse.json({ message: 'User not found' }, { status: 404 })
     if (['admin', 'super_admin'].includes(target.role)) {
       return NextResponse.json({ message: 'Cannot suspend admin accounts' }, { status: 403 })

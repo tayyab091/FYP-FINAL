@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import { getUser } from '@/lib/auth'
 import Gym from '@/models/Gym'
+import { gymUpdateSchema, parseJsonBody } from '@/lib/validation'
 
 export async function GET(req: NextRequest) {
   try {
@@ -28,25 +29,21 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ message: 'Gym owner access required' }, { status: 403 })
     }
 
-    const body = await req.json()
-    if (typeof body.name !== 'string' || !body.name.trim()) {
-      return NextResponse.json({ message: 'Gym name is required' }, { status: 400 })
-    }
-    if (typeof body.address !== 'string' || !body.address.trim()) {
-      return NextResponse.json({ message: 'Gym address is required' }, { status: 400 })
-    }
+    const parsed = await parseJsonBody(req, gymUpdateSchema)
+    if ('error' in parsed) return parsed.error
+    const body = parsed.data
 
     await connectDB()
     const gym = await Gym.findOneAndUpdate(
       { ownerId: tokenUser.userId },
       {
-        name: body.name.trim(),
-        address: body.address.trim(),
-        country: typeof body.country === 'string' ? body.country.trim() : 'Pakistan',
-        description: typeof body.description === 'string' ? body.description.trim() : '',
-        phone: typeof body.phone === 'string' ? body.phone.trim() : '',
-        email: typeof body.email === 'string' ? body.email.trim().toLowerCase() : '',
-        logo: typeof body.logo === 'string' ? body.logo.trim() : '',
+        name: body.name,
+        address: body.address,
+        country: body.country || 'Pakistan',
+        description: body.description || '',
+        phone: body.phone || '',
+        email: body.email || '',
+        logo: body.logo || '',
       },
       { new: true, runValidators: true },
     )

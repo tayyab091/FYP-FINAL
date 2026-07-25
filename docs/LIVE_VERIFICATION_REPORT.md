@@ -1,33 +1,29 @@
 # Live Verification Report
 
-**Date:** 2026-07-13  
+**Date:** 2026-07-13 (Phase 1–3 security re-verify)  
 **Branch:** `musadiq`  
 **Runtime:** `npm run dev` (Next.js 16.2.10) on `http://localhost:3000`  
 **Database:** MongoDB Atlas (`mongodb+srv://…`) — connected after DNS SRV workaround  
-**Method:** HTTP API probes + authenticated page fetches (`scripts/live-verify.mjs`); no browser MCP available  
+**Method:** `npm run live-verify` (`scripts/live-verify.mjs`); HTTP API probes + authenticated page fetches + security probes  
+**Payments:** **PAUSED — out of scope** (Stripe checkout / webhooks not exercised; plan fields read-only for gating)
 
 ## Environment inventory
 
 | Variable | In `.env.local` | Notes |
 |----------|-----------------|-------|
-| `MONGODB_URI` | Set (Atlas) | Required. Windows ISP DNS refused `querySrv`; app resolves SRV via Google DNS (`8.8.8.8`) then connects with a direct `mongodb://` URI |
-| `JWT_SECRET` | Set | Required |
-| `NEXT_PUBLIC_APP_URL` | Set | |
-| `ADMIN_SETUP_KEY` | Set | Seed / admin setup |
-| `GEMINI_API_KEY` | Set | AI features |
-| `SPOONACULAR_API_KEY` | Set | Nutrition search (falls back to local DB) |
-| `STRIPE_SECRET_KEY` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Set | Runtime reported `stripeEnabled: false` (treated as placeholders / not live) → simulated checkout path |
-| `ALLOW_DATABASE_SEEDING` | Missing | Not required in `development` |
-| `ALLOW_ADMIN_SETUP` | Missing | Optional |
-| `PUSHER_*` / `NEXT_PUBLIC_PUSHER_*` | Missing | Realtime push unavailable; REST poll fallback works |
-| `DAILY_API_KEY` | Missing | Live session **create** returns 503 |
-| `BLOB_READ_WRITE_TOKEN` | Missing | Chat image upload returns 503 |
-| `SMTP_*` | Missing | Forgot-password returns 200 and logs link (dev fallback) |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Missing | OAuth start returns 503 |
-| Local MongoDB `:27017` | Not running | Atlas used instead |
-| Docker | Not installed | N/A |
+| `MONGODB_URI` | ✅ Set (Atlas) | Required. Windows ISP DNS refused `querySrv`; app resolves SRV via Google DNS then connects with a direct `mongodb://` URI |
+| `JWT_SECRET` | ✅ Set | Required |
+| `NEXT_PUBLIC_APP_URL` | ✅ Set | Used for CORS allow-origin |
+| `ADMIN_SETUP_KEY` | ✅ Set | Seed / admin setup |
+| `GEMINI_API_KEY` / `SPOONACULAR_API_KEY` | Placeholder | Nutrition falls back to local DB |
+| `STRIPE_*` | Placeholder | **PAUSED** — simulated path when unset/non-live |
+| `PUSHER_*` / `NEXT_PUBLIC_PUSHER_*` | ❌ Missing | Realtime push N/A; REST poll works |
+| No Jitsi env vars | n/a | Live session create should work without extra secrets |
+| `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | Optional | Chat image upload depends on Cloudinary config |
+| `SMTP_*` | ❌ Missing | Forgot-password / verify return `devLink` in development |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | ❌ Missing | OAuth start returns 503 |
 
-## Seed / demo accounts (Atlas already seeded)
+## Seed / demo accounts
 
 | Role | Email | Password |
 |------|-------|----------|
@@ -40,57 +36,69 @@
 
 ## Feature-by-feature results
 
-| Feature | Status | What was called / clicked | Expected | Actual | DB / notes |
-|---------|--------|---------------------------|----------|--------|------------|
-| Health / Mongo | **Working** | `GET /api/health` | 200 + `database: connected` | 200 connected | Atlas ping OK via direct URI |
-| Signup | **Working** | `POST /api/auth/register` (`verify_*@test.com`) | 201 | 201 | User document created |
-| Login | **Working** | `POST /api/auth/login` (all roles) | 200 + httpOnly cookie | 200 | JWT cookie set |
-| Auth me / logout | **Working** | `GET /api/auth/me`, `POST /api/auth/logout` | 200 | 200 | |
-| Password reset | **Working (dev)** | `POST /api/auth/forgot-password` | 200 | 200 | SMTP unset → console/dev link path |
-| Email verify | **Partial** | Routes exist (`/verify-email`, API) | Token flow | Not fully exercised end-to-end without email | |
-| Google OAuth | **Cannot run — missing X** | `GET /api/auth/oauth/google` | Redirect to Google | **503** | Missing `GOOGLE_CLIENT_ID` / `SECRET` |
-| User dashboard (home) | **Working** | `GET /` as user1 | 200 HTML | 200 | No longer pulls Mongoose into client bundle |
-| Trainer dashboard APIs | **Working** | login trainer → profile, pending requests, plans list | 200 | 200 | |
-| Gym owner | **Working** | `GET /api/gym-owner/gym`, `/trainers` | 200 | 200 | FitZone Lahore present |
-| Admin | **Working** | `GET /api/admin/stats`, `/users` | 200 | 200 | |
-| Coaching / trainers | **Working** | `GET /api/trainers` | DB trainers | 200 real trainers (not fallback) | Confirmed in Atlas |
-| Reviews | **Working** | `GET /api/trainers/:id/reviews` | 200 | 200 | |
-| Chat list / send / typing | **Working** | conversations + messages POST + typing | 200/201 | Pass | Message persisted; Pusher optional |
-| Chat image upload | **Cannot run — missing X** | `POST /api/chat/upload` | Upload URL | **503** | Needs `BLOB_READ_WRITE_TOKEN` |
-| Notifications | **Working** | `GET /api/notifications` | List | 200 with chat notifications | Pusher push N/A without keys |
-| Nutrition catalog | **Working** | `GET /api/meals`, meal-logs today | 200 | 200 | |
-| Nutrition analyze | **Working** | `GET /api/nutrition/analyze?query=chicken` | Results | 200 local DB results | POST returns 405 (GET-only by design) |
-| Progress metrics | **Working** | `GET /api/tracking/progress` | Records | 200 (weight 72.5 logged) | UI lives under `/my-fitness` (not `/progress`) |
-| Workout plans (trainer) | **Working** | trainer `GET /api/tracking/plans` | List | 200 | User gets 403 (trainers-only) — expected |
-| My plan (member) | **Working** | `GET /api/tracking/plans/my-plan` | Active plan | 200 | |
-| Subscription | **Working (simulated)** | `GET` + `POST /api/subscription` | Checkout or simulated | `stripeEnabled: false`, `mode: simulated` | Stripe keys present but not treated as live |
-| Meal plans | **Working** | `GET` + `POST /api/meal-plans` as Pro | List / generate | 200 / **201** | Generated successfully |
-| Community | **Working** | `GET` + `POST /api/community/posts` | Feed / create | 200 / **201** | Post created |
-| Analytics | **Working** | `GET /api/analytics/summary` as Pro | Charts/summary | 200 | workoutCount, calories, weight trend |
-| Live sessions list | **Working** | `GET /api/live-sessions` | List | 200 `[]` | |
-| Live session create | **Cannot run — missing X** | trainer `POST /api/live-sessions` | 201 | **503** `DAILY_API_KEY` required | Elite member create correctly **403** (trainer-only) |
-| Exercise catalog / check page | **Working** | `GET /api/exercises`, `GET /exercise-check` | 200 | 200 | Form-check gated by plan in API |
-| Gamification | **Working** | `GET /api/gamification/me` | XP/achievements | 200 | |
-| Pages (auth-gated) | **Working** | `/chat`, `/meal-plans`, `/community`, `/analytics`, `/live-sessions`, `/notifications`, `/my-fitness`, `/subscription`, `/coaching`, `/nutrition` | 200 | 200 | |
-| Legacy paths `/progress`, `/workout-plans` | **Redirected** | Previously 404 | Soft redirect → `/my-fitness` | Added in `next.config.ts` | |
+Legend: ✅ working · ⚠️ partial / env-gated · ❌ broken · 🧩 newly wired · ⏸️ payments paused · 🔒 security hardened
 
-## Blockers fixed during Phase 0
+| Feature | Status | What was verified | Notes |
+|---------|--------|-------------------|-------|
+| Health / Mongo | ✅ | `GET /api/health` | `database: connected` |
+| Signup / login / me | ✅🔒 | register + login + me | Zod + rate limit; NoSQL operator login rejected |
+| Password reset | ✅🔒 | forgot → `devLink` → reset | Zod + rate limit |
+| Email verify | ✅🔒 | register logs verify `devLink` | Zod token body |
+| Google OAuth | ⚠️ | start → 503 without secrets | Code: CSRF `state`, `googleId` linking |
+| Homepage | ✅🔒 | `GET /` | CSP + security headers present |
+| Role dashboards | ✅ | trainer / gym / admin APIs | |
+| Coaching / trainers | ✅ | `GET /api/trainers` | |
+| Trainer reviews | ✅🔒 | GET/POST reviews | Zod rating/comment sanitize |
+| Chat list / send / typing | ✅🔒 | messages POST + typing | ObjectId + sanitized text; https-only images |
+| Chat image (Cloudinary) | ⚠️🔒 | upload without file / env → 400 or 503 | MIME/size + rate limit; needs Cloudinary keys |
+| Pusher realtime | ⚠️ | auth → 503 | Needs Pusher keys; REST poll fallback OK |
+| Notifications center | ✅ | list + community triggers | |
+| Nutrition catalog | ✅🔒 | meals + analyze GET | Query Zod-sanitized |
+| `/nutrition/[id]` | ✅ | detail page 200 | |
+| `/exercises/[id]` | ✅ | detail page 200 | |
+| Progress / my-fitness | ✅🔒 | progress POST Zod | |
+| Workout plans | ✅🔒 | member 403 on trainer list; my-plan 200 | Plan create Zod + ownership |
+| Meal plans (Pro) | ✅🔒 | GET + POST generate 201 | Zod body |
+| Analytics (Pro) | ✅ | summary 200 | |
+| Community feed | ✅🔒 | post / like / comment | HTML stripped server-side |
+| Live sessions | ✅🔒 | list/create/join with trainer + elite gating | Create body Zod; Jitsi embed via `meet.jit.si` |
+| Subscription / payments | ⏸️ | GET plan fields only | **PAUSED — out of scope** |
+| Edge route guards | ✅ | `src/proxy.ts` only | jose JWT |
+| Gamification | ✅🔒 | `/api/gamification/me`; form-check Zod + rate limit | |
+| AI chat | ✅🔒 | auth + Zod + rate limit | Not in live-verify script |
+| CSP / headers | ✅🔒 | CSP, nosniff, frame options | Via `next.config.ts` |
 
-1. **Atlas `querySrv ECONNREFUSED`** on Windows — `src/lib/mongodb.ts` resolves SRV with an explicit Google DNS `Resolver`, then connects with a non-SRV URI; failed promises are not cached forever.  
-2. **Next.js crashed** when both `src/middleware.ts` and `src/proxy.ts` existed — removed `middleware.ts` (keep Edge `proxy.ts` only).  
-3. **Homepage / client 500** — `subscription.ts` imported Mongoose `User`; split server ops into `subscription-server.ts` and moved gamification types to `src/types/gamification.ts`.  
-4. **Turbopack wrong root** (parent `C:\Users\al rafio\package-lock.json`) — set `turbopack.root` to project directory in `next.config.ts`.
+## Security probes (this session)
 
-## Summary counts (scripted run)
+| Probe | Result |
+|-------|--------|
+| Login `email: {$ne: null}` | **400** — operator rejected |
+| Register operator email | **400** |
+| Community `<script>` / `<img onerror>` | Stored as plain text (tags stripped) |
+| Profile `profileImage: javascript:…` | **400** |
+| CSP on `/` | Present |
 
-- **54 pass / 4 fail / 58 total** on first full script (failures were expectation mismatches: trainer-only plans 403, nutrition POST 405, legacy page 404s).  
-- After correcting expectations + redirects: core product paths verified working against live Atlas data.
+## Summary counts (latest scripted run)
+
+- **69 pass / 0 fail / 69 total** (`npm run live-verify`)
+- `npm run build` — success
+- Env-gated expected 503s counted as pass: OAuth, Cloudinary upload, Pusher auth
 
 ## Cannot fully verify without secrets
 
-- Realtime push (Pusher)  
-- Live video rooms (Daily.co)  
-- Chat image Blob uploads  
-- Google OAuth  
-- Real Stripe Checkout (keys appear non-live → simulated)  
-- SMTP-delivered password reset / verify emails  
+- Realtime push (Pusher)
+- Chat image Cloudinary uploads
+- Google OAuth end-to-end
+- SMTP-delivered emails (dev `devLink` verified instead)
+- Real Stripe Checkout — **PAUSED**
+
+## Fixes applied this session (security)
+
+1. Zod + NoSQL operator rejection across mutating APIs  
+2. Plain-text / URL sanitization for UGC  
+3. CSP and related security headers; tighter CORS origin  
+4. Rate limits on auth, AI, and upload routes  
+5. AI chat requires authentication  
+6. Chat UI blocks non-https image URLs  
+
+See `docs/SECURITY_AUDIT_REPORT.md`.
