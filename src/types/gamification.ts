@@ -3,6 +3,7 @@ export interface GamificationMeResponse {
   level: number
   levelTitle: string
   levelDesc: string
+  rank: number | null
   progressToNextLevel: {
     current: number
     required: number
@@ -19,4 +20,19 @@ export interface GamificationMeResponse {
   streak: number
   formCheckerSessions: number
   streakBonusXp: number
+}
+
+export interface LeaderboardEntry {
+  rank: number
+  userId: string
+  fullName: string
+  initials: string
+  level: number
+  xp: number
+  isCurrentUser: boolean
+}
+
+export interface GamificationLeaderboardResponse {
+  leaderboard: LeaderboardEntry[]
+  me: GamificationMeResponse
 }

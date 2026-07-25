@@ -6,7 +6,7 @@ const BADGE_DEFS = [
   { emoji: '🏋️', label: 'First Workout', id: 'first_workout' },
   { emoji: '🔥', label: '7-Day Streak', id: 'streak_7' },
   { emoji: '🥗', label: 'Nutrition Pro', id: 'nutrition_pro' },
-  { emoji: '🤝', label: 'Connected', id: 'connected' },
+  { emoji: '🤝', label: 'Connected', id: 'trainer_connected' },
 ]
 
 function levelTitle(level: number) {

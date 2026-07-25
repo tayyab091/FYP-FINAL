@@ -16,11 +16,13 @@
 T.E.S.T. connects members, verified trainers, gym owners, and admins:
 
 - Members track workouts, nutrition, progress, and chat with trainers  
-- Trainers manage clients, assign plans, and (with Daily.co) host live sessions  
+- Trainers manage clients, assign plans, and host live sessions on Jitsi Meet  
 - Gym owners manage gym profiles and affiliated trainers  
 - Admins verify trainers/gyms and oversee users  
 
 Monetization uses three plans: **Basic** (free), **Pro**, **Elite**, with server-side entitlement checks.
+
+**Payments status: PAUSED — out of scope for current work.** Stripe Checkout exists in code (simulated when keys unset / non-live). JazzCash is planned and **not started**. Do not treat payment checkout as verified.
 
 ---
 
@@ -35,8 +37,8 @@ Edge proxy.ts (jose JWT) ── redirects for protected / guest / role routes
 Next.js Route Handlers (Node) ── Mongoose ── MongoDB Atlas
    │
    ├── Pusher (optional) ── private chat + notification channels
-   ├── Daily.co (optional) ── live video rooms
-   ├── Vercel Blob (optional) ── chat images
+   ├── Jitsi Meet (`meet.jit.si`) ── live video rooms
+   ├── Cloudinary (optional) ── chat images
    ├── Stripe (optional) ── Checkout; simulated upgrade when unset
    ├── SMTP (optional) ── password reset / verify email
    └── Gemini / Spoonacular (optional) ── AI coach / food search
@@ -47,8 +49,8 @@ Next.js Route Handlers (Node) ── Mongoose ── MongoDB Atlas
 | Need | Not used | Used instead |
 |------|----------|--------------|
 | Realtime chat | Socket.io custom server | **Pusher** (+ REST poll fallback) |
-| Live video | Homegrown WebRTC | **Daily.co** |
-| Image uploads | Local `fs` / `public/uploads` | **Vercel Blob** |
+| Live video | Homegrown WebRTC | **Jitsi Meet** |
+| Image uploads | Local `fs` / `public/uploads` | **Cloudinary** |
 | Edge auth | Node `jsonwebtoken` / fs | **`jose` in `proxy.ts`** |
 
 Prefer `npm run dev` (`next dev`). `npm run dev:custom` (`tsx server.ts`) is a legacy/custom entry and is not required for Vercel.
@@ -70,7 +72,7 @@ Prefer `npm run dev` (`next dev`). `npm run dev:custom` (`tsx server.ts`) is a l
 | `Notification` | In-app notifications |
 | `Review` | Trainer ratings |
 | `CommunityPost` / `CommunityComment` | Social feed |
-| `LiveSession` | Scheduled sessions + Daily room metadata |
+| `LiveSession` | Scheduled sessions + meeting room metadata |
 | `GamificationProfile` | XP, streaks, achievements |
 | `AuditLog` | Admin actions |
 
@@ -92,7 +94,7 @@ Enforcement lives in `src/lib/subscription.ts` (+ `subscription-server.ts` for D
 | Analytics | — | ✓ | ✓ |
 | AI form check | — | ✓ | ✓ |
 | Live sessions (join) | — | — | ✓ |
-| Live sessions (create) | Trainer role + Daily.co | | |
+| Live sessions (create) | Trainer role + Jitsi Meet | | |
 
 Privileged roles (admin / trainer / gym_owner) bypass member subscription gates where noted in code.
 
@@ -138,7 +140,7 @@ Privileged roles (admin / trainer / gym_owner) bypass member subscription gates 
 
 ### Live & billing
 `/api/live-sessions`, `[id]`, `[id]/join`  
-`/api/subscription`, `/api/subscription/confirm`, `/api/webhooks/stripe`
+`/api/subscription`, `/api/subscription/confirm`, `/api/webhooks/stripe` — **payments PAUSED** (read plan fields for gating only; Stripe simulated/test; JazzCash not started)
 
 ### Ops
 `/api/health`, `/api/seed`, `/api/admin/*`, `/api/gym-owner/*`
@@ -160,11 +162,12 @@ JWT_SECRET=...
 | `JWT_SECRET` | **Yes** | Auth / proxy fail |
 | `ADMIN_SETUP_KEY` | Dev seed | Seed / create-admin blocked |
 | `PUSHER_*` + `NEXT_PUBLIC_PUSHER_*` | Optional | Chat/notifications poll instead of push |
-| `DAILY_API_KEY` | Optional | Live session create returns 503 |
-| `BLOB_READ_WRITE_TOKEN` | Optional | Chat image upload 503 |
-| `STRIPE_*` | Optional | Simulated checkout (`PUT` with `simulatedPayment: true` only when Stripe unset) |
-| `SMTP_*` | Optional | Reset/verify links logged in development |
-| `GOOGLE_CLIENT_*` | Optional | OAuth returns 503 |
+| No extra live-video env vars | Optional | Live sessions use `meet.jit.si` directly |
+| `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | Optional | Chat image upload 503 |
+| `CLOUDINARY_UPLOAD_FOLDER` | Optional | Defaults to `chat` |
+| `STRIPE_*` | Optional / **PAUSED** | Simulated checkout when unset; live Checkout out of scope for current phase |
+| `SMTP_*` | Optional | Reset/verify links logged + `devLink` returned in development |
+| `GOOGLE_CLIENT_*` | Optional | OAuth returns 503; when set, links same-email accounts via `googleId` |
 | `GEMINI_API_KEY` / `SPOONACULAR_API_KEY` | Optional | AI / food search degrade gracefully |
 
 **Windows note:** Some ISP DNS resolvers refuse MongoDB SRV (`querySrv ECONNREFUSED`). `src/lib/mongodb.ts` resolves SRV via Google DNS and connects with a direct URI.
@@ -191,27 +194,38 @@ Verification helper: `node scripts/live-verify.mjs` (server must be running).
 
 **Gaps (env / product):**
 
-1. Production realtime requires Pusher + Daily + Blob tokens on Vercel  
+1. Production realtime requires Pusher and Cloudinary credentials on Vercel; Jitsi uses `meet.jit.si`
 2. Google OAuth and SMTP need real credentials for production auth UX  
-3. Stripe is one-time Checkout, not recurring Billing Subscriptions  
-4. Live video create hard-requires Daily — cannot fully demo without key  
+3. **Payments PAUSED:** Stripe is one-time Checkout (simulated/test locally); JazzCash planned, not started — not in current verification scope  
+4. Live video still depends on browser camera/microphone access and third-party iframe availability
+
+**Security (2026-07-13 hardening):**
+
+- Zod + Mongo operator rejection on mutating API bodies (`src/lib/validation.ts`)  
+- Plain-text / http(s) URL sanitization (`src/lib/sanitize.ts`)  
+- CSP and related headers in `next.config.ts`  
+- In-memory rate limits on auth, AI, and upload routes  
+- See `docs/SECURITY_AUDIT_REPORT.md` for vuln / fix / retest  
 
 **Suggested next steps:**
 
-1. Provision Pusher / Daily / Blob / SMTP / Google / live Stripe; document dashboard URLs in team wiki  
-2. Add CI smoke tests against `/api/health` + login  
-3. Consider MongoDB connection string with explicit hosts for CI Windows runners  
-4. Remove or archive unused custom `server.ts` if fully replaced by Pusher  
-5. Expand E2E (Playwright) for chat + plan upgrade happy paths  
+1. Provision Pusher / Cloudinary / SMTP / Google; document dashboard URLs in team wiki  
+2. When payments resume: live Stripe keys + webhook, then JazzCash design  
+3. Add CI smoke tests against `/api/health` + login (`npm run live-verify`)  
+4. Consider MongoDB connection string with explicit hosts for CI Windows runners  
+5. Remove or archive unused custom `server.ts` if fully replaced by Pusher  
+6. Replace in-memory rate limits with Redis for multi-instance Vercel production  
 
 ---
 
 ## 10. Related docs
 
-- `docs/LIVE_VERIFICATION_REPORT.md` — Phase 0 live probe results  
+- `docs/LIVE_VERIFICATION_REPORT.md` — live probe results (latest: 69/69 pass)  
+- `docs/SECURITY_AUDIT_REPORT.md` — NoSQL / XSS / CSP / rate-limit audit  
 - `docs/AUDIT_REPORT.md` — Working / Partial / Cannot-run matrix  
 - `docs/REALTIME_CHAT.md` — Pusher channel conventions  
 
 ---
 
-*Generated for zero-context readers. Prefer live reports over assuming a file’s presence means a feature works.*
+*Generated for zero-context readers. Prefer live reports over assuming a file’s presence means a feature works.*  
+*Payments: PAUSED (Stripe simulated/test; JazzCash planned not started).*

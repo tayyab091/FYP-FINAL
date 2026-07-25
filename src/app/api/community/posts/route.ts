@@ -4,9 +4,13 @@ import { getUser } from '@/lib/auth'
 import { bypassesSubscriptionGate } from '@/lib/access'
 import { normalizePlan, canAccessCommunity } from '@/lib/subscription'
 import { syncUserSubscription } from '@/lib/subscription-server'
+import { publishCommunityNewPost } from '@/lib/realtime'
 import CommunityPost from '@/models/CommunityPost'
 import CommunityComment from '@/models/CommunityComment'
 import User from '@/models/User'
+import { communityPostSchema, parseJsonBody } from '@/lib/validation'
+import { z } from 'zod'
+import { parseSearchParams } from '@/lib/validation'
 
 async function assertCommunityAccess(userId: string, role: string) {
   if (bypassesSubscriptionGate(role)) return null
@@ -20,6 +24,65 @@ async function assertCommunityAccess(userId: string, role: string) {
   return null
 }
 
+const listQuerySchema = z.object({
+  limit: z
+    .string()
+    .optional()
+    .transform((v) => {
+      const n = parseInt(v || '20', 10)
+      if (!Number.isFinite(n)) return 20
+      return Math.min(50, Math.max(1, n))
+    }),
+})
+
+function shapePost(
+  post: {
+    _id: { toString(): string }
+    authorId: unknown
+    authorName?: string
+    content?: string
+    category?: string
+    likes?: { toString(): string }[]
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  },
+  tokenUserId: string,
+  commentCount = 0,
+) {
+  const author =
+    post.authorId && typeof post.authorId === 'object' && 'fullName' in post.authorId
+      ? (post.authorId as {
+          _id?: { toString(): string }
+          fullName?: string
+          profileImage?: string
+          role?: string
+        })
+      : null
+
+  const authorId =
+    author?._id?.toString() ||
+    (typeof post.authorId === 'object' &&
+    post.authorId &&
+    'toString' in post.authorId
+      ? (post.authorId as { toString(): string }).toString()
+      : String(post.authorId))
+
+  return {
+    _id: post._id.toString(),
+    authorId,
+    authorName: author?.fullName || post.authorName || 'Member',
+    authorImage: author?.profileImage || '',
+    authorRole: author?.role || 'user',
+    content: post.content,
+    category: post.category || 'Motivation',
+    likeCount: post.likes?.length || 0,
+    likedByMe: (post.likes || []).some((id) => id.toString() === tokenUserId),
+    commentCount,
+    createdAt: post.createdAt,
+    updatedAt: post.updatedAt,
+  }
+}
+
 export async function GET(req: NextRequest) {
   try {
     const tokenUser = await getUser(req)
@@ -28,13 +91,14 @@ export async function GET(req: NextRequest) {
     const denied = await assertCommunityAccess(tokenUser.userId, tokenUser.role)
     if (denied) return denied
 
-    await connectDB()
-    const limit = Math.min(50, Math.max(1, parseInt(req.nextUrl.searchParams.get('limit') || '20', 10) || 20))
+    const query = parseSearchParams(req.nextUrl.searchParams, listQuerySchema)
+    if ('error' in query) return query.error
 
+    await connectDB()
     const posts = await CommunityPost.find({})
       .populate('authorId', 'fullName profileImage role')
       .sort({ createdAt: -1 })
-      .limit(limit)
+      .limit(query.data.limit)
       .lean()
 
     const postIds = posts.map((p) => p._id)
@@ -44,23 +108,9 @@ export async function GET(req: NextRequest) {
     ])
     const countMap = new Map(commentCounts.map((c) => [c._id.toString(), c.count as number]))
 
-    const shaped = posts.map((post) => {
-      const author =
-        post.authorId && typeof post.authorId === 'object' && 'fullName' in post.authorId
-          ? (post.authorId as { fullName?: string; profileImage?: string; role?: string })
-          : null
-      return {
-        ...post,
-        authorName: author?.fullName || post.authorName,
-        authorImage: author?.profileImage,
-        authorRole: author?.role,
-        likeCount: post.likes?.length || 0,
-        likedByMe: (post.likes || []).some(
-          (id: { toString(): string }) => id.toString() === tokenUser.userId,
-        ),
-        commentCount: countMap.get(post._id.toString()) || 0,
-      }
-    })
+    const shaped = posts.map((post) =>
+      shapePost(post, tokenUser.userId, countMap.get(post._id.toString()) || 0),
+    )
 
     return NextResponse.json(shaped)
   } catch {
@@ -76,32 +126,41 @@ export async function POST(req: NextRequest) {
     const denied = await assertCommunityAccess(tokenUser.userId, tokenUser.role)
     if (denied) return denied
 
-    const body = await req.json() as { content?: string }
-    const content = typeof body.content === 'string' ? body.content.trim() : ''
-    if (!content) {
-      return NextResponse.json({ message: 'Post content is required' }, { status: 400 })
-    }
-    if (content.length > 2000) {
-      return NextResponse.json({ message: 'Post is too long (max 2000 characters)' }, { status: 400 })
-    }
+    const parsed = await parseJsonBody(req, communityPostSchema)
+    if ('error' in parsed) return parsed.error
 
     await connectDB()
-    const user = await User.findById(tokenUser.userId).select('fullName').lean()
+    const user = await User.findById(tokenUser.userId)
+      .select('fullName profileImage role')
+      .lean()
     const authorName = user?.fullName || tokenUser.email
 
     const post = await CommunityPost.create({
       authorId: tokenUser.userId,
       authorName,
-      content,
+      content: parsed.data.content,
+      category: parsed.data.category,
       likes: [],
     })
 
-    return NextResponse.json({
-      ...post.toObject(),
+    const shaped = {
+      _id: post._id.toString(),
+      authorId: tokenUser.userId,
+      authorName,
+      authorImage: user?.profileImage || '',
+      authorRole: user?.role || tokenUser.role || 'user',
+      content: post.content,
+      category: post.category || parsed.data.category,
       likeCount: 0,
       likedByMe: false,
       commentCount: 0,
-    }, { status: 201 })
+      createdAt: post.createdAt,
+      updatedAt: post.updatedAt,
+    }
+
+    await publishCommunityNewPost(shaped).catch(() => {})
+
+    return NextResponse.json(shaped, { status: 201 })
   } catch {
     return NextResponse.json({ message: 'Server error' }, { status: 500 })
   }

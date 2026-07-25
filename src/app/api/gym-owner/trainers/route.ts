@@ -4,6 +4,11 @@ import Gym from '@/models/Gym'
 import Trainer from '@/models/Trainer'
 import User from '@/models/User'
 import { getUser } from '@/lib/auth'
+import {
+  gymOwnerLinkSchema,
+  gymOwnerTrainerActionSchema,
+  parseJsonBody,
+} from '@/lib/validation'
 
 export async function GET(req: NextRequest) {
   try {
@@ -23,15 +28,15 @@ export async function POST(req: NextRequest) {
   try {
     const tokenUser = await getUser(req)
     if (!tokenUser || tokenUser.role !== 'gym_owner') return NextResponse.json({ message: 'Not authorized' }, { status: 403 })
+
+    const parsed = await parseJsonBody(req, gymOwnerLinkSchema)
+    if ('error' in parsed) return parsed.error
+
     await connectDB()
-    const { trainerEmail } = await req.json()
     const gym = await Gym.findOne({ ownerId: tokenUser.userId })
     if (!gym) return NextResponse.json({ message: 'Gym not found' }, { status: 404 })
-    const normalizedEmail = typeof trainerEmail === 'string' ? trainerEmail.trim().toLowerCase() : ''
-    if (!normalizedEmail) {
-      return NextResponse.json({ message: 'Trainer email is required' }, { status: 400 })
-    }
-    const trainerUser = await User.findOne({ email: normalizedEmail, role: 'trainer' })
+
+    const trainerUser = await User.findOne({ email: parsed.data.trainerEmail, role: 'trainer' })
     if (!trainerUser) return NextResponse.json({ message: 'Trainer not found with this email' }, { status: 404 })
     const existingTrainer = await Trainer.findOne({ userId: trainerUser._id })
     if (!existingTrainer) return NextResponse.json({ message: 'Trainer profile not found' }, { status: 404 })
@@ -47,7 +52,7 @@ export async function POST(req: NextRequest) {
         gymVerificationStatus: 'approved',
         isFullyVerified: existingTrainer.adminVerificationStatus === 'approved',
       },
-      { new: true }
+      { new: true },
     )
     if (trainer) {
       await Gym.updateOne({ _id: gym._id }, { $addToSet: { trainers: trainer._id } })
@@ -65,10 +70,9 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ message: 'Not authorized' }, { status: 403 })
     }
 
-    const { trainerId, action } = await req.json()
-    if (!trainerId || !['approve', 'remove'].includes(action)) {
-      return NextResponse.json({ message: 'Valid trainer and action are required' }, { status: 400 })
-    }
+    const parsed = await parseJsonBody(req, gymOwnerTrainerActionSchema)
+    if ('error' in parsed) return parsed.error
+    const { trainerId, action } = parsed.data
 
     await connectDB()
     const gym = await Gym.findOne({ ownerId: tokenUser.userId })

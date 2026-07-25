@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Dumbbell, Users, ClipboardList } from 'lucide-react'
+import { Dumbbell, Users, ClipboardList, Utensils } from 'lucide-react'
 import { AccessGate } from '@/components/shared/AccessGate'
 import { PageLoader } from '@/components/shared/PageLoader'
 import { StatCard } from '@/components/shared/StatCard'
@@ -54,12 +54,42 @@ interface DraftDay {
   exercises: DraftExercise[]
 }
 
+interface DraftMeal {
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack'
+  name: string
+  calories: number
+  protein: number
+  carbs: number
+  fat: number
+}
+
+interface TrainerMealPlan {
+  _id: string
+  title: string
+  goal: string
+  status: string
+  dailyCalories: number
+  durationDays?: number
+  userId?: { _id: string; fullName?: string; email?: string } | string
+  createdAt?: string
+}
+
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+const MEAL_TYPES: DraftMeal['mealType'][] = ['breakfast', 'lunch', 'dinner', 'snack']
 const createEmptySchedule = (): DraftDay[] =>
   DAYS.map((day) => ({
     day,
     isRestDay: false,
     exercises: [{ name: '', sets: 3, reps: '10', restSeconds: 60 }],
+  }))
+const createEmptyMeals = (): DraftMeal[] =>
+  MEAL_TYPES.map((mealType) => ({
+    mealType,
+    name: '',
+    calories: 0,
+    protein: 0,
+    carbs: 0,
+    fat: 0,
   }))
 
 export default function TrainerDashboardPage() {
@@ -69,12 +99,22 @@ export default function TrainerDashboardPage() {
   const [clients, setClients] = useState<Client[]>([])
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [activePlanCount, setActivePlanCount] = useState(0)
+  const [mealPlans, setMealPlans] = useState<TrainerMealPlan[]>([])
   const [loading, setLoading] = useState(true)
   const [planModalOpen, setPlanModalOpen] = useState(false)
+  const [mealPlanModalOpen, setMealPlanModalOpen] = useState(false)
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [planForm, setPlanForm] = useState({ title: '', goal: 'general_fitness', durationWeeks: '8', difficulty: 'beginner' })
   const [planSchedule, setPlanSchedule] = useState<DraftDay[]>(createEmptySchedule)
+  const [mealPlanForm, setMealPlanForm] = useState({
+    title: '',
+    goal: 'weight_loss',
+    durationDays: '7',
+    clientRelationshipId: '',
+  })
+  const [mealPlanMeals, setMealPlanMeals] = useState<DraftMeal[]>(createEmptyMeals)
   const [creating, setCreating] = useState(false)
+  const [creatingMealPlan, setCreatingMealPlan] = useState(false)
   const [sendPlanViaChat, setSendPlanViaChat] = useState(true)
   const [clientProgress, setClientProgress] = useState<Record<string, unknown> | null>(null)
   const [progressClient, setProgressClient] = useState<Client | null>(null)
@@ -87,11 +127,13 @@ export default function TrainerDashboardPage() {
       fetch('/api/relationships?status=active').then(r => r.ok ? r.json() : []),
       fetch('/api/chat/conversations').then(r => r.ok ? r.json() : []),
       fetch('/api/tracking/plans').then(r => r.ok ? r.json() : []),
-    ]).then(([reqs, cls, convs, plans]) => {
+      fetch('/api/meal-plans').then(r => r.ok ? r.json() : []),
+    ]).then(([reqs, cls, convs, plans, meals]) => {
       setRequests(Array.isArray(reqs) ? reqs : [])
       setClients(Array.isArray(cls) ? cls : [])
       setConversations(Array.isArray(convs) ? convs : [])
       setActivePlanCount(Array.isArray(plans) ? plans.filter((plan: { status?: string }) => plan.status === 'active').length : 0)
+      setMealPlans(Array.isArray(meals) ? meals : [])
     }).finally(() => setLoading(false))
   }
 
@@ -103,7 +145,7 @@ export default function TrainerDashboardPage() {
     try {
       const res = await fetch(`/api/relationships/${id}/accept`, { method: 'PUT' })
       if (!res.ok) throw new Error()
-      toast.success('Client accepted!')
+      toast.success('Client accepted! Chat created.')
       loadData()
     } catch {
       toast.error('Failed to accept request')
@@ -230,6 +272,57 @@ export default function TrainerDashboardPage() {
     }
   }
 
+  const updateMealPlanMeal = (index: number, update: Partial<DraftMeal>) => {
+    setMealPlanMeals((meals) =>
+      meals.map((meal, i) => (i === index ? { ...meal, ...update } : meal)),
+    )
+  }
+
+  const handleCreateMealPlan = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!mealPlanForm.title.trim()) return toast.error('Plan name is required')
+    if (!mealPlanForm.clientRelationshipId) return toast.error('Select a client')
+    const filledMeals = mealPlanMeals.filter((m) => m.name.trim())
+    if (filledMeals.length === 0) return toast.error('Add at least one meal with a food name')
+
+    const client = clients.find((c) => c._id === mealPlanForm.clientRelationshipId)
+    if (!client) return toast.error('Client not found')
+
+    setCreatingMealPlan(true)
+    try {
+      const res = await fetch('/api/meal-plans', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: client.userId._id,
+          relationshipId: client._id,
+          title: mealPlanForm.title.trim(),
+          goal: mealPlanForm.goal,
+          durationDays: parseInt(mealPlanForm.durationDays, 10) || 7,
+          meals: filledMeals.map((m) => ({
+            mealType: m.mealType,
+            name: m.name.trim(),
+            calories: Number(m.calories) || 0,
+            protein: Number(m.protein) || 0,
+            carbs: Number(m.carbs) || 0,
+            fat: Number(m.fat) || 0,
+          })),
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || 'Failed to create meal plan')
+      toast.success('Meal plan created and assigned!')
+      setMealPlanModalOpen(false)
+      setMealPlanForm({ title: '', goal: 'weight_loss', durationDays: '7', clientRelationshipId: '' })
+      setMealPlanMeals(createEmptyMeals())
+      loadData()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to create meal plan')
+    } finally {
+      setCreatingMealPlan(false)
+    }
+  }
+
   const viewClientProgress = async (client: Client) => {
     setProgressClient(client)
     setLoadingProgress(true)
@@ -280,15 +373,44 @@ export default function TrainerDashboardPage() {
 
         <Tabs defaultValue="overview">
           <TabsList className="mb-8">
-            {['overview', 'requests', 'clients', 'chat'].map(t => (
+            {['overview', 'requests', 'clients', 'meal-plans', 'chat'].map(t => (
               <TabsTrigger key={t} value={t} className="capitalize">
-                {t === 'requests' ? 'Client Requests' : t === 'clients' ? 'My Clients' : t}
+                {t === 'requests' ? 'Client Requests' : t === 'clients' ? 'My Clients' : t === 'meal-plans' ? 'Meal Plans' : t}
               </TabsTrigger>
             ))}
           </TabsList>
 
           <TabsContent value="overview">
-            {loading ? <Skeleton className="h-32 bg-muted" /> : (
+            {loading ? (
+              <div className="space-y-8">
+                <div className="dashboard-grid cols-3">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="tile min-h-[7.5rem] space-y-3">
+                      <Skeleton className="h-4 w-24 bg-muted" />
+                      <Skeleton className="h-8 w-16 bg-muted" />
+                    </div>
+                  ))}
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {[0, 1, 2, 3].map((i) => (
+                    <div key={i} className="tile min-h-[7.5rem] space-y-3">
+                      <Skeleton className="h-5 w-32 bg-muted" />
+                      <Skeleton className="h-3 w-20 bg-muted" />
+                    </div>
+                  ))}
+                </div>
+                <div className="grid gap-6 lg:grid-cols-2">
+                  {[0, 1].map((i) => (
+                    <div key={i} className="tile min-h-[240px] space-y-3">
+                      <Skeleton className="h-6 w-40 bg-muted" />
+                      <Skeleton className="h-14 w-full bg-muted" />
+                      <Skeleton className="h-14 w-full bg-muted" />
+                      <Skeleton className="h-14 w-full bg-muted" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
               <div className="space-y-8">
                 <StaggerChildren className="dashboard-grid cols-3">
                   <StatCard label="Active Clients" value={clients.length} icon={Users} variant="primary" />
@@ -391,7 +513,25 @@ export default function TrainerDashboardPage() {
           </TabsContent>
 
           <TabsContent value="requests">
-            {loading ? <Skeleton className="h-48 bg-muted" /> : requests.length === 0 ? (
+            {loading ? (
+              <div className="space-y-4">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="flex items-center justify-between gap-4 rounded-xl border border-border bg-card/60 p-6">
+                    <div className="flex items-center gap-4">
+                      <Skeleton className="h-12 w-12 rounded-full bg-muted" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-32 bg-muted" />
+                        <Skeleton className="h-3 w-40 bg-muted" />
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Skeleton className="h-9 w-20 bg-muted" />
+                      <Skeleton className="h-9 w-20 bg-muted" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : requests.length === 0 ? (
               <p className="text-muted-foreground text-center py-12">No pending requests</p>
             ) : (
               <div className="space-y-4">
@@ -423,7 +563,23 @@ export default function TrainerDashboardPage() {
           </TabsContent>
 
           <TabsContent value="clients">
-            {loading ? <Skeleton className="h-48 bg-muted" /> : clients.length === 0 ? (
+            {loading ? (
+              <div className="space-y-4">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="flex items-center justify-between gap-4 rounded-xl border border-border bg-card/60 p-6">
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-36 bg-muted" />
+                      <Skeleton className="h-3 w-44 bg-muted" />
+                      <Skeleton className="h-5 w-16 bg-muted" />
+                    </div>
+                    <div className="flex gap-2">
+                      <Skeleton className="h-9 w-28 bg-muted" />
+                      <Skeleton className="h-9 w-28 bg-muted" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : clients.length === 0 ? (
               <p className="text-muted-foreground text-center py-12">No active clients yet</p>
             ) : (
               <div className="space-y-4">
@@ -456,8 +612,84 @@ export default function TrainerDashboardPage() {
             )}
           </TabsContent>
 
+          <TabsContent value="meal-plans">
+            {loading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-24 bg-muted" />
+                <Skeleton className="h-24 bg-muted" />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-bold text-white">Assigned meal plans</h2>
+                    <p className="text-sm text-muted-foreground">Create and assign nutrition plans to active clients.</p>
+                  </div>
+                  <Button
+                    onClick={() => {
+                      setMealPlanForm((f) => ({
+                        ...f,
+                        clientRelationshipId: clients[0]?._id || '',
+                      }))
+                      setMealPlanModalOpen(true)
+                    }}
+                    className="bg-primary text-black hover:brightness-95"
+                    disabled={clients.length === 0}
+                  >
+                    <Utensils className="size-4" />
+                    Create Meal Plan
+                  </Button>
+                </div>
+                {clients.length === 0 ? (
+                  <p className="py-12 text-center text-muted-foreground">
+                    Accept a client request first to assign meal plans.
+                  </p>
+                ) : mealPlans.length === 0 ? (
+                  <p className="py-12 text-center text-muted-foreground">
+                    No meal plans yet. Create one and assign it to a client.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {mealPlans.map((plan) => {
+                      const clientName =
+                        typeof plan.userId === 'object' && plan.userId?.fullName
+                          ? plan.userId.fullName
+                          : 'Client'
+                      return (
+                        <Card key={plan._id}>
+                          <CardContent className="flex flex-wrap items-center justify-between gap-4 pt-6">
+                            <div>
+                              <div className="font-bold text-white">{plan.title}</div>
+                              <div className="mt-1 text-sm text-muted-foreground">
+                                {clientName} · {plan.goal?.replace(/_/g, ' ')} · {plan.dailyCalories} kcal
+                                {plan.durationDays ? ` · ${plan.durationDays} days` : ''}
+                              </div>
+                            </div>
+                            <Badge className="capitalize bg-primary/10 text-primary">{plan.status}</Badge>
+                          </CardContent>
+                        </Card>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </TabsContent>
+
           <TabsContent value="chat">
-            {loading ? <Skeleton className="h-48 bg-muted" /> : conversations.length === 0 ? (
+            {loading ? (
+              <div className="space-y-2">
+                {[0, 1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center gap-4 rounded-xl border border-border bg-card/60 p-4">
+                    <Skeleton className="h-10 w-10 rounded-full bg-muted" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-32 bg-muted" />
+                      <Skeleton className="h-3 w-48 bg-muted" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : conversations.length === 0 ? (
               <p className="text-muted-foreground text-center py-12">No conversations yet</p>
             ) : (
               <div className="space-y-2">
@@ -604,6 +836,123 @@ export default function TrainerDashboardPage() {
               <Button type="button" variant="outline" onClick={() => setPlanModalOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={creating} className="bg-primary text-black hover:brightness-95">
                 {creating ? 'Creating...' : 'Create Plan'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={mealPlanModalOpen} onOpenChange={setMealPlanModalOpen}>
+        <DialogContent className="bg-card/60 border-border text-white sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create Meal Plan</DialogTitle>
+            <p className="text-sm text-muted-foreground">Assign a daily nutrition template to a client.</p>
+          </DialogHeader>
+          <form onSubmit={handleCreateMealPlan} className="space-y-4">
+            <div>
+              <Label>Plan Name</Label>
+              <Input
+                value={mealPlanForm.title}
+                onChange={(e) => setMealPlanForm((f) => ({ ...f, title: e.target.value }))}
+                className="mt-1 bg-background border-border"
+                placeholder="7-Day Cut Plan"
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label>Goal</Label>
+                <select
+                  value={mealPlanForm.goal}
+                  onChange={(e) => setMealPlanForm((f) => ({ ...f, goal: e.target.value }))}
+                  className="mt-1 h-8 w-full rounded-lg border border-border bg-background px-2 text-sm"
+                >
+                  <option value="weight_loss">Weight Loss</option>
+                  <option value="muscle_gain">Muscle Gain</option>
+                  <option value="maintenance">Maintenance</option>
+                </select>
+              </div>
+              <div>
+                <Label>Duration (days)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={31}
+                  value={mealPlanForm.durationDays}
+                  onChange={(e) => setMealPlanForm((f) => ({ ...f, durationDays: e.target.value }))}
+                  className="mt-1 bg-background border-border"
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Assign to Client</Label>
+              <select
+                value={mealPlanForm.clientRelationshipId}
+                onChange={(e) => setMealPlanForm((f) => ({ ...f, clientRelationshipId: e.target.value }))}
+                className="mt-1 h-8 w-full rounded-lg border border-border bg-background px-2 text-sm"
+              >
+                <option value="">Select client…</option>
+                {clients.map((client) => (
+                  <option key={client._id} value={client._id}>
+                    {client.userId?.fullName || client.userId?.email || 'Client'}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-3">
+              <Label>Daily meals</Label>
+              {mealPlanMeals.map((meal, index) => (
+                <div key={meal.mealType} className="rounded-xl border border-border bg-background p-3">
+                  <p className="mb-2 text-xs font-bold uppercase tracking-wide text-primary">
+                    {meal.mealType}
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-[1fr_70px_70px_70px_70px]">
+                    <Input
+                      placeholder="Food name"
+                      value={meal.name}
+                      onChange={(e) => updateMealPlanMeal(index, { name: e.target.value })}
+                    />
+                    <Input
+                      type="number"
+                      min={0}
+                      placeholder="Cal"
+                      aria-label={`${meal.mealType} calories`}
+                      value={meal.calories || ''}
+                      onChange={(e) => updateMealPlanMeal(index, { calories: Number(e.target.value) || 0 })}
+                    />
+                    <Input
+                      type="number"
+                      min={0}
+                      placeholder="P"
+                      aria-label={`${meal.mealType} protein`}
+                      value={meal.protein || ''}
+                      onChange={(e) => updateMealPlanMeal(index, { protein: Number(e.target.value) || 0 })}
+                    />
+                    <Input
+                      type="number"
+                      min={0}
+                      placeholder="C"
+                      aria-label={`${meal.mealType} carbs`}
+                      value={meal.carbs || ''}
+                      onChange={(e) => updateMealPlanMeal(index, { carbs: Number(e.target.value) || 0 })}
+                    />
+                    <Input
+                      type="number"
+                      min={0}
+                      placeholder="F"
+                      aria-label={`${meal.mealType} fat`}
+                      value={meal.fat || ''}
+                      onChange={(e) => updateMealPlanMeal(index, { fat: Number(e.target.value) || 0 })}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setMealPlanModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={creatingMealPlan} className="bg-primary text-black hover:brightness-95">
+                {creatingMealPlan ? 'Creating…' : 'Create & Assign'}
               </Button>
             </DialogFooter>
           </form>

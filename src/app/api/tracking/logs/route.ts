@@ -1,7 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import WorkoutLog from '@/models/WorkoutLog'
+import WorkoutPlan from '@/models/WorkoutPlan'
 import { getUser } from '@/lib/auth'
+import { parseJsonBody, workoutLogStartSchema } from '@/lib/validation'
+
+export async function POST(req: NextRequest) {
+  try {
+    const tokenUser = await getUser(req)
+    if (!tokenUser) return NextResponse.json({ message: 'Not authenticated' }, { status: 401 })
+    if (tokenUser.role !== 'user') {
+      return NextResponse.json({ message: 'Member account required' }, { status: 403 })
+    }
+
+    const parsed = await parseJsonBody(req, workoutLogStartSchema)
+    if ('error' in parsed) return parsed.error
+
+    await connectDB()
+    const plan = await WorkoutPlan.findOne({
+      _id: parsed.data.planId,
+      userId: tokenUser.userId,
+      status: 'active',
+    }).select('_id')
+    if (!plan) {
+      return NextResponse.json({ message: 'Active plan not found' }, { status: 404 })
+    }
+
+    const date = parsed.data.date ? new Date(parsed.data.date) : new Date()
+    if (Number.isNaN(date.getTime())) {
+      return NextResponse.json({ message: 'Invalid date' }, { status: 400 })
+    }
+
+    const log = await WorkoutLog.create({
+      userId: tokenUser.userId,
+      planId: plan._id,
+      status: 'in_progress',
+      exercises: parsed.data.exercises,
+      date,
+    })
+
+    return NextResponse.json({ message: 'Workout started', log }, { status: 201 })
+  } catch {
+    return NextResponse.json({ message: 'Server error' }, { status: 500 })
+  }
+}
 
 export async function GET(req: NextRequest) {
   try {
