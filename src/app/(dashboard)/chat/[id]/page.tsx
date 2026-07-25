@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
 import { useChatSocket } from '@/hooks/useChatSocket'
@@ -46,6 +46,7 @@ function mergeIncomingMessage(prev: Message[], incoming: Message) {
 
 export default function ChatConversationPage() {
   const { id } = useParams<{ id: string }>()
+  const router = useRouter()
   const { user, isLoading: authLoading } = useAuth()
   const [messages, setMessages] = useState<Message[]>([])
   const [conversation, setConversation] = useState<ConversationInfo | null>(null)
@@ -318,6 +319,24 @@ export default function ChatConversationPage() {
                       >
                         Open Plan
                       </Link>
+                      {!isMine && (msg.attachedPlan?._id || msg.attachedPlanId) && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const planId = msg.attachedPlan?._id || msg.attachedPlanId
+                            const res = await fetch(`/api/tracking/plans/${planId}/activate`, { method: 'PUT' })
+                            if (res.ok) {
+                              toast.success('Plan activated! Check My Fitness.')
+                              router.push('/my-fitness')
+                            } else {
+                              router.push('/my-fitness')
+                            }
+                          }}
+                          className="mt-2 block w-full rounded-lg bg-[#00ff87] px-3 py-2 text-center text-xs font-bold text-black hover:bg-[#00cc6a]"
+                        >
+                          View & Activate Plan →
+                        </button>
+                      )}
                     </div>
                   ) : msg.type === 'image' && typeof msg.content === 'string' && /^https:\/\//i.test(msg.content) ? (
                     // eslint-disable-next-line @next/next/no-img-element

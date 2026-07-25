@@ -16,6 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Dumbbell, Users, ClipboardList, Utensils } from 'lucide-react'
 import { AccessGate } from '@/components/shared/AccessGate'
 import { PageLoader } from '@/components/shared/PageLoader'
+import { AvailabilityTab } from './AvailabilityTab'
 import { StatCard } from '@/components/shared/StatCard'
 import { StaggerChildren } from '@/components/motion'
 
@@ -373,9 +374,9 @@ export default function TrainerDashboardPage() {
 
         <Tabs defaultValue="overview">
           <TabsList className="mb-8">
-            {['overview', 'requests', 'clients', 'meal-plans', 'chat'].map(t => (
+            {['overview', 'requests', 'clients', 'meal-plans', 'availability', 'chat'].map(t => (
               <TabsTrigger key={t} value={t} className="capitalize">
-                {t === 'requests' ? 'Client Requests' : t === 'clients' ? 'My Clients' : t === 'meal-plans' ? 'Meal Plans' : t}
+                {t === 'requests' ? 'Client Requests' : t === 'clients' ? 'My Clients' : t === 'meal-plans' ? 'Meal Plans' : t === 'availability' ? 'Availability' : t}
               </TabsTrigger>
             ))}
           </TabsList>
@@ -674,6 +675,10 @@ export default function TrainerDashboardPage() {
                 )}
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="availability">
+            <AvailabilityTab />
           </TabsContent>
 
           <TabsContent value="chat">

@@ -6,6 +6,17 @@ import Relationship from '@/models/Relationship'
 import { getUser } from '@/lib/auth'
 import { parseJsonBody, workoutPlanCreateSchema } from '@/lib/validation'
 import { sanitizePlainText } from '@/lib/sanitize'
+import { z } from 'zod'
+
+const selfPlanSchema = z.object({
+  title: z.string().min(1).max(120),
+  goal: z.string().optional(),
+  durationWeeks: z.number().int().min(1).max(52).optional(),
+  difficulty: z.string().max(40).optional(),
+  weeklySchedule: z.array(z.unknown()).max(14).optional().default([]),
+  activateNow: z.boolean().optional(),
+  trainerId: z.string().optional(),
+})
 
 export async function GET(req: NextRequest) {
   try {
@@ -32,13 +43,46 @@ export async function POST(req: NextRequest) {
   try {
     const tokenUser = await getUser(req)
     if (!tokenUser) return NextResponse.json({ message: 'Not authenticated' }, { status: 401 })
-    if (tokenUser.role !== 'trainer') return NextResponse.json({ message: 'Trainers only' }, { status: 403 })
+
+    await connectDB()
+
+    if (tokenUser.role === 'user') {
+      const body = await req.json()
+      const parsed = selfPlanSchema.safeParse(body)
+      if (!parsed.success) {
+        return NextResponse.json({ message: 'Invalid plan data' }, { status: 400 })
+      }
+      const { title, goal, durationWeeks, difficulty, weeklySchedule, activateNow, trainerId } = parsed.data
+
+      if (activateNow) {
+        await WorkoutPlan.updateMany(
+          { userId: tokenUser.userId, status: 'active' },
+          { status: 'completed' },
+        )
+      }
+
+      const plan = await WorkoutPlan.create({
+        userId: tokenUser.userId,
+        trainerId: trainerId || undefined,
+        title: sanitizePlainText(title, 120),
+        goal: goal || 'general_fitness',
+        durationWeeks: durationWeeks ?? 8,
+        difficulty: difficulty ? sanitizePlainText(difficulty, 40) : 'beginner',
+        weeklySchedule: Array.isArray(weeklySchedule) ? weeklySchedule : [],
+        status: activateNow ? 'active' : 'draft',
+        startDate: activateNow ? new Date() : undefined,
+      })
+
+      return NextResponse.json(plan, { status: 201 })
+    }
+
+    if (tokenUser.role !== 'trainer') {
+      return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
+    }
 
     const parsed = await parseJsonBody(req, workoutPlanCreateSchema)
     if ('error' in parsed) return parsed.error
     const { userId, relationshipId, title, goal, durationWeeks, difficulty, weeklySchedule } = parsed.data
-
-    await connectDB()
 
     const trainer = await Trainer.findOne({ userId: tokenUser.userId })
     if (!trainer) return NextResponse.json({ message: 'Trainer profile not found' }, { status: 404 })
