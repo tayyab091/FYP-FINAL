@@ -5,7 +5,11 @@ import { getUser } from '@/lib/auth'
 import { bypassesSubscriptionGate } from '@/lib/access'
 import { normalizePlan, canAccessCommunity } from '@/lib/subscription'
 import { syncUserSubscription } from '@/lib/subscription-server'
+import { createNotification } from '@/lib/notifications'
+import { publishCommunityPostLiked } from '@/lib/realtime'
 import CommunityPost from '@/models/CommunityPost'
+import User from '@/models/User'
+import { parseObjectIdParam } from '@/lib/validation'
 
 type RouteContext = { params: Promise<{ id: string }> }
 
@@ -29,10 +33,10 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     const denied = await assertCommunityAccess(tokenUser.userId, tokenUser.role)
     if (denied) return denied
 
-    const { id } = await params
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return NextResponse.json({ message: 'Invalid post id' }, { status: 400 })
-    }
+    const { id: rawId } = await params
+    const idResult = parseObjectIdParam(rawId, 'post id')
+    if ('error' in idResult) return idResult.error
+    const id = idResult.id
 
     await connectDB()
     const post = await CommunityPost.findById(id)
@@ -53,10 +57,26 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
 
     await post.save()
 
-    return NextResponse.json({
+    if (!alreadyLiked && post.authorId.toString() !== tokenUser.userId) {
+      const liker = await User.findById(tokenUser.userId).select('fullName').lean()
+      await createNotification({
+        userId: post.authorId,
+        title: 'New like on your post',
+        message: `${liker?.fullName || 'Someone'} liked your community post`,
+        type: 'community',
+        link: '/community',
+      }).catch(() => {})
+    }
+
+    const payload = {
+      postId: id,
       likedByMe: !alreadyLiked,
       likeCount: post.likes.length,
-    })
+    }
+
+    await publishCommunityPostLiked(payload).catch(() => {})
+
+    return NextResponse.json(payload)
   } catch {
     return NextResponse.json({ message: 'Server error' }, { status: 500 })
   }

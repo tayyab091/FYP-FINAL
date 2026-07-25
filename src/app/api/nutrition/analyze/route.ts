@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { nutritionQuerySchema, parseSearchParams } from '@/lib/validation'
 
 const NUTRITION_DB: Record<string, { calories: number; protein: number; carbs: number; fat: number }> = {
   'chicken': { calories: 165, protein: 31, carbs: 0, fat: 3.6 },
@@ -40,8 +41,9 @@ interface SpoonacularResponse {
 
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = req.nextUrl
-    const query = searchParams.get('query')?.toLowerCase() || ''
+    const queryParsed = parseSearchParams(req.nextUrl.searchParams, nutritionQuerySchema)
+    if ('error' in queryParsed) return queryParsed.error
+    const query = queryParsed.data.query
 
     if (!query) {
       return NextResponse.json({ message: 'Query required' }, { status: 400 })

@@ -13,6 +13,7 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
+  const [devLink, setDevLink] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,6 +30,7 @@ export default function ForgotPasswordPage() {
       })
       const data = await res.json()
       setSent(true)
+      if (typeof data.devLink === 'string') setDevLink(data.devLink)
       toast.success(data.message || 'Check your email')
     } catch {
       toast.error('Network error. Please try again.')
@@ -71,6 +73,14 @@ export default function ForgotPasswordPage() {
                 If an account exists for that email, a reset link has been sent. Check your inbox
                 (and spam folder).
               </p>
+              {devLink ? (
+                <div className="rounded-xl border border-primary/20 bg-primary/[.06] p-3 text-left">
+                  <p className="mb-1 text-xs font-medium text-primary">Dev reset link (SMTP unset)</p>
+                  <a href={devLink} className="break-all text-sm text-white underline hover:text-primary">
+                    {devLink}
+                  </a>
+                </div>
+              ) : null}
               <Link href="/login" className="text-sm font-medium text-primary hover:text-primary/80">
                 Back to sign in
               </Link>

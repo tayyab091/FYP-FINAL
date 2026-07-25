@@ -133,7 +133,7 @@ export interface AppNotification {
   userId: string
   title: string
   message: string
-  type: 'chat' | 'workout' | 'system' | 'trainer' | 'payment'
+  type: 'chat' | 'workout' | 'system' | 'trainer' | 'payment' | 'community'
   isRead: boolean
   link?: string
   createdAt: string

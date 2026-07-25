@@ -22,11 +22,33 @@ export async function POST(
     if (!session) {
       return NextResponse.json({ message: 'Session not found' }, { status: 404 })
     }
-    if (session.status === 'ended') {
+
+    const endAt = new Date(
+      new Date(session.scheduledAt).getTime() + session.durationMinutes * 60_000,
+    )
+    if (session.status === 'ended' || endAt.getTime() < Date.now()) {
+      if (session.status !== 'ended') {
+        session.status = 'ended'
+        await session.save()
+      }
       return NextResponse.json({ message: 'This session has ended' }, { status: 400 })
     }
 
     const isTrainer = session.trainerId.toString() === tokenUser.userId
+    const assignedClientId = session.clientId ? session.clientId.toString() : null
+    const isAssignedClient = Boolean(assignedClientId && assignedClientId === tokenUser.userId)
+    const alreadyJoined = session.participantIds.some(
+      (pid: { toString(): string }) => pid.toString() === tokenUser.userId,
+    )
+
+    // When a client is assigned, only trainer or that client may join
+    if (assignedClientId && !isTrainer && !isAssignedClient) {
+      return NextResponse.json(
+        { message: 'You are not invited to this session' },
+        { status: 403 },
+      )
+    }
+
     if (!isTrainer) {
       const subscription = await syncUserSubscription(tokenUser.userId)
       const plan = normalizePlan(subscription?.plan)
@@ -38,15 +60,11 @@ export async function POST(
       }
     }
 
-    const alreadyJoined = session.participantIds.some(
-      (pid: { toString(): string }) => pid.toString() === tokenUser.userId,
-    )
-
     if (!alreadyJoined && !isTrainer) {
       if (session.participantIds.length >= session.maxParticipants) {
         return NextResponse.json({ message: 'Session is full' }, { status: 400 })
       }
-      session.participantIds.push(tokenUser.userId as unknown as typeof session.participantIds[0])
+      session.participantIds.push(tokenUser.userId as unknown as (typeof session.participantIds)[0])
     }
 
     if (session.status === 'scheduled') {
@@ -54,16 +72,26 @@ export async function POST(
     }
     await session.save()
 
+    const meetingUrl = session.meetingUrl || session.dailyRoomUrl || ''
+    if (!meetingUrl) {
+      return NextResponse.json(
+        { message: 'Meeting room is unavailable. Please try again or contact support.' },
+        { status: 503 },
+      )
+    }
+
     return NextResponse.json({
       message: 'Joined session',
       session: {
         _id: session._id.toString(),
         roomId: session.roomId,
-        dailyRoomUrl: session.dailyRoomUrl,
-        dailyRoomName: session.dailyRoomName,
+        meetingProvider: session.meetingProvider || (session.dailyRoomUrl ? 'daily' : 'jitsi'),
+        meetingUrl,
+        meetingRoomName: session.meetingRoomName || session.dailyRoomName || '',
         title: session.title,
         status: session.status,
         trainerId: session.trainerId.toString(),
+        clientId: session.clientId ? session.clientId.toString() : null,
         participantIds: session.participantIds.map((pid: { toString(): string }) => pid.toString()),
       },
     })
