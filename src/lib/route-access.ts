@@ -1,4 +1,4 @@
-import type { UserRole } from '@/lib/access'
+type UserRole = 'user' | 'trainer' | 'gym_owner' | 'admin' | 'super_admin'
 
 /** Dashboard routes that require a valid JWT cookie (complements client AccessGate/SignInGate). */
 export const PROTECTED_ROUTES = [
