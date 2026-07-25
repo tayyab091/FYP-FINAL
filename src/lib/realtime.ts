@@ -54,3 +54,21 @@ export async function publishNotification(userId: string, notification: unknown)
   if (!pusher) return
   await pusher.trigger(userChannel(userId), 'notification', notification)
 }
+
+export const COMMUNITY_CHANNEL = 'community'
+
+export async function publishCommunityNewPost(post: unknown) {
+  const pusher = getPusherServer()
+  if (!pusher) return
+  await pusher.trigger(COMMUNITY_CHANNEL, 'new-post', { post })
+}
+
+export async function publishCommunityPostLiked(payload: {
+  postId: string
+  likeCount: number
+  likedByMe?: boolean
+}) {
+  const pusher = getPusherServer()
+  if (!pusher) return
+  await pusher.trigger(COMMUNITY_CHANNEL, 'post-liked', payload)
+}

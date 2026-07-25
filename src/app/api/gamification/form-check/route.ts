@@ -4,9 +4,14 @@ import { getUser } from '@/lib/auth'
 import { recordFormCheckSession } from '@/lib/gamification'
 import { normalizePlan, canUseExerciseCheck } from '@/lib/subscription'
 import { syncUserSubscription } from '@/lib/subscription-server'
+import { formCheckSchema, parseJsonBody } from '@/lib/validation'
+import { rateLimitAi } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
   try {
+    const limited = rateLimitAi(req)
+    if (limited) return limited
+
     const tokenUser = await getUser(req)
     if (!tokenUser) {
       return NextResponse.json({ message: 'Not authenticated' }, { status: 401 })
@@ -15,16 +20,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'Member account required' }, { status: 403 })
     }
 
-    const body = await req.json() as { exercise?: unknown; reps?: unknown }
-    const exercise = typeof body.exercise === 'string' ? body.exercise.trim() : ''
-    const reps = typeof body.reps === 'number' ? body.reps : Number(body.reps)
-
-    if (!exercise) {
-      return NextResponse.json({ message: 'Exercise name required' }, { status: 400 })
-    }
-    if (!Number.isFinite(reps) || reps < 1) {
-      return NextResponse.json({ message: 'At least one rep required' }, { status: 400 })
-    }
+    const parsed = await parseJsonBody(req, formCheckSchema)
+    if ('error' in parsed) return parsed.error
+    const { exercise, reps } = parsed.data
 
     await connectDB()
     const subscription = await syncUserSubscription(tokenUser.userId)

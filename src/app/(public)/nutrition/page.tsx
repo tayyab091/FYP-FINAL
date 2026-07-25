@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
-import { Salad, ClipboardList, UtensilsCrossed, ChevronDown, ChevronUp, Globe } from 'lucide-react'
+import { Salad, ClipboardList, UtensilsCrossed, ChevronDown, ChevronUp, Globe, Trash2 } from 'lucide-react'
 import { SectionHeading } from '@/components/shared/SectionHeading'
 import { CatalogImageFrame } from '@/components/shared/CatalogImageFrame'
 import { ExpandableCardPanel } from '@/components/shared/ExpandableCardPanel'
@@ -91,11 +91,12 @@ export default function NutritionPage() {
   const [mealCatalogTotal, setMealCatalogTotal] = useState(0)
   const [mealPage, setMealPage] = useState(1)
   const [mealTotalPages, setMealTotalPages] = useState(1)
+  const [deletingMealId, setDeletingMealId] = useState<string | null>(null)
 
   const fetchTodayMeals = useCallback(async () => {
     if (!user) return
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 8000)
+    const timeout = setTimeout(() => controller.abort(), 6000)
     setSummaryLoading(true)
 
     try {
@@ -246,7 +247,7 @@ export default function NutritionPage() {
     setSearching(true)
     setSearchResults([])
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 8000)
+    const timeout = setTimeout(() => controller.abort(), 6000)
 
     try {
       const res = await fetch(`/api/nutrition/analyze?query=${encodeURIComponent(query)}`, {
@@ -290,7 +291,7 @@ export default function NutritionPage() {
 
     setSubmittingLog(true)
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 8000)
+    const timeout = setTimeout(() => controller.abort(), 6000)
 
     try {
       const res = await fetch('/api/tracking/meal-logs/today', {
@@ -318,6 +319,33 @@ export default function NutritionPage() {
     } finally {
       clearTimeout(timeout)
       setSubmittingLog(false)
+    }
+  }
+
+  const handleDeleteMeal = async (mealId: string) => {
+    if (!user || deletingMealId) return
+    setDeletingMealId(mealId)
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 6000)
+
+    try {
+      const res = await fetch(`/api/tracking/meal-logs/today/${mealId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+        signal: controller.signal,
+      })
+      if (res.ok) {
+        toast.success('Meal deleted')
+        await fetchTodayMeals()
+      } else {
+        const data = await res.json().catch(() => ({}))
+        toast.error(data.message || 'Failed to delete meal')
+      }
+    } catch {
+      toast.error('Failed to delete meal')
+    } finally {
+      clearTimeout(timeout)
+      setDeletingMealId(null)
     }
   }
 
@@ -496,21 +524,44 @@ export default function NutritionPage() {
         {user && todayMeals.length > 0 && (
           <section>
             <SectionHeading title="Today's Meals" />
-            <div className="space-y-3">
-              {todayMeals.map(meal => (
-                <div key={meal._id} className="glass rounded-xl p-4 border border-border">
-                  <p className="text-primary text-xs font-semibold uppercase mb-2">{meal.mealType}</p>
-                  {meal.foods.map((food, i) => (
-                    <div key={i} className="flex justify-between text-sm">
-                      <span className="text-white">{food.name}</span>
-                      <span className="text-primary font-medium">{Math.round(food.calories)} cal</span>
-                    </div>
-                  ))}
-                  <p className="text-muted-foreground text-xs mt-2">
-                    P: {Math.round(meal.totalProtein)}g · C: {Math.round(meal.totalCarbs)}g · F: {Math.round(meal.totalFat)}g
-                  </p>
-                </div>
-              ))}
+            <div className="space-y-6">
+              {MEAL_TYPES.map(({ value, label }) => {
+                const mealsForType = todayMeals.filter(
+                  (meal) => meal.mealType.toLowerCase() === value,
+                )
+                if (mealsForType.length === 0) return null
+                return (
+                  <div key={value} className="space-y-3">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-primary">{label}</h3>
+                    {mealsForType.map((meal) => (
+                      <div key={meal._id} className="glass rounded-xl p-4 border border-border">
+                        <div className="mb-2 flex items-start justify-between gap-3">
+                          <p className="text-primary text-xs font-semibold uppercase">{label}</p>
+                          <button
+                            type="button"
+                            onClick={() => void handleDeleteMeal(meal._id)}
+                            disabled={deletingMealId === meal._id}
+                            aria-label={`Delete ${label} meal`}
+                            className="inline-flex items-center gap-1 rounded-lg border border-red-500/30 px-2.5 py-1 text-xs text-red-400 hover:bg-red-500/10 disabled:opacity-50"
+                          >
+                            <Trash2 className="size-3.5" />
+                            {deletingMealId === meal._id ? 'Deleting...' : 'Delete'}
+                          </button>
+                        </div>
+                        {meal.foods.map((food, i) => (
+                          <div key={i} className="flex justify-between text-sm">
+                            <span className="text-white">{food.name}</span>
+                            <span className="text-primary font-medium">{Math.round(food.calories)} cal</span>
+                          </div>
+                        ))}
+                        <p className="text-muted-foreground text-xs mt-2">
+                          P: {Math.round(meal.totalProtein)}g · C: {Math.round(meal.totalCarbs)}g · F: {Math.round(meal.totalFat)}g
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })}
             </div>
           </section>
         )}

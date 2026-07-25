@@ -8,6 +8,7 @@ import WorkoutPlan from '@/models/WorkoutPlan'
 import Trainer from '@/models/Trainer'
 import { createNotification } from '@/lib/notifications'
 import type { TokenPayload } from '@/lib/auth'
+import { isSafeHttpUrl, sanitizePlainText } from '@/lib/sanitize'
 
 export class ChatError extends Error {
   status: number
@@ -73,24 +74,22 @@ export async function assertCanChat(conversationId: string, userId: string) {
 
 export async function createMessage(input: CreateMessageInput) {
   const { conversationId, sender, content, type = 'text', attachedPlanId } = input
-  const trimmed = content.trim()
 
-  if (!trimmed) throw new ChatError(400, 'Message cannot be empty')
-  if (type !== 'image' && trimmed.length > 2000) {
-    throw new ChatError(400, 'Message is too long')
-  }
   if (!['text', 'workout_plan', 'image'].includes(type)) {
     throw new ChatError(400, 'Invalid message type')
   }
 
+  let trimmed = content.trim()
   if (type === 'image') {
-    const isHttpsUrl = /^https:\/\//i.test(trimmed)
-    if (!isHttpsUrl) {
-      throw new ChatError(400, 'Image content must be an https URL (Vercel Blob)')
+    if (!isSafeHttpUrl(trimmed, true)) {
+      throw new ChatError(400, 'Image content must be a valid https URL (Cloudinary)')
     }
     if (trimmed.length > 2048) {
       throw new ChatError(400, 'Image URL is too long')
     }
+  } else {
+    trimmed = sanitizePlainText(trimmed, 2000)
+    if (!trimmed) throw new ChatError(400, 'Message cannot be empty')
   }
 
   await connectDB()
@@ -151,9 +150,15 @@ export async function createMessage(input: CreateMessageInput) {
       .map((recipientId: string) =>
         createNotification({
           userId: recipientId,
-          title: `New message from ${senderName}`,
-          message: preview,
-          type: 'chat',
+          title:
+            type === 'workout_plan'
+              ? 'Workout plan assigned'
+              : `New message from ${senderName}`,
+          message:
+            type === 'workout_plan'
+              ? `${senderName} sent you a workout plan`
+              : preview,
+          type: type === 'workout_plan' ? 'workout' : 'chat',
           link: `/chat/${conversationId}`,
         }),
       ),

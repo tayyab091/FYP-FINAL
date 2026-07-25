@@ -11,8 +11,8 @@ Full-stack fitness coaching platform built as a Final Year Project. Members conn
 | Database | MongoDB + Mongoose |
 | Auth | JWT (httpOnly cookies), Google OAuth, email verify / password reset |
 | Realtime | **Pusher** (chat + notifications) — Vercel-compatible |
-| Live video | **Daily.co** rooms (Elite); scheduling gated in our API |
-| Uploads | **Vercel Blob** (chat images) |
+| Live video | **Jitsi Meet** (`meet.jit.si`) rooms (Elite); scheduling gated in our API |
+| Uploads | **Cloudinary** (chat images) |
 | UI | Tailwind CSS 4, shadcn/ui, Recharts, Framer Motion |
 | AI | Google Gemini (chatbot, nutrition hints) |
 | Pose | MediaPipe Pose (exercise form checker) |
@@ -30,8 +30,8 @@ Full-stack fitness coaching platform built as a Final Year Project. Members conn
 - **Progress tracking** — Weight, body fat, measurements with charts
 - **Advanced analytics** — Pro+ dashboard: workouts, nutrition, weight trends (`/analytics`)
 - **Community feed** — Basic+ posts, likes, comments (`/community`)
-- **Live training sessions** — Elite scheduling + **Daily.co** video rooms (`/live-sessions`)
-- **Chat** — REST + **Pusher** realtime; workout plan cards and **Vercel Blob** image uploads
+- **Live training sessions** — Elite scheduling + **Jitsi Meet** video rooms (`/live-sessions`)
+- **Chat** — REST + **Pusher** realtime; workout plan cards and **Cloudinary** image uploads
 - **Notifications** — In-app center + bell; Pusher push with poll fallback
 - **Trainer reviews** — Rating + comment; average on trainer profiles
 - **AI form checker** — Pro/Elite gated pose feedback (`/exercise-check`)
@@ -76,8 +76,9 @@ Optional integrations (see `.env.example`):
 | `SMTP_*` | Transactional email (verify / reset links) |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth |
 | `PUSHER_*` / `NEXT_PUBLIC_PUSHER_*` | Realtime chat + notifications |
-| `DAILY_API_KEY` | Elite live video rooms |
-| `BLOB_READ_WRITE_TOKEN` | Chat image uploads (Vercel Blob) |
+| No extra env vars | Live sessions embed `meet.jit.si` directly |
+| `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | Chat image uploads (Cloudinary) |
+| `CLOUDINARY_UPLOAD_FOLDER` | Optional Cloudinary folder for chat images |
 | `GEMINI_API_KEY` | AI chatbot |
 | `SPOONACULAR_API_KEY` | Enhanced food search |
 
@@ -170,7 +171,7 @@ src/
 ├── app/              # Next.js App Router (pages + API routes)
 ├── components/       # UI components
 ├── hooks/            # React hooks (useAuth, useChatRealtime)
-├── lib/              # Auth, MongoDB, Stripe, Pusher, Daily, Blob, plans
+├── lib/              # Auth, MongoDB, Stripe, Pusher, Jitsi, Cloudinary, plans
 ├── models/           # Mongoose schemas
 ├── middleware.ts     # Edge route guards (re-exports proxy)
 └── proxy.ts          # Next.js 16 request proxy / auth redirects

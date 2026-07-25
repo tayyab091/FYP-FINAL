@@ -260,6 +260,8 @@ export default function AdminPageClient() {
   const pendingTrainers = trainers.filter((t) => t.adminVerificationStatus !== 'approved')
   const pendingGyms = gyms.filter((g) => g.verificationStatus === 'pending')
   const pendingCount = pendingTrainers.length + pendingGyms.length
+  const pendingTileCount =
+    typeof stats?.pendingVerifications === 'number' ? stats.pendingVerifications : pendingCount
 
   const ROLE_COLORS: Record<string, string> = {
     user: 'bg-blue-500/20 text-blue-400',
@@ -329,8 +331,27 @@ export default function AdminPageClient() {
           ))}
         </div>
 
-        {loading && <p className="text-sm text-[#a0a0a0]">Loading admin data...</p>}
-
+        {loading ? (
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="tile skeleton h-28" />
+              ))}
+            </div>
+            <div className="tile overflow-hidden p-0">
+              <div className="space-y-0">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-4 border-b border-white/5 px-4 py-4">
+                    <div className="skeleton h-4 w-32 rounded" />
+                    <div className="skeleton h-4 w-20 rounded" />
+                    <div className="ml-auto skeleton h-4 w-24 rounded" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
           {active === 'overview' && (
             <div className="space-y-6">
               <div>
@@ -341,7 +362,12 @@ export default function AdminPageClient() {
                 {[
                   { label: 'Total Users', value: stats?.totalUsers || 0, icon: '👥', color: '#00ff87' },
                   { label: 'Total Trainers', value: stats?.totalTrainers || 0, icon: '🏋️', color: '#00d4ff' },
-                  { label: 'Pending Verifications', value: pendingCount, icon: '⏳', color: '#ffd93d' },
+                  {
+                    label: 'Pending Verifications',
+                    value: pendingTileCount,
+                    icon: '⏳',
+                    color: '#ffd93d',
+                  },
                   { label: 'Active Relationships', value: stats?.activeRelationships || 0, icon: '🤝', color: '#ff6b6b' },
                 ].map((stat) => (
                   <div key={stat.label} className="tile">
@@ -353,13 +379,13 @@ export default function AdminPageClient() {
                   </div>
                 ))}
               </div>
-              {pendingCount > 0 && (
+              {pendingTileCount > 0 && (
                 <div className="tile border-yellow-500/30 bg-yellow-500/5">
                   <div className="flex items-center justify-between gap-4">
                     <div>
                       <p className="font-bold text-yellow-400">⚠ Action Required</p>
                       <p className="mt-1 text-sm text-[#a0a0a0]">
-                        {pendingCount} pending verification{pendingCount !== 1 ? 's' : ''} need your review
+                        {pendingTileCount} pending verification{pendingTileCount !== 1 ? 's' : ''} need your review
                       </p>
                     </div>
                     <button type="button" onClick={() => setActive('verifications')} className="badge-accent cursor-pointer hover:opacity-80">
@@ -513,6 +539,13 @@ export default function AdminPageClient() {
                         </td>
                       </tr>
                     ))}
+                    {trainers.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-12 text-center text-[#a0a0a0]">
+                          No trainers found
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -582,6 +615,13 @@ export default function AdminPageClient() {
                         </td>
                       </tr>
                     ))}
+                    {gyms.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-12 text-center text-[#a0a0a0]">
+                          No gyms found
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -860,6 +900,8 @@ export default function AdminPageClient() {
               </div>
             </div>
           )}
+          </>
+        )}
       </div>
     </div>
   )
