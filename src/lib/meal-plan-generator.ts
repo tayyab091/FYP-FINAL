@@ -146,6 +146,7 @@ export interface GeneratedMealPlan {
 }
 
 function normalizeGoal(goal?: string): FitnessGoal {
+  if (goal === 'maintenance') return 'general_fitness'
   const allowed: FitnessGoal[] = ['weight_loss', 'muscle_gain', 'endurance', 'flexibility', 'general_fitness']
   if (goal && allowed.includes(goal as FitnessGoal)) return goal as FitnessGoal
   return 'general_fitness'

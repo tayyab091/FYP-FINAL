@@ -6,31 +6,21 @@ import bcrypt from 'bcryptjs'
 import mongoose from 'mongoose'
 import { createToken, cookieOptions } from '@/lib/auth'
 import { createSecureToken, sendVerificationEmail } from '@/lib/auth-email'
+import { parseJsonBody, registerGymOwnerSchema } from '@/lib/validation'
+import { rateLimitAuth } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
   try {
+    const limited = rateLimitAuth(req)
+    if (limited) return limited
+
     await connectDB()
-    const { fullName, email, password, country, gymName, gymAddress, gymDescription } = await req.json()
+    const parsed = await parseJsonBody(req, registerGymOwnerSchema)
+    if ('error' in parsed) return parsed.error
 
-    if (
-      typeof fullName !== 'string' ||
-      typeof email !== 'string' ||
-      typeof gymName !== 'string' ||
-      !fullName.trim() ||
-      !email.trim() ||
-      !gymName.trim() ||
-      !password
-    ) {
-      return NextResponse.json({ message: 'All fields including gym name are required' }, { status: 400 })
-    }
-    if (typeof password !== 'string' || password.length < 8) {
-      return NextResponse.json({ message: 'Password must be at least 8 characters' }, { status: 400 })
-    }
+    const { fullName, email, password, country, gymName, gymAddress, gymDescription } = parsed.data
 
-    const normalizedEmail = email.toLowerCase().trim()
-    const normalizedName = fullName.trim()
-    const normalizedGymName = gymName.trim()
-    const existing = await User.findOne({ email: normalizedEmail })
+    const existing = await User.findOne({ email })
     if (existing) {
       return NextResponse.json({ message: 'Email already registered' }, { status: 409 })
     }
@@ -40,8 +30,8 @@ export async function POST(req: NextRequest) {
     const session = await mongoose.startSession()
     const user = await session.withTransaction(async () => {
       const [createdUser] = await User.create([{
-        fullName: normalizedName,
-        email: normalizedEmail,
+        fullName,
+        email,
         password: hashedPassword,
         country: country || 'Pakistan',
         role: 'gym_owner',
@@ -51,25 +41,25 @@ export async function POST(req: NextRequest) {
       }], { session })
 
       await Gym.create([{
-        name: normalizedGymName,
-        address: typeof gymAddress === 'string' && gymAddress.trim() ? gymAddress.trim() : 'Pakistan',
+        name: gymName,
+        address: gymAddress || 'Pakistan',
         country: country || 'Pakistan',
         ownerId: createdUser._id,
         verificationStatus: 'pending',
-        description: typeof gymDescription === 'string' ? gymDescription.trim() : '',
+        description: gymDescription || '',
       }], { session })
       return createdUser
     }).finally(() => session.endSession())
     if (!user) throw new Error('Gym registration transaction did not complete')
 
-    void sendVerificationEmail(normalizedEmail, verifyToken).catch((err) => {
+    void sendVerificationEmail(email, verifyToken).catch((err) => {
       console.error('Verification email error:', err)
     })
 
     const token = createToken({ userId: user._id.toString(), role: 'gym_owner', email: user.email })
     const response = NextResponse.json({
       message: 'Gym owner account created. Pending verification.',
-      user: { id: user._id, fullName: normalizedName, email: normalizedEmail, role: 'gym_owner' }
+      user: { id: user._id, fullName, email, role: 'gym_owner' },
     }, { status: 201 })
     response.cookies.set('token', token, cookieOptions())
     return response

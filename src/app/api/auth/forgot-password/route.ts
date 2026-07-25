@@ -2,36 +2,45 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import User from '@/models/User'
 import { createSecureToken, sendPasswordResetEmail } from '@/lib/auth-email'
+import { forgotPasswordSchema, parseJsonBody } from '@/lib/validation'
+import { rateLimitAuth } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
   try {
-    const { email } = await req.json()
-    const normalized =
-      typeof email === 'string' ? email.toLowerCase().trim() : ''
+    const limited = rateLimitAuth(req)
+    if (limited) return limited
 
-    // Always return the same success message (do not leak account existence)
-    const success = NextResponse.json({
+    const payload: { message: string; devLink?: string } = {
       message: 'If an account exists for that email, a reset link has been sent.',
-    })
-
-    if (!normalized || !normalized.includes('@')) {
-      return success
     }
 
+    const parsed = await parseJsonBody(req, forgotPasswordSchema)
+    // Always return generic message for invalid shape (no email enumeration)
+    if ('error' in parsed) {
+      return NextResponse.json(payload)
+    }
+
+    const { email } = parsed.data
+
     await connectDB()
-    const user = await User.findOne({ email: normalized })
-    if (!user) return success
+    const user = await User.findOne({ email })
+    if (!user) return NextResponse.json(payload)
 
     const token = createSecureToken()
     user.resetPasswordToken = token
     user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000)
     await user.save()
 
-    await sendPasswordResetEmail(user.email, token).catch((err) => {
+    const result = await sendPasswordResetEmail(user.email, token).catch((err) => {
       console.error('Forgot password email error:', err)
+      return null
     })
 
-    return success
+    if (process.env.NODE_ENV !== 'production' && result?.devLink) {
+      payload.devLink = result.devLink
+    }
+
+    return NextResponse.json(payload)
   } catch (error) {
     console.error('Forgot password error:', error)
     return NextResponse.json({

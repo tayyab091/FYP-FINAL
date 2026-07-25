@@ -2,7 +2,7 @@ import Notification from '@/models/Notification'
 import mongoose from 'mongoose'
 import { publishNotification } from '@/lib/realtime'
 
-type NotificationType = 'chat' | 'workout' | 'system' | 'trainer' | 'payment'
+type NotificationType = 'chat' | 'workout' | 'system' | 'trainer' | 'payment' | 'community'
 
 interface CreateNotificationInput {
   userId: string | mongoose.Types.ObjectId
