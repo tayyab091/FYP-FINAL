@@ -184,6 +184,11 @@ export default function TrainerDetailPage() {
   const [submittingReview, setSubmittingReview] = useState(false)
   const [reviewRating, setReviewRating] = useState(5)
   const [reviewComment, setReviewComment] = useState('')
+  const [availabilitySlots, setAvailabilitySlots] = useState<
+    Array<{ dayOfWeek: number; startTime: string; endTime: string; isAvailable: boolean }>
+  >([])
+
+  const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
   const loadReviews = useCallback(async (trainerId: string) => {
     const res = await fetch(`/api/trainers/${trainerId}/reviews`, { credentials: 'include' })
@@ -236,10 +241,14 @@ export default function TrainerDetailPage() {
     Promise.all([
       fetch(`/api/trainers/${id}`).then(r => r.ok ? r.json() : null),
       loadReviews(id),
+      fetch(`/api/trainer/availability?trainerId=${encodeURIComponent(id)}`).then((r) =>
+        r.ok ? r.json() : { slots: [] },
+      ),
     ])
-      .then(([trainerData, reviews]) => {
+      .then(([trainerData, reviews, availability]) => {
         setTrainer(trainerData)
         setReviewsData(reviews)
+        if (Array.isArray(availability?.slots)) setAvailabilitySlots(availability.slots)
       })
       .finally(() => setLoading(false))
   }, [id, loadReviews])
@@ -416,6 +425,28 @@ export default function TrainerDetailPage() {
                       </span>
                     </p>
                   </div>
+
+                  {availabilitySlots.some((s) => s.isAvailable) && (
+                    <div>
+                      <h2 className="font-bold text-white mb-3 flex items-center gap-2">
+                        <Clock className="size-4 text-primary" /> Availability
+                      </h2>
+                      <ul className="grid gap-2 sm:grid-cols-2">
+                        {availabilitySlots
+                          .filter((s) => s.isAvailable)
+                          .map((s) => (
+                            <li
+                              key={s.dayOfWeek}
+                              className="rounded-xl border border-border px-3 py-2 text-sm text-muted-foreground"
+                            >
+                              <span className="text-white font-medium">{DAY_NAMES[s.dayOfWeek]}</span>
+                              {' · '}
+                              {s.startTime} – {s.endTime}
+                            </li>
+                          ))}
+                      </ul>
+                    </div>
+                  )}
 
                   {trainer.certifications && trainer.certifications.length > 0 && (
                     <div>

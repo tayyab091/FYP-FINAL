@@ -14,6 +14,7 @@ export const PROTECTED_ROUTES = [
   '/analytics',
   '/live-sessions',
   '/notifications',
+  '/leaderboard',
 ] as const
 
 /** Auth pages that redirect authenticated users to their workspace. */

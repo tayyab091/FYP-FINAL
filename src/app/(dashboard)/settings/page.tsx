@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
 import { SignInGate } from '@/components/shared/AccessGate'
@@ -37,6 +38,7 @@ const GYM_TAB = { id: 'gym', label: 'Facility', icon: '🏢' }
 
 export default function SettingsPage() {
   const { user, isLoading: authLoading, refreshUser, logout } = useAuth()
+  const router = useRouter()
   const [tab, setTab] = useState('profile')
   const [profile, setProfile] = useState({
     fullName: '',
@@ -58,6 +60,7 @@ export default function SettingsPage() {
   const [passwords, setPasswords] = useState({ current: '', newPass: '', confirm: '' })
   const [saving, setSaving] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState('')
+  const [deleting, setDeleting] = useState(false)
 
   const tabs =
     user?.role === 'trainer'
@@ -106,6 +109,25 @@ export default function SettingsPage() {
         })
     }
   }, [user])
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirm !== 'DELETE') return
+    setDeleting(true)
+    try {
+      const res = await fetch('/api/user/delete', { method: 'DELETE' })
+      if (res.ok) {
+        toast.success('Account deleted')
+        await logout()
+        router.replace('/')
+      } else {
+        toast.error('Failed to delete account')
+        setDeleting(false)
+      }
+    } catch {
+      toast.error('Failed to delete account')
+      setDeleting(false)
+    }
+  }
 
   const saveProfile = async () => {
     setSaving(true)
@@ -602,10 +624,11 @@ export default function SettingsPage() {
                 />
                 <button
                   type="button"
-                  disabled={deleteConfirm !== 'DELETE'}
+                  onClick={handleDeleteAccount}
+                  disabled={deleteConfirm !== 'DELETE' || deleting}
                   className="w-full rounded-2xl border border-red-500/30 py-3 text-sm font-bold text-red-400 transition-colors hover:bg-red-500/10 disabled:opacity-30"
                 >
-                  Delete Account Permanently
+                  {deleting ? 'Deleting...' : 'Delete Account Permanently'}
                 </button>
               </div>
             </div>

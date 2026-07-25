@@ -16,6 +16,8 @@ export default function MyFitnessPage() {
 function MyFitnessGate() {
   const searchParams = useSearchParams()
   const tabParam = searchParams.get('tab') || 'workout'
+  const allowed = ['workout', 'nutrition', 'progress', 'ai-generator']
+  const initialTab = allowed.includes(tabParam) ? tabParam : 'workout'
   const planId = searchParams.get('planId')
-  return <MyFitnessInner initialTab={tabParam} planId={planId} />
+  return <MyFitnessInner initialTab={initialTab} planId={planId} />
 }

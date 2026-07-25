@@ -17,6 +17,7 @@ import { PageLoader } from '@/components/shared/PageLoader'
 import { SignInGate } from '@/components/shared/AccessGate'
 import { GamificationBar } from '@/components/gamification/GamificationBar'
 import type { GamificationMeResponse } from '@/types/gamification'
+import { AIGeneratorTab } from './AIGeneratorTab'
 
 interface FoodResult {
   name: string
@@ -63,7 +64,7 @@ export default function MyFitnessInner({
 }) {
   const { user, isLoading: authLoading } = useAuth()
   const router = useRouter()
-  const tab = ['workout', 'nutrition', 'progress'].includes(initialTab) ? initialTab : 'workout'
+  const tab = ['workout', 'nutrition', 'progress', 'ai-generator'].includes(initialTab) ? initialTab : 'workout'
 
   const [plan, setPlan] = useState<WorkoutPlan | null>(null)
   const [progress, setProgress] = useState<ProgressRecord[]>([])
@@ -439,10 +440,11 @@ export default function MyFitnessInner({
         </div>
 
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="mb-6 grid w-full grid-cols-3 sm:inline-flex sm:w-auto">
+          <TabsList className="mb-6 grid w-full grid-cols-2 sm:grid-cols-4 sm:inline-flex sm:w-auto">
             <TabsTrigger value="workout">Workout</TabsTrigger>
             <TabsTrigger value="nutrition">Nutrition</TabsTrigger>
             <TabsTrigger value="progress">Progress</TabsTrigger>
+            <TabsTrigger value="ai-generator">AI Generator</TabsTrigger>
           </TabsList>
 
           <TabsContent value="workout">
@@ -780,6 +782,10 @@ export default function MyFitnessInner({
                 </div>
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="ai-generator">
+            <AIGeneratorTab />
           </TabsContent>
         </Tabs>
       </div>
