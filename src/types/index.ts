@@ -65,6 +65,7 @@ export interface Message {
   content: string
   type: 'text' | 'workout_plan' | 'image'
   attachedPlan?: WorkoutPlan
+  attachedPlanId?: string
   createdAt: string
 }
 
