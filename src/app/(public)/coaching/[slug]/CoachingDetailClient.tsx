@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useParams, useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
 import { Badge } from '@/components/ui/badge'
@@ -30,6 +30,7 @@ import {
 
 interface TrainerDetail {
   _id: string
+  slug?: string
   name: string
   specialty: string[]
   country: string
@@ -172,8 +173,7 @@ function ConnectButton({
   )
 }
 
-export default function TrainerDetailPage() {
-  const { id } = useParams<{ id: string }>()
+export function CoachingDetailClient({ slug }: { slug: string }) {
   const { user } = useAuth()
   const router = useRouter()
   const [trainer, setTrainer] = useState<TrainerDetail | null>(null)
@@ -237,29 +237,38 @@ export default function TrainerDetailPage() {
   }, [user])
 
   useEffect(() => {
-    if (!id) return
-    Promise.all([
-      fetch(`/api/trainers/${id}`).then(r => r.ok ? r.json() : null),
-      loadReviews(id),
-      fetch(`/api/trainer/availability?trainerId=${encodeURIComponent(id)}`).then((r) =>
-        r.ok ? r.json() : { slots: [] },
-      ),
-    ])
-      .then(([trainerData, reviews, availability]) => {
+    if (!slug) return
+    setLoading(true)
+    fetch(`/api/trainers/${encodeURIComponent(slug)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then((trainerData) => {
         setTrainer(trainerData)
-        setReviewsData(reviews)
-        if (Array.isArray(availability?.slots)) setAvailabilitySlots(availability.slots)
       })
       .finally(() => setLoading(false))
-  }, [id, loadReviews])
+  }, [slug])
 
   useEffect(() => {
-    if (!id || !user) {
+    const trainerId = trainer?._id
+    if (!trainerId) return
+    Promise.all([
+      loadReviews(trainerId),
+      fetch(`/api/trainer/availability?trainerId=${encodeURIComponent(trainerId)}`).then((r) =>
+        r.ok ? r.json() : { slots: [] },
+      ),
+    ]).then(([reviews, availability]) => {
+      setReviewsData(reviews)
+      if (Array.isArray(availability?.slots)) setAvailabilitySlots(availability.slots)
+    })
+  }, [trainer?._id, loadReviews])
+
+  useEffect(() => {
+    const trainerId = trainer?._id
+    if (!trainerId || !user) {
       setHasActiveRelationship(false)
       return
     }
-    loadRelationshipState(id)
-  }, [id, user, loadRelationshipState])
+    loadRelationshipState(trainerId)
+  }, [trainer?._id, user, loadRelationshipState])
 
   const handleConnect = async () => {
     if (!user) {
@@ -267,11 +276,11 @@ export default function TrainerDetailPage() {
       router.push('/login')
       return
     }
-    if (connectStatus !== 'idle') return
+    if (connectStatus !== 'idle' || !trainer?._id) return
 
     setConnectStatus('loading')
     try {
-      const res = await fetch(`/api/relationships/request/${id}`, {
+      const res = await fetch(`/api/relationships/request/${trainer._id}`, {
         method: 'POST',
         credentials: 'include',
       })
@@ -308,9 +317,11 @@ export default function TrainerDetailPage() {
       return
     }
 
+    if (!trainer?._id) return
+
     setSubmittingReview(true)
     try {
-      const res = await fetch(`/api/trainers/${id}/reviews`, {
+      const res = await fetch(`/api/trainers/${trainer._id}/reviews`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -325,7 +336,7 @@ export default function TrainerDetailPage() {
       toast.success('Review submitted!')
       setReviewComment('')
       setReviewRating(5)
-      const refreshed = await loadReviews(id)
+      const refreshed = await loadReviews(trainer._id)
       if (refreshed) setReviewsData(refreshed)
       if (typeof data.averageRating === 'number') {
         setTrainer(prev => prev ? { ...prev, rating: data.averageRating } : prev)

@@ -8,6 +8,7 @@ import { createToken, cookieOptions } from '@/lib/auth'
 import { createSecureToken, sendVerificationEmail } from '@/lib/auth-email'
 import { parseJsonBody, registerTrainerSchema } from '@/lib/validation'
 import { rateLimitAuth } from '@/lib/rate-limit'
+import { allocateTrainerSlug } from '@/lib/trainer-slug-server'
 
 export async function POST(req: NextRequest) {
   try {
@@ -40,8 +41,10 @@ export async function POST(req: NextRequest) {
         verifyEmailExpires: new Date(Date.now() + 24 * 60 * 60 * 1000),
       }], { session })
 
+      const slug = await allocateTrainerSlug(fullName)
       await Trainer.create([{
         userId: createdUser._id,
+        slug,
         name: fullName,
         email,
         specialty: specialty || [],
