@@ -14,10 +14,17 @@ const WorkoutLogSchema = new Schema({
     setsCompleted: Number,
     repsCompleted: String,
     notes: String,
+    // Per-exercise checklist completion, persisted on toggle so the
+    // checklist survives a page reload/revisit while a workout is
+    // in_progress (see BUG_REPORT.md — workout checklist XP persistence).
+    completed: { type: Boolean, default: false },
   }],
   durationMinutes: { type: Number, default: 0 },
   caloriesBurned: { type: Number, default: 0 },
   notes: { type: String, default: '' },
+  // Explicit idempotency guard: XP is awarded at most once per log,
+  // independent of the `status` transition check in the complete route.
+  xpAwarded: { type: Boolean, default: false },
 }, { timestamps: true })
 
 export default mongoose.models.WorkoutLog || mongoose.model('WorkoutLog', WorkoutLogSchema)
