@@ -414,6 +414,17 @@ export const workoutLogStartSchema = z.object({
     .default([]),
 })
 
+/** Toggle a single exercise's checklist-completed flag on an in-progress log. */
+export const workoutLogToggleSchema = z.object({
+  exerciseIndex: z.number().int().min(0).max(99),
+  completed: z.boolean(),
+})
+
+/** Abandon an in-progress workout log without completing it (XP is never awarded). */
+export const workoutLogCancelSchema = z.object({
+  status: z.literal('skipped'),
+})
+
 export const workoutCompleteSchema = z.object({
   exercises: z
     .array(
