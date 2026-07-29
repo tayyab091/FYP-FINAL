@@ -62,7 +62,7 @@ Prefer `npm run dev` (`next dev`). `npm run dev:custom` (`tsx server.ts`) is a l
 | Collection / model | Purpose |
 |--------------------|---------|
 | `User` | Accounts, roles, subscription, reset/verify tokens |
-| `Trainer` | Public trainer profile, verification, gym link |
+| `Trainer` | Public trainer profile, verification, gym link, **unique `slug` for `/coaching/[slug]`** |
 | `Gym` | Gym owner entity + verification |
 | `Relationship` | Member↔trainer coaching request lifecycle |
 | `Conversation` / `Message` | 1:1 chat (text/image types) |
@@ -106,7 +106,7 @@ Privileged roles (admin / trainer / gym_owner) bypass member subscription gates 
 |------|----------|
 | `/`, `/login`, `/signup`, `/forgot-password`, `/reset-password`, `/verify-email` | Public / auth |
 | `/register-trainer`, `/register-gym-owner` | Onboarding |
-| `/coaching`, `/nutrition`, `/exercises`, `/exercise-check`, `/subscription` | Catalog / marketing / gated tools |
+| `/coaching`, `/coaching/[slug]`, `/nutrition`, `/exercises`, `/exercise-check`, `/subscription` | Catalog / marketing / gated tools |
 | `/my-fitness` | Member hub (progress, plan, gamification) |
 | `/chat`, `/notifications` | Messaging |
 | `/meal-plans`, `/community`, `/analytics`, `/live-sessions` | Plan-gated member features |
@@ -224,6 +224,17 @@ Verification helper: `node scripts/live-verify.mjs` (server must be running).
 - `docs/SECURITY_AUDIT_REPORT.md` — NoSQL / XSS / CSP / rate-limit audit  
 - `docs/AUDIT_REPORT.md` — Working / Partial / Cannot-run matrix  
 - `docs/REALTIME_CHAT.md` — Pusher channel conventions  
+
+- `docs/MODULE_INVENTORY.md` — routes/API map and merge + slug migration notes  
+- `BUG_REPORT.md` — verification bugs and known limitations  
+
+---
+
+## 11. Branch integration (2026-07-29)
+
+- **`musadiq`** merged **`remotes/fyp-final/main`** (integration main; includes Tayyab UI/admin work). Local branch **`tayyab`** was already contained after that merge.
+- Local git branch **`main`** has **unrelated history** to `musadiq`; use **`fyp-final/main`** for integration, not local `main`, unless histories are reconciled deliberately.
+- **Trainer slugs:** run `npm run backfill-trainer-slugs` once per environment after deploy; new trainers receive slugs on registration.
 
 ---
 

@@ -7,7 +7,7 @@ import { getUser } from '@/lib/auth'
 import { getTrainerConnectionLimit, normalizePlan } from '@/lib/subscription'
 import { syncUserSubscription } from '@/lib/subscription-server'
 import { createNotification } from '@/lib/notifications'
-import mongoose from 'mongoose'
+import { findTrainerByIdOrSlug } from '@/lib/resolve-trainer'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ trainerId: string }> }) {
   try {
@@ -17,10 +17,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tra
       return NextResponse.json({ message: 'Member account required' }, { status: 403 })
     }
 
-    const { trainerId } = await params
-    if (!mongoose.isValidObjectId(trainerId)) {
-      return NextResponse.json({ message: 'Trainer not found' }, { status: 404 })
-    }
+    const { trainerId: trainerRef } = await params
     await connectDB()
 
     // Check subscription
@@ -34,12 +31,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tra
       return NextResponse.json({ message: 'Upgrade your plan to connect with more trainers' }, { status: 403 })
     }
 
-    const trainer = await Trainer.findOne({
-      _id: trainerId,
-      isFullyVerified: true,
-      isActive: true,
-    })
+    const resolvedTrainer = await findTrainerByIdOrSlug(trainerRef)
+    if (!resolvedTrainer || !resolvedTrainer.isFullyVerified || !resolvedTrainer.isActive) {
+      return NextResponse.json({ message: 'Trainer not found' }, { status: 404 })
+    }
+    const trainer = await Trainer.findById(resolvedTrainer._id)
     if (!trainer) return NextResponse.json({ message: 'Trainer not found' }, { status: 404 })
+    const trainerId = trainer._id.toString()
 
     const existing = await Relationship.findOne({ userId: tokenUser.userId, trainerId })
     if (existing) {
