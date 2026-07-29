@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "live-verify": "node scripts/live-verify.mjs",
+    "backfill-trainer-slugs": "node scripts/backfill-trainer-slugs.mjs",
     "dev:custom": "tsx server.ts"
   },
   "dependencies": {
