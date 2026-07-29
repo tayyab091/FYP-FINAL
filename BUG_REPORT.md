@@ -50,6 +50,17 @@ Ran against a real `next dev` server on `localhost:3000` with the live Atlas dat
 - Ad-hoc targeted check: coaching list cards render real `<a href="/coaching/{slug}">` links for every trainer (`ali-hassan`, `sarah-khan`, `usman-malik`, …) — confirms the slug migration is live end-to-end in the browser, not just in source.
 - Manually verified `/coaching/<ObjectId>` in a browser context: Next.js emits the documented streaming `<meta http-equiv="refresh">` redirect to `/coaching/<slug>` (this Next.js version serves `permanentRedirect()` as a client meta-refresh instead of a raw HTTP 308 when the response is streamed — see `node_modules/next/dist/docs/.../permanentRedirect.md`). Real browsers follow it correctly; a non-JS HTTP client (`curl`) sees `200` with the meta tag in the body rather than a `Location` header. Documenting this as expected framework behavior for this Next.js version, not a bug — flag it if search-engine-crawlable 301s are a hard requirement.
 
+## Re-verification — independent follow-up session (2026-07-29, later same day)
+
+Ran as a fresh, single-session audit against the current `musadiq` working tree (no other concurrent session this time):
+
+- Confirmed the BUG-004 DNS fix (`toDirectMongoUri()`) and the slug-or-id relationship-request fix are present in the working tree (diffed against `HEAD`, clean).
+- `node scripts/backfill-trainer-slugs.mjs` → `Done. Backfilled 0 trainer slug(s).` (all trainers already had slugs from the prior run — confirms idempotency and that the DNS fix still works).
+- `npm run build` → succeeded, `/coaching/[slug]` present in route output, no type errors.
+- Re-audited all trainer id/slug lookups across `src/app/api/**` (trainers, reviews, availability, relationships/request) — all public-facing routes resolve slug-or-ObjectId via `src/lib/resolve-trainer.ts`; only admin/gym-owner-internal routes remain strict-ObjectId, which is correct since those always receive an internal `_id` from an already-scoped list, never a public URL param.
+- Re-ran the full Playwright suite from scratch with a clean dev server (not reusing any prior instance): `e2e/full-audit.spec.ts` **20/20 passed** (4.4m), `e2e/final-complete.spec.ts` **38/38 passed** (7.8m) — this run had **zero flaky retries**, unlike the earlier session's 3 first-attempt cold-compile flakes.
+- Reverted an incidental `next-env.d.ts` diff produced by `npm run build` (Next.js regenerates this file's `.next/dev/...` vs `.next/...` import path depending on whether the last build was `dev` or `build`) — not committed, per policy.
+
 ## Verification checklist (post-fix)
 
 - [x] `npm run build`
