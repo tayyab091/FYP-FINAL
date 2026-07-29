@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/mongodb'
 import { getUser } from '@/lib/auth'
 import Trainer from '@/models/Trainer'
 import mongoose from 'mongoose'
+import { resolveTrainerObjectId } from '@/lib/resolve-trainer'
 
 const AvailabilitySchema = new mongoose.Schema(
   {
@@ -27,11 +28,10 @@ const Availability =
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = req.nextUrl
-    const trainerId = searchParams.get('trainerId')
-    if (!trainerId) return NextResponse.json({ message: 'trainerId required' }, { status: 400 })
-    if (!mongoose.Types.ObjectId.isValid(trainerId)) {
-      return NextResponse.json({ slots: [] })
-    }
+    const trainerIdParam = searchParams.get('trainerId')
+    if (!trainerIdParam) return NextResponse.json({ message: 'trainerId required' }, { status: 400 })
+    const trainerId = await resolveTrainerObjectId(trainerIdParam)
+    if (!trainerId) return NextResponse.json({ slots: [] })
     await connectDB()
     const availability = await Availability.findOne({ trainerId }).lean()
     return NextResponse.json(availability || { slots: [] })

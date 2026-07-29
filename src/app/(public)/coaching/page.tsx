@@ -10,9 +10,11 @@ import { Search } from 'lucide-react'
 import { FadeIn } from '@/components/motion'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { easeTransition } from '@/lib/motion'
+import { trainerPublicPath } from '@/lib/trainer-slug'
 
 interface Trainer {
   _id: string
+  slug?: string
   name?: string
   fullName?: string
   specialty: string | string[]
@@ -66,7 +68,7 @@ function TrainerCard({ trainer, connectable, onConnect }: { trainer: Trainer; co
       transition={easeTransition}
       className="elite-panel interactive-lift card-athletic flex flex-col overflow-hidden rounded-2xl"
     >
-      <Link href={isPreview ? '/coaching' : `/coaching/${trainer._id}`} className="relative h-40 bg-gradient-to-br from-primary/10 to-sky-400/5 flex items-center justify-center">
+      <Link href={isPreview ? '/coaching' : trainerPublicPath(trainer)} className="relative h-40 bg-gradient-to-br from-primary/10 to-sky-400/5 flex items-center justify-center">
         {image ? (
           <Image src={image} alt={name} width={80} height={80}
             className="h-20 w-20 rounded-full object-cover ring-4 ring-background shadow-xl" />
@@ -84,7 +86,7 @@ function TrainerCard({ trainer, connectable, onConnect }: { trainer: Trainer; co
       <div className="p-5 flex flex-col flex-1">
         <div className="flex items-start justify-between mb-2">
           <div>
-            <Link href={isPreview ? '/coaching' : `/coaching/${trainer._id}`}>
+            <Link href={isPreview ? '/coaching' : trainerPublicPath(trainer)}>
               <h3 className="font-bold text-white text-base hover:text-primary transition-colors">{name}</h3>
             </Link>
             <p className="text-muted-foreground text-xs mt-0.5">{trainer.country}{trainer.gymName ? ` · ${trainer.gymName}` : ''}</p>
@@ -124,7 +126,7 @@ function TrainerCard({ trainer, connectable, onConnect }: { trainer: Trainer; co
            'Connect'}
         </button>
         {!isPreview && (
-          <Link href={`/coaching/${trainer._id}`} className="mt-2 text-center text-xs text-primary hover:underline">
+          <Link href={trainerPublicPath(trainer)} className="mt-2 text-center text-xs text-primary hover:underline">
             View profile →
           </Link>
         )}
