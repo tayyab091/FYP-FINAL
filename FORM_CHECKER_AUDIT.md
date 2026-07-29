@@ -1,5 +1,7 @@
 # AI Form Checker — Technical Audit (2026-07-29)
 
+> **Update (2026-07-29, later session):** Sections 1-11 below are the original **read-only** audit and are left intact for history. **Section 12** documents the fixes actually implemented afterward (bilateral landmarks, cited thresholds, graded feedback, premium-gate alignment) and an honest session report on what could/could not be verified without a real camera.
+
 **Scope:** Read-only audit of the pose-detection "form checker" feature. No logic was changed as part of this audit (per instructions). This document describes exactly what the current implementation does, cites exact code locations, and calls out where thresholds are unverified/arbitrary.
 
 **Files reviewed:**
@@ -224,3 +226,71 @@ Steps to manually verify the feature in a browser (used to validate this audit's
 7. Server-side `POST /api/gamification/form-check` trusts the client-reported rep count entirely; no server-side pose or plausibility validation.
 8. No dedicated e2e test coverage exists for `/exercise-check` in `e2e/` at the time of this audit.
 9. Feature has a hard runtime dependency on the `cdn.jsdelivr.net` CDN for MediaPipe assets — no bundled/offline fallback.
+
+---
+
+## 12. Fixes applied in this session (2026-07-29, later)
+
+All changes are in `src/components/exercise/PoseDetector.tsx` unless noted. Item numbers reference §11 above.
+
+### 12.1 Bilateral landmarks (item 2)
+
+Every exercise now reads **both** left and right side landmarks (e.g. squat: `[23,25,27]` **and** `[24,26,28]`). Per-joint MediaPipe `visibility` is checked (`MIN_JOINT_VISIBILITY = 0.5`, matching `minDetectionConfidence`/`minTrackingConfidence`) before a side is trusted:
+
+- If both sides pass the visibility gate, the angle is the **average** of both sides (more robust to single-limb tracking noise).
+- If only one side is visible (user angled away from camera on the other side), that side is used alone — this is the fallback the audit recommended, not the previous "left-only, no fallback" behavior.
+- If neither side is visible, the UI now shows **"Move fully into frame — joints not clearly visible"** instead of silently computing an angle from a low-confidence landmark (this also closes item 3: angle math is now gated on `visibility`, the same threshold used for the skeleton overlay).
+
+**Lunge specifically** now uses both legs to distinguish the front (bent) leg from the back (extended) leg — see `getLungeFeedback()`. Previously (§6, item 1) squat and lunge were mathematically identical and the "lower your back knee" cue was cosmetic; now the back leg's own angle is checked against a 150° extension threshold and the cue is only shown when the back leg is genuinely under-extended.
+
+### 12.2 Cited thresholds (item 4)
+
+Every `goodAngle` / `repAngle` in `EXERCISES` now has an inline comment plus a `citation` string (also surfaced under the exercise picker in the UI as "Threshold source: …"):
+
+| Exercise | Depth threshold | Source | Reset/tolerance | Status |
+|---|---|---|---|---|
+| Squat | 100° knee flexion | NASM Essentials of Personal Fitness Training (7th ed.) / ACE squat-depth guidance — "parallel" depth ≈ 90-100° knee flexion | 160° reset | Reset angle is a **BEST ESTIMATE** (not independently cited) |
+| Push-Up | 90° elbow flexion | ACE push-up test protocol / NASM push-up form standard — full rep ≈ upper arm parallel to floor | 160° reset | Reset angle is a **BEST ESTIMATE** |
+| Lunge | 100° front-knee flexion (shared w/ squat) + 150° back-leg extension | Front knee: NASM/ACE (as above). Back-leg 150° threshold | — | Back-leg threshold is a **BEST ESTIMATE** |
+| Plank | 160° shoulder-hip-ankle | NASM straight-body-line guidance (ideal ≈ 180°) | — | 160° tolerance band is a **BEST ESTIMATE**, not an exact published figure |
+| Joint visibility gate | 0.5 | MediaPipe Pose documented default `minDetectionConfidence`/`minTrackingConfidence` | — | Matches upstream default, not app-specific |
+| Min rep hold | 250 ms | — | — | **BEST ESTIMATE** anti-noise guard, added this session (item 5) |
+| Plank hold credit | 10 s / "rep" | — | — | **BEST ESTIMATE**, added this session (item 6) |
+
+No claim is made that 100°/90°/160°/150° are the *only* correct values — they are the same order-of-magnitude figures used by mainstream certifying bodies' depth/lockout descriptions, cited above; anything not backed by an external citation is explicitly labeled **BEST ESTIMATE** both in code comments and in this table, per instructions.
+
+### 12.3 Real-time feedback — specific cues, not binary (item from Phase 1 brief)
+
+`getGradedFeedback()`, `getLungeFeedback()`, and `getPlankFeedback()` replace the old flat good/bad strings with cues that reference the actual measured deviation, e.g.:
+- "Almost there — 12° more to go" instead of a generic "Go lower".
+- "Hips sagging — engage your core and lift hips" vs. "Hips too high — lower into a straight line" (previously both faults produced the identical "Raise your hips" message; now the shoulder-ankle line is used to infer sag vs. pike direction from the hip's actual vs. expected y-position).
+- "Extend your back leg further for a full lunge" only fires when the back leg is specifically under-extended (see 12.1).
+
+### 12.4 Rep-counting integrity (item 5)
+
+`MIN_REP_HOLD_MS = 250` requires the tracked angle to stay in the "down" position for at least 250ms before the "up" transition can complete a rep, reducing (not eliminating) the previously-noted issue of very fast, partial-range motions counting as full reps. This is a best-estimate anti-noise guard, not a tempo/cadence validator — a determined user can still game it.
+
+### 12.5 Plank can now earn XP (item 6)
+
+Plank has no concentric/eccentric cycle, so it's tracked differently: every `PLANK_HOLD_INCREMENT_MS` (10s) of **continuous good-form hold** increments the session's "rep" counter by 1 (surfaced in the UI as hold-time seconds, not an angle). On Stop, this non-zero counter is sent to `POST /api/gamification/form-check` exactly like a rep-based exercise, so a plank-only session now earns XP and progresses the `form_master` achievement — closing the gap documented in §8 ("Plank cannot earn XP through the normal flow"). No server-side change was needed for this — `formCheckSchema` already accepted any `reps` 1-500 for any exercise string.
+
+### 12.6 Premium gate alignment (Phase 2)
+
+- `src/components/exercise/ExerciseCheckGate.tsx` now renders the shared `AccessGate` / `SignInGate` components (`src/components/shared/AccessGate.tsx`) — the same ones `analytics/page.tsx` uses — instead of a bespoke inline panel, so the sign-in and upgrade UX is now visually and structurally consistent across gated Pro features.
+- `src/app/api/gamification/form-check/route.ts` previously hard-rejected any `role !== 'user'` with 403 "Member account required" — this disagreed with the client gate, which lets privileged roles (`admin`/`super_admin`/`trainer`/`gym_owner`) through via `bypassesSubscriptionGate()`. The route now mirrors `api/analytics/summary`'s pattern exactly: privileged roles bypass the plan check, everyone else needs `canUseExerciseCheck(plan)`, else a `403` with a clear JSON `message` ("AI form checking requires Pro or Elite plan"). Basic-plan `user` accounts are still correctly blocked — see `e2e/exercise-check-and-checklist.spec.ts`.
+
+### 12.7 Honest session report (per Phase 1 instructions)
+
+**What this agent could verify, and how:**
+- All of the above via static code reading + `npm run build` (TypeScript compiles, no runtime type errors).
+- Premium gating (client UI text + API status codes) via real Playwright browser automation against a live `next dev` server + live MongoDB Atlas — see `e2e/exercise-check-and-checklist.spec.ts` ("Basic plan is blocked in the UI", "Pro plan unlocks the exercise-check UI").
+- The `POST /api/gamification/form-check` XP-award path end-to-end (real HTTP request, real DB write, real XP delta) for both Basic (403) and Pro (200 + XP) plans.
+
+**What this agent could NOT verify, and why — the user must validate physically:**
+- **Actual pose-estimation accuracy** — whether the bilateral angle averaging, the visibility gating, or the specific cited angle thresholds (100°/90°/160°/150°/160°) actually produce correct "good form" / "bad form" classifications for a real human body in front of a real webcam. This agent has no camera and cannot run MediaPipe against live video.
+- **Camera position / framing**: the UI instructs users to stand far enough back that hip, knee, and ankle (or shoulder/elbow/wrist for push-ups) are in frame; whether typical home setups (webcam height, distance, angle) actually satisfy this is unverified. Recommend testing at ~2-2.5m from camera, camera at chest height, perpendicular (side-on) framing for squat/push-up/lunge and a 3/4 or side angle for plank so the shoulder-hip-ankle line is visible.
+- **Lighting**: MediaPipe's landmark `visibility` confidence (now actually gating angle math, see 12.1) is known to degrade in low light or backlit conditions (window/bright light behind the subject). This was not empirically tested — only inferred from MediaPipe's own documentation and general pose-estimation literature.
+- **The 250ms min-rep-hold and 10s plank-hold-credit constants** are unvalidated against real rep cadence; they were chosen to be permissive (fast lifters/short pauses shouldn't be blocked) rather than strict.
+- **Bilateral averaging** assumes both sides of a symmetric bodyweight movement move together; it has not been validated against an asymmractional or single-limb variation (e.g. single-leg lunges are still fine since only one leg is "front", but a genuinely asymmetric fault, like one-sided knee valgus, would be averaged away rather than flagged — a known limitation of averaging bilateral angles, not a citation gap).
+
+**Recommendation:** before relying on this feature for real coaching decisions, a sighted human (ideally with fitness-coaching background) should record short reference clips of correct/incorrect squats, push-ups, lunges, and planks under normal home lighting and manually confirm the on-screen angle/feedback matches expectations, across at least a "well-lit" and a "dim room" condition.
