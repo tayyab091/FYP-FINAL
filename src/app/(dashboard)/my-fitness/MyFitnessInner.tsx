@@ -141,8 +141,11 @@ export default function MyFitnessInner({
         r.ok ? r.json() : { logs: [], streak: 0, totalCompleted: 0 },
       ),
       fetch('/api/gamification/me', { signal: controller.signal }).then((r) => (r.ok ? r.json() : null)),
+      // Restore today's in-progress workout (if any) so the checklist
+      // survives a reload/revisit instead of resetting to empty.
+      fetch('/api/tracking/logs/active', { signal: controller.signal }).then((r) => (r.ok ? r.json() : { log: null })),
     ])
-      .then(([planData, progressData, mealData, historyData, gamificationData]) => {
+      .then(([planData, progressData, mealData, historyData, gamificationData, activeData]) => {
         if (planData?.plan === null) setPlan(null)
         else if (planData?._id) setPlan(planData)
         else if (planData?.plan) setPlan(planData.plan)
@@ -150,6 +153,20 @@ export default function MyFitnessInner({
         setMeals(mealData)
         setWorkoutHistory(historyData)
         if (gamificationData?.xp !== undefined) setGamification(gamificationData)
+
+        const activeLog = activeData?.log as
+          | { _id: string; exercises?: Array<{ completed?: boolean }> }
+          | null
+          | undefined
+        if (activeLog?._id) {
+          setActiveLogId(activeLog._id)
+          setWorkoutStarted(true)
+          setCompletedExercises(
+            (activeLog.exercises || [])
+              .map((exercise, index) => (exercise.completed ? index : -1))
+              .filter((index) => index !== -1),
+          )
+        }
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === 'AbortError') {
@@ -272,6 +289,37 @@ export default function MyFitnessInner({
       toast.error(error instanceof Error ? error.message : 'Failed to start workout')
     } finally {
       setStartingWorkout(false)
+    }
+  }
+
+  const handleToggleExercise = (index: number, checked: boolean) => {
+    // Optimistic local update so the checkbox feels instant...
+    setCompletedExercises((current) =>
+      checked ? [...current, index] : current.filter((i) => i !== index),
+    )
+    // ...then persist to the in-progress log so a reload/revisit doesn't
+    // lose the checklist (see BUG_REPORT.md).
+    if (!activeLogId) return
+    fetch(`/api/tracking/logs/${activeLogId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ exerciseIndex: index, completed: checked }),
+    }).catch(() => {
+      toast.error('Could not save checklist — check your connection')
+    })
+  }
+
+  const handleCancelWorkout = () => {
+    const logId = activeLogId
+    setWorkoutStarted(false)
+    setActiveLogId(null)
+    setCompletedExercises([])
+    if (logId) {
+      fetch(`/api/tracking/logs/${logId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'skipped' }),
+      }).catch(() => {})
     }
   }
 
@@ -488,11 +536,7 @@ export default function MyFitnessInner({
                                         checked={completedExercises.includes(globalIndex)}
                                         disabled={!workoutStarted}
                                         onChange={(event) =>
-                                          setCompletedExercises((current) =>
-                                            event.target.checked
-                                              ? [...current, globalIndex]
-                                              : current.filter((index) => index !== globalIndex),
-                                          )
+                                          handleToggleExercise(globalIndex, event.target.checked)
                                         }
                                         className="h-4 w-4 accent-primary"
                                       />
@@ -535,11 +579,7 @@ export default function MyFitnessInner({
                               </Button>
                               <Button
                                 variant="outline"
-                                onClick={() => {
-                                  setWorkoutStarted(false)
-                                  setActiveLogId(null)
-                                  setCompletedExercises([])
-                                }}
+                                onClick={handleCancelWorkout}
                               >
                                 Cancel
                               </Button>
