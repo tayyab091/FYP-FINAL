@@ -20,6 +20,41 @@ Two agent sessions ended up running shell/git commands against the **same non-wo
 - Confirmed the race had stopped (no commits in `git reflog` for 40+ minutes) before resuming, re-applied the reverted DNS fix, and re-verified it end-to-end (`node scripts/backfill-trainer-slugs.mjs` → success).
 - **Recommendation:** never run two agents against the same non-worktree checkout concurrently — use `git worktree add` (or fully serialize handoffs) per agent to avoid clobbered edits.
 
+## Fixed in this session (2026-07-29, later — Form Checker / Gating / Checklist)
+
+| ID | Severity | Issue | Fix |
+|----|----------|-------|-----|
+| BUG-009 | Medium | `POST /api/gamification/form-check` hard-rejected any `role !== 'user'` with 403 "Member account required", but the client gate (`ExerciseCheckGate`, `canAccessExerciseCheck`) lets privileged roles (`admin`/`super_admin`/`trainer`/`gym_owner`) through via `bypassesSubscriptionGate()`. A privileged user could open `/exercise-check`, use the camera, click Stop, and get a confusing 403 on submit. | Route now mirrors `api/analytics/summary`'s pattern: `bypassesSubscriptionGate(role)` skips the plan check entirely for privileged roles; everyone else needs `canUseExerciseCheck(plan)`. See `src/app/api/gamification/form-check/route.ts`. |
+| BUG-010 | Medium | `ExerciseCheckGate.tsx` used a bespoke inline "sign in" / "upgrade" panel instead of the shared `AccessGate`/`SignInGate` components that `analytics/page.tsx` (and others) use, so the upgrade-prompt UX was visually inconsistent between Pro-gated features. | Refactored `ExerciseCheckGate` to render `<SignInGate>` / `<AccessGate>` — see `src/components/exercise/ExerciseCheckGate.tsx`. |
+| **BUG-011** | **High** | **Workout checklist / XP persistence bug** (my-fitness workout flow). Per-exercise checkbox completion lived only in client React state (`completedExercises`) — never sent to the server except at "Complete Workout" time. Reloading or navigating away during a workout lost all checkbox state *and* the `activeLogId`/`workoutStarted` flags, silently abandoning the `in_progress` `WorkoutLog` document (orphaned in the DB) and forcing the user to start over. | See "Before/after" below. |
+| BUG-012 | Low (defense-in-depth) | `PUT /api/tracking/logs/:id/complete` guarded against double-completion with a plain `findOne` → check `status` → `save()`, which has a TOCTOU race window under concurrent requests (two simultaneous clicks could both pass the check before either saves, double-awarding XP). No explicit per-log "already paid out" flag existed either. | Replaced with an atomic `findOneAndUpdate({ status: { $ne: 'completed' } }, { $set: { status: 'completed', ... } })` (single Mongo operation — only one caller can win the transition) **plus** a new `xpAwarded: Boolean` field on `WorkoutLog`, checked before calling `awardWorkoutXp`, as an independent second guard. |
+
+### BUG-011 — Before / after
+
+**Before:**
+- `WorkoutLog.exercises[]` had no `completed` flag — the schema only tracked `name`/`setsCompleted`/`repsCompleted`/`notes`.
+- Checkbox `onChange` only updated `useState<number[]>` locally; no network call.
+- `GET /api/tracking/logs` only ever returned `status: 'completed'` logs — there was no way to fetch an `in_progress` log, so a page reload had nothing to restore from.
+- "Complete Workout" *did* use the local checkbox state (this part was already correct) but that state was fragile — a reload before clicking Complete lost everything.
+- `Cancel` only cleared local state; the `in_progress` `WorkoutLog` row was left orphaned in the database forever.
+
+**After:**
+- `WorkoutLog.exercises[].completed: Boolean` (default `false`) persists per-exercise checklist state (`src/models/WorkoutLog.ts`).
+- New `PATCH /api/tracking/logs/:id` (`src/app/api/tracking/logs/[id]/route.ts`) accepts `{ exerciseIndex, completed }` and updates a single checklist item on an `in_progress` log (rejects if the log isn't `in_progress`, i.e. can't edit a completed/skipped log). The same endpoint accepts `{ status: 'skipped' }` to explicitly cancel/abandon a workout server-side.
+- New `GET /api/tracking/logs/active` (`src/app/api/tracking/logs/active/route.ts`) returns today's `in_progress` log (if any) for the current user.
+- `MyFitnessInner.tsx`'s initial data-load effect now also calls `/api/tracking/logs/active` and, if a log is found, restores `activeLogId`, `workoutStarted`, and `completedExercises` (derived from `exercises[].completed`) — a reload or revisit **no longer loses the in-progress checklist**.
+- The checkbox `onChange` now calls `handleToggleExercise()`, which optimistically updates local state **and** fires a `PATCH` to persist the toggle.
+- `Cancel` now calls `handleCancelWorkout()`, which `PATCH`es `{ status: 'skipped' }` so the log is properly closed out instead of left as a dangling `in_progress` row (and so it no longer shows up as the "active" log on a later revisit).
+- "Complete Workout" is unchanged in that it still filters by `completedExercises` — but that array is now backed by the server, so it reflects reality even after a reload (closing the "Complete Workout uses persisted state" requirement).
+- XP-once guard: see BUG-012 above (atomic transition + `xpAwarded` flag).
+
+**Verified via:** `e2e/exercise-check-and-checklist.spec.ts` → `Workout checklist persistence & XP-once guard` describe block:
+1. Starts a real workout via the API, toggles exercise 0's checklist item, re-fetches `/api/tracking/logs/active` fresh (simulating a reload) and confirms the toggle survived.
+2. Reloads the actual `/my-fitness` **UI** and confirms the checkbox renders checked (not just an API-level check).
+3. Completes the workout, confirms `gamification.xp` increases by exactly `xpAwarded`.
+4. Calls complete **again** on the same log id, confirms `400 "Workout already completed"` and that `xp` did **not** change a second time.
+5. A separate test confirms `Cancel` (`PATCH { status: 'skipped' }`) removes the log from `/api/tracking/logs/active`.
+
 ## Open / known limitations
 
 | ID | Severity | Repro | Expected | Actual | Notes |
@@ -69,3 +104,17 @@ Ran as a fresh, single-session audit against the current `musadiq` working tree 
 - [x] Old ObjectId URLs → `permanentRedirect` to slug when trainer has `slug` (verified in real browser via Playwright)
 - [x] `POST /api/relationships/request/[trainerId]` resolves slug or ObjectId (`findTrainerByIdOrSlug`)
 - [x] Full Playwright E2E suite (58/58 effective passes across both spec files)
+
+## Re-verification — Form Checker / Gating / Checklist session (2026-07-29, later)
+
+- `npm run build` → succeeded (webpack), all routes compiled including the two new API routes (`/api/tracking/logs/[id]`, `/api/tracking/logs/active`), no TypeScript errors.
+- Added `e2e/exercise-check-and-checklist.spec.ts` (6 tests): Basic-plan UI gate, Basic-plan API 403, Pro-plan UI unlock, Pro-plan API 200+XP, checklist persistence + XP-once guard (API + real UI reload check), cancel-clears-active-log.
+- **First full Playwright run** (`e2e/exercise-check-and-checklist.spec.ts` + `e2e/final-complete.spec.ts` + `e2e/full-audit.spec.ts`, 64 tests total): 9 failures, all in `final-complete.spec.ts`, all `TimeoutError: page.waitForResponse ... /api/auth/login` (or a page that depends on that same login helper) — none in the new spec file, and none touching code changed in this session (login/settings/leaderboard/community/notifications pages were not modified). Consistent with this repo's previously-documented dev-server/network flakiness (see "Session notes — concurrent-agent race" above and the earlier "3 flaky-then-passed" note) rather than a regression.
+- **Second full Playwright run**, fresh dev server, no other change: **64/64 passed**, 12.7m, zero retries needed. Confirms the first run's failures were transient environment flakiness, not caused by this session's code changes.
+- Gating and checklist scenarios were exercised both at the API level (via `request` fixtures hitting real routes against the live dev DB) and via real browser UI navigation/reload (Playwright `page` fixture) — not just source-code review.
+
+## Honest limitations of this verification pass
+
+- All Playwright runs used the **simulated** subscription upgrade path (`POST /api/subscription`), not a real Stripe checkout — Stripe itself was not exercised in these tests (consistent with `STRIPE_SECRET_KEY` not being configured for local/dev testing per `src/app/api/subscription/route.ts`).
+- The AI Form Checker's pose-estimation *accuracy* (as opposed to the plan-gating and XP wiring around it) could not be tested by this agent — no camera is available in this environment. See `FORM_CHECKER_AUDIT.md` §12.7 for the detailed camera/lighting/limitations write-up and what a human tester should verify.
+- Test data (the "Checklist Persistence Test Plan" / "Cancel Test Plan" `WorkoutPlan` documents and their `WorkoutLog`s created by the new e2e spec) is left in the shared dev database, consistent with how existing specs already leave behind test signups/plans — no cleanup step existed previously and none was added here.
