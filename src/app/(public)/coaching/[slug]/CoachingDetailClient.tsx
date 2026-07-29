@@ -280,7 +280,7 @@ export function CoachingDetailClient({ slug }: { slug: string }) {
 
     setConnectStatus('loading')
     try {
-      const res = await fetch(`/api/relationships/request/${trainer._id}`, {
+      const res = await fetch(`/api/relationships/request/${encodeURIComponent(slug)}`, {
         method: 'POST',
         credentials: 'include',
       })
