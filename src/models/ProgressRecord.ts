@@ -11,4 +11,7 @@ const ProgressRecordSchema = new Schema({
   notes: { type: String, default: '' },
 }, { timestamps: true })
 
+// my-fitness progress tab and analytics/summary both filter/sort by userId + date.
+ProgressRecordSchema.index({ userId: 1, date: -1 })
+
 export default mongoose.models.ProgressRecord || mongoose.model('ProgressRecord', ProgressRecordSchema)

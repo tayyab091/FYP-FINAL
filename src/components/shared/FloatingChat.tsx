@@ -4,10 +4,6 @@ import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 
-interface ConversationRow {
-  unreadCount?: number
-}
-
 export function FloatingChat() {
   const { user } = useAuth()
   const router = useRouter()
@@ -17,13 +13,14 @@ export function FloatingChat() {
   useEffect(() => {
     if (!user) return
     const controller = new AbortController()
-    fetch('/api/chat/conversations', { signal: controller.signal })
-      .then((r) => (r.ok ? r.json() : []))
-      .then((convs: ConversationRow[]) => {
-        const list = Array.isArray(convs) ? convs : []
-        const total = list.reduce((sum, c) => sum + (c.unreadCount || 0), 0)
-        setUnread(total)
-      })
+    // Uses the lightweight count-only endpoint instead of the full
+    // conversations list (populated participants, last message, etc.) —
+    // this badge only ever needs a number, and it re-fetches on every
+    // navigation, so the heavier endpoint was a real, measured cost added
+    // to every single page load across the app.
+    fetch('/api/chat/unread-count', { signal: controller.signal })
+      .then((r) => (r.ok ? r.json() : { count: 0 }))
+      .then((data: { count?: number }) => setUnread(data.count || 0))
       .catch(() => {})
     return () => controller.abort()
   }, [user, pathname])
