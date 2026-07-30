@@ -89,6 +89,13 @@ export default function MyFitnessInner({
   const [startingWorkout, setStartingWorkout] = useState(false)
   const [completedExercises, setCompletedExercises] = useState<number[]>([])
   const [completingWorkout, setCompletingWorkout] = useState(false)
+  // Today's already-completed log (if any), so a revisit after "Complete
+  // Workout" shows the checklist as it was left instead of resetting to
+  // empty (see BUG_REPORT.md — checklist unchecked after completing).
+  const [completedTodayLog, setCompletedTodayLog] = useState<{
+    _id: string
+    exercises?: Array<{ name: string; completed?: boolean }>
+  } | null>(null)
   const [foodSearch, setFoodSearch] = useState('')
   const [foodResults, setFoodResults] = useState<FoodResult[]>([])
   const [searchingFood, setSearchingFood] = useState(false)
@@ -166,7 +173,15 @@ export default function MyFitnessInner({
               .map((exercise, index) => (exercise.completed ? index : -1))
               .filter((index) => index !== -1),
           )
+        } else {
+          setActiveLogId(null)
+          setWorkoutStarted(false)
+          setCompletedExercises([])
         }
+        setCompletedTodayLog(
+          (activeData?.completedToday as { _id: string; exercises?: Array<{ name: string; completed?: boolean }> } | null) ||
+            null,
+        )
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === 'AbortError') {
@@ -193,6 +208,14 @@ export default function MyFitnessInner({
   const todayGrouped = useMemo(
     () => (todaySchedule?.exercises ? groupExercisesByBodyPart(todaySchedule.exercises) : {}),
     [todaySchedule],
+  )
+
+  const completedTodayNames = useMemo(
+    () =>
+      new Set(
+        (completedTodayLog?.exercises || []).filter((exercise) => exercise.completed).map((exercise) => exercise.name),
+      ),
+    [completedTodayLog],
   )
 
   const chartData = progress.map((r) => ({
@@ -291,6 +314,7 @@ export default function MyFitnessInner({
       setActiveLogId(logId)
       setWorkoutStarted(true)
       setCompletedExercises([])
+      setCompletedTodayLog(null)
       toast.success('Workout started')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to start workout')
@@ -526,12 +550,21 @@ export default function MyFitnessInner({
                       <p className="text-[#a0a0a0]">Rest day — recover and recharge</p>
                     ) : (
                       <div className="space-y-5">
+                        {!workoutStarted && completedTodayLog && (
+                          <div className="rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-primary">
+                            ✓ Today&apos;s workout is already completed — checklist below reflects what you finished.
+                            Start a new session if you want to log another one.
+                          </div>
+                        )}
                         {Object.entries(todayGrouped).map(([part, exercises]) => (
                           <div key={part}>
                             <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-primary">{part}</h3>
                             <div className="space-y-2">
                               {exercises.map((ex) => {
                                 const globalIndex = todaySchedule.exercises.indexOf(ex)
+                                const isChecked = workoutStarted
+                                  ? completedExercises.includes(globalIndex)
+                                  : completedTodayNames.has(ex.name)
                                 return (
                                   <div
                                     key={`${part}-${globalIndex}`}
@@ -540,7 +573,7 @@ export default function MyFitnessInner({
                                     <label className="flex items-center gap-3">
                                       <input
                                         type="checkbox"
-                                        checked={completedExercises.includes(globalIndex)}
+                                        checked={isChecked}
                                         disabled={!workoutStarted}
                                         onChange={(event) =>
                                           handleToggleExercise(globalIndex, event.target.checked)
@@ -549,7 +582,7 @@ export default function MyFitnessInner({
                                       />
                                       <span
                                         className={
-                                          completedExercises.includes(globalIndex)
+                                          isChecked
                                             ? 'font-medium text-[#a0a0a0] line-through'
                                             : 'font-medium text-white'
                                         }
