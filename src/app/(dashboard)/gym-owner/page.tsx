@@ -182,7 +182,7 @@ export default function GymOwnerPage() {
   )
 
   return (
-    <div className="min-h-screen pt-6 pb-12 px-4 sm:px-6">
+    <div className="dashboard-fab-reserve min-h-screen px-4 pt-6 sm:px-6">
       <div className="max-w-7xl mx-auto">
         <div className="page-hero mb-6 flex flex-wrap items-start justify-between gap-4 px-6 py-8 sm:px-8">
           <div>
