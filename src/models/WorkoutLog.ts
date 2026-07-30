@@ -27,4 +27,10 @@ const WorkoutLogSchema = new Schema({
   xpAwarded: { type: Boolean, default: false },
 }, { timestamps: true })
 
+// Every completed-workout listing, streak calculation, and count (dashboard,
+// my-fitness, gamification/me, analytics/summary) filters by userId+status
+// and sorts by date, so this compound index covers all of them without a
+// collection scan.
+WorkoutLogSchema.index({ userId: 1, status: 1, date: -1 })
+
 export default mongoose.models.WorkoutLog || mongoose.model('WorkoutLog', WorkoutLogSchema)

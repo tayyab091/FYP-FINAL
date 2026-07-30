@@ -26,4 +26,7 @@ const MealLogSchema = new Schema({
   notes: { type: String, default: '' },
 }, { timestamps: true })
 
+// meal-logs/today and analytics/summary both filter by userId + date range.
+MealLogSchema.index({ userId: 1, date: -1 })
+
 export default mongoose.models.MealLog || mongoose.model('MealLog', MealLogSchema)
