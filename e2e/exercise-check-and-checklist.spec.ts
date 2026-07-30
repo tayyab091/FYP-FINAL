@@ -197,6 +197,88 @@ test.describe('Workout checklist persistence & XP-once guard', () => {
     expect(gamiFinal.xp).toBe(gamiAfter.xp) // unchanged — XP awarded exactly once
   })
 
+  test('Completed workout checklist is restored (checked, read-only) on revisit — not reset to empty', async ({
+    page,
+    request,
+  }) => {
+    test.setTimeout(90000)
+    await loginAPI(request)
+    await setPlan(request, 'pro')
+
+    const today = new Date().toLocaleDateString('en-US', { weekday: 'long' })
+    const exerciseNames = ['Revisit Test Exercise A', 'Revisit Test Exercise B']
+
+    const planRes = await request.post(`${BASE}/api/tracking/plans`, {
+      data: {
+        title: 'Revisit Persistence Test Plan',
+        goal: 'general_fitness',
+        durationWeeks: 4,
+        difficulty: 'beginner',
+        activateNow: true,
+        weeklySchedule: [
+          {
+            day: today,
+            isRestDay: false,
+            exercises: exerciseNames.map((name) => ({ name, sets: 3, reps: '10', restSeconds: 30, notes: '' })),
+          },
+        ],
+      },
+    })
+    expect(planRes.status()).toBe(201)
+    const plan = await planRes.json()
+
+    const startRes = await request.post(`${BASE}/api/tracking/logs`, {
+      data: {
+        planId: plan._id,
+        date: new Date().toISOString(),
+        exercises: exerciseNames.map((name) => ({ name, setsCompleted: 0, repsCompleted: '10' })),
+      },
+    })
+    expect(startRes.status()).toBe(201)
+    const { log } = await startRes.json()
+    const logId = log._id as string
+
+    // Only the first exercise is checked before completing — the completed
+    // log's `exercises` array should reflect exactly that, not silently
+    // default every exercise's `completed` flag to false (see BUG_REPORT.md).
+    const completeRes = await request.put(`${BASE}/api/tracking/logs/${logId}/complete`, {
+      data: { exercises: [{ name: exerciseNames[0], setsCompleted: 3, repsCompleted: '10' }] },
+    })
+    expect(completeRes.status()).toBe(200)
+    const completeData = await completeRes.json()
+    expect(completeData.xpAwarded).toBeGreaterThan(0)
+    expect(completeData.log.exercises).toHaveLength(1)
+    expect(completeData.log.exercises[0].completed).toBe(true)
+
+    // The active endpoint must surface this as `completedToday` (distinct
+    // from `log`, which stays reserved for an in-progress workout).
+    const activeRes = await request.get(`${BASE}/api/tracking/logs/active`)
+    const activeData = await activeRes.json()
+    expect(activeData.log).toBeNull()
+    expect(activeData.completedToday?._id).toBe(logId)
+    expect(activeData.completedToday.exercises[0].completed).toBe(true)
+
+    // UI-level confirmation: revisiting /my-fitness after completion must
+    // show the checklist as checked (read-only) instead of empty.
+    await loginUI(page)
+    await page.goto(`${BASE}/my-fitness?tab=workout`)
+    await page.waitForTimeout(3000)
+    await page.screenshot({ path: 'e2e/screenshots/33-my-fitness-completed-checklist-restored.png', fullPage: true })
+
+    const firstCheckbox = page.locator('input[type="checkbox"]').first()
+    const secondCheckbox = page.locator('input[type="checkbox"]').nth(1)
+    expect(await firstCheckbox.isChecked().catch(() => false)).toBe(true)
+    expect(await secondCheckbox.isChecked().catch(() => true)).toBe(false)
+    expect(await firstCheckbox.isDisabled()).toBe(true)
+
+    const hasCompletedBanner = await page
+      .getByText(/already completed/i)
+      .first()
+      .isVisible()
+      .catch(() => false)
+    expect(hasCompletedBanner).toBe(true)
+  })
+
   test('Cancelling an in-progress workout marks it skipped (no orphan "active" log)', async ({ request }) => {
     await loginAPI(request)
     await setPlan(request, 'pro')

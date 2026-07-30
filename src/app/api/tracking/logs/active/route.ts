@@ -8,6 +8,13 @@ import WorkoutLog from '@/models/WorkoutLog'
  * restore `workoutStarted` / `activeLogId` / per-exercise checklist state
  * after a page reload or revisit, instead of silently losing it.
  * (See BUG_REPORT.md — workout checklist XP persistence bug.)
+ *
+ * Also returns today's most recently *completed* log (`completedToday`) as a
+ * separate field — kept distinct from `log` so existing callers that treat
+ * `log` as "there is an in-progress workout to resume" are unaffected. This
+ * is what lets the client show today's checklist as checked/read-only after
+ * "Complete Workout" instead of resetting to an empty, unchecked list on
+ * revisit (see BUG_REPORT.md — checklist unchecked after completing).
  */
 export async function GET(req: NextRequest) {
   try {
@@ -21,15 +28,24 @@ export async function GET(req: NextRequest) {
     const startOfDay = new Date()
     startOfDay.setHours(0, 0, 0, 0)
 
-    const log = await WorkoutLog.findOne({
-      userId: tokenUser.userId,
-      status: 'in_progress',
-      date: { $gte: startOfDay },
-    })
-      .sort({ createdAt: -1 })
-      .lean()
+    const [log, completedToday] = await Promise.all([
+      WorkoutLog.findOne({
+        userId: tokenUser.userId,
+        status: 'in_progress',
+        date: { $gte: startOfDay },
+      })
+        .sort({ createdAt: -1 })
+        .lean(),
+      WorkoutLog.findOne({
+        userId: tokenUser.userId,
+        status: 'completed',
+        date: { $gte: startOfDay },
+      })
+        .sort({ createdAt: -1 })
+        .lean(),
+    ])
 
-    return NextResponse.json({ log: log || null })
+    return NextResponse.json({ log: log || null, completedToday: completedToday || null })
   } catch {
     return NextResponse.json({ message: 'Server error' }, { status: 500 })
   }

@@ -63,12 +63,23 @@ export async function PUT(
     // flag below is a second, independent guard so XP can never be granted
     // twice for the same log even if this route is called again after a
     // partial failure.
+    // The client only submits the exercises the user actually checked off
+    // (see MyFitnessInner.handleCompleteWorkout), but `workoutCompleteSchema`
+    // has no `completed` field, so without this the exercises written here
+    // would silently default to `completed: false` — which is exactly why a
+    // completed log could never be used to restore a checked checklist on
+    // revisit (see BUG_REPORT.md — checklist unchecked after completing).
+    const completedExercises = parsed.data.exercises.map((exercise) => ({
+      ...exercise,
+      completed: true,
+    }))
+
     const log = await WorkoutLog.findOneAndUpdate(
       { _id: idResult.id, userId: tokenUser.userId, status: { $ne: 'completed' } },
       {
         $set: {
           status: 'completed',
-          exercises: parsed.data.exercises,
+          exercises: completedExercises,
           durationMinutes: parsed.data.durationMinutes || 0,
           notes: parsed.data.notes || '',
         },
