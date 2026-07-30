@@ -294,3 +294,23 @@ Plank has no concentric/eccentric cycle, so it's tracked differently: every `PLA
 - **Bilateral averaging** assumes both sides of a symmetric bodyweight movement move together; it has not been validated against an asymmractional or single-limb variation (e.g. single-leg lunges are still fine since only one leg is "front", but a genuinely asymmetric fault, like one-sided knee valgus, would be averaged away rather than flagged — a known limitation of averaging bilateral angles, not a citation gap).
 
 **Recommendation:** before relying on this feature for real coaching decisions, a sighted human (ideally with fitness-coaching background) should record short reference clips of correct/incorrect squats, push-ups, lunges, and planks under normal home lighting and manually confirm the on-screen angle/feedback matches expectations, across at least a "well-lit" and a "dim room" condition.
+
+### 12.8 Re-verification (2026-07-30, retry session)
+
+Static code audit re-run against the current tree — all §12 claims **confirmed in source**:
+
+| Claim | Verified location | Status |
+|---|---|---|
+| 4 exercises (squat, pushup, lunge, plank) | `EXERCISES` in `PoseDetector.tsx` L79–139 | ✅ |
+| Bilateral left+right landmarks + visibility gate | `LANDMARKS`, `resolveSide()`, `MIN_JOINT_VISIBILITY` L33–51, L145–163, L209–226 | ✅ |
+| Cited thresholds + UI citation line | per-exercise `citation` + picker subtitle L423–425 | ✅ |
+| Graded feedback (not binary) | `getGradedFeedback`, `getLungeFeedback`, `getPlankFeedback` L499–546 | ✅ |
+| Lunge back-leg check (150° BEST ESTIMATE) | `getLungeFeedback` L515–521 | ✅ |
+| Rep hold guard (250 ms) | `MIN_REP_HOLD_MS` L61, FSM L251–255 | ✅ |
+| Plank XP via 10 s hold credits | `PLANK_HOLD_INCREMENT_MS` L64, plank branch L265–286, stop POST L376–395 | ✅ |
+| Client Pro/Elite gate | `ExerciseCheckGate.tsx` → `canAccessExerciseCheck()` L20–32 | ✅ |
+| Server Pro/Elite gate (+ privileged bypass) | `form-check/route.ts` L33–41 mirrors `bypassesSubscriptionGate` | ✅ |
+
+**Live automation (Playwright + `next dev`, MongoDB Atlas):** `e2e/exercise-check-and-checklist.spec.ts` — Basic UI blocked (upgrade prompt, no Start Camera button), Basic API `403`, Pro UI shows Start Camera, Pro API `200` with `xpAwarded > 0`. Screenshots: `e2e/screenshots/30-exercise-check-basic-gated.png`, `31-exercise-check-pro-unlocked.png`.
+
+**Still not verified (requires human + webcam):** real-time pose accuracy, camera framing distance, lighting degradation — unchanged from §12.7.
