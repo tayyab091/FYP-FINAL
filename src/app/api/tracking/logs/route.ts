@@ -61,7 +61,11 @@ export async function GET(req: NextRequest) {
 
     await connectDB()
 
-    const [logs, total] = await Promise.all([
+    // These three queries are independent of each other, so they're run
+    // concurrently instead of awaiting the streak lookup after the first two
+    // resolve — that previously cost a full extra network round trip to the
+    // database on every load of this endpoint.
+    const [logs, total, recentDates] = await Promise.all([
       WorkoutLog.find({ userId: tokenUser.userId, status: 'completed' })
         .sort({ date: -1 })
         .skip(skip)
@@ -69,22 +73,18 @@ export async function GET(req: NextRequest) {
         .populate('planId', 'title goal difficulty')
         .lean(),
       WorkoutLog.countDocuments({ userId: tokenUser.userId, status: 'completed' }),
+      // Streak: consecutive days with at least one completed workout
+      WorkoutLog.find({ userId: tokenUser.userId, status: 'completed' })
+        .sort({ date: -1 })
+        .limit(90)
+        .select('date')
+        .lean(),
     ])
 
     const shaped = logs.map((log) => ({
       ...log,
       plan: log.planId || undefined,
     }))
-
-    // Streak: consecutive days with at least one completed workout
-    const recentDates = await WorkoutLog.find({
-      userId: tokenUser.userId,
-      status: 'completed',
-    })
-      .sort({ date: -1 })
-      .limit(90)
-      .select('date')
-      .lean()
 
     const daySet = new Set(
       recentDates.map((entry) => new Date(entry.date).toISOString().slice(0, 10)),

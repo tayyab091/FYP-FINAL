@@ -20,5 +20,10 @@ const GamificationProfileSchema = new Schema(
   { timestamps: true },
 )
 
+// computeUserRank() counts profiles with xp greater than the current user's on
+// every /api/gamification/me call (dashboard, my-fitness, analytics,
+// community all fetch this) — without this index that's a full collection scan.
+GamificationProfileSchema.index({ xp: -1 })
+
 export default mongoose.models.GamificationProfile
   || mongoose.model('GamificationProfile', GamificationProfileSchema)
