@@ -92,7 +92,7 @@ export default function DashboardPage() {
   ]
 
   return (
-    <div className="min-h-screen px-4 pb-28 pt-6 sm:px-6">
+    <div className="dashboard-fab-reserve-with-nav min-h-screen px-4 pt-6 sm:px-6">
       <div className="mx-auto max-w-6xl space-y-6">
         <div>
           <p className="section-eyebrow">Your Home</p>

@@ -351,7 +351,7 @@ export default function TrainerDashboardPage() {
   )
 
   return (
-    <div className="min-h-screen pt-6 pb-12 px-4 sm:px-6">
+    <div className="dashboard-fab-reserve min-h-screen px-4 pt-6 sm:px-6">
       <div className="max-w-7xl mx-auto">
         <div className="page-hero mb-6 flex flex-wrap items-start justify-between gap-4 px-6 py-8 sm:px-8">
           <div>
@@ -429,10 +429,10 @@ export default function TrainerDashboardPage() {
                     <Link
                       key={action.label}
                       href={action.href}
-                      className="tile interactive-lift min-h-[7.5rem] justify-between"
+                      className="tile interactive-lift min-h-[8.5rem] justify-between"
                     >
-                      <p className="font-bold text-white">{action.label}</p>
-                      <p className="text-xs text-muted-foreground">{action.desc}</p>
+                      <p className="break-words font-bold leading-snug text-white">{action.label}</p>
+                      <p className="text-xs leading-snug text-muted-foreground">{action.desc}</p>
                     </Link>
                   ))}
                 </div>
