@@ -248,7 +248,14 @@ export default function MyFitnessInner({
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.message || 'Failed to delete')
       toast.success('Progress entry deleted')
-      reloadData()
+      // The DELETE already confirmed removal server-side, so the local list is
+      // updated directly instead of calling reloadData(). reloadData() re-fetches
+      // six unrelated endpoints (plan, meals, workout history, gamification,
+      // active log) and flips `loading` back to true, which blanks the entire
+      // Progress tab — chart, form, and history table — behind a skeleton for
+      // seconds on every single-row delete. That made a successful delete look
+      // like it had wiped the whole list or done nothing.
+      setProgress((prev) => prev.filter((entry) => entry._id !== id))
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to delete progress')
     } finally {
