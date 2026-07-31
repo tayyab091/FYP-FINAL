@@ -8,14 +8,46 @@ import { SiteFooter } from '@/components/layout/SiteFooter'
 import { AIChatbot } from '@/components/shared/AIChatbot'
 import { FloatingChat } from '@/components/shared/FloatingChat'
 import { Toaster } from 'sonner'
+import {
+  DEFAULT_DESCRIPTION,
+  DEFAULT_KEYWORDS,
+  getSiteUrl,
+  SITE_NAME,
+  SITE_TAGLINE,
+} from '@/lib/seo'
 
 const manrope = Manrope({ subsets: ['latin'], variable: '--font-body' })
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-display' })
 
 export const metadata: Metadata = {
-  title: 'T.E.S.T. — Train. Eat. Sleep. Thrive.',
-  description: "Pakistan's first AI-powered fitness coaching platform. Connect with verified trainers, track nutrition, and achieve your fitness goals.",
-  keywords: 'fitness, trainer, workout, nutrition, Pakistan, AI coaching',
+  metadataBase: new URL(getSiteUrl()),
+  title: {
+    default: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: DEFAULT_DESCRIPTION,
+  keywords: DEFAULT_KEYWORDS,
+  applicationName: SITE_NAME,
+  authors: [{ name: SITE_NAME }],
+  creator: SITE_NAME,
+  formatDetection: { email: false, address: false, telephone: false },
+  openGraph: {
+    type: 'website',
+    locale: 'en_PK',
+    siteName: SITE_NAME,
+    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    description: DEFAULT_DESCRIPTION,
+  },
+  twitter: {
+    card: 'summary',
+    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    description: DEFAULT_DESCRIPTION,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, 'max-image-preview': 'large' },
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

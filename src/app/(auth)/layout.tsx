@@ -1,4 +1,7 @@
 import { Activity, BrainCircuit, ShieldCheck, Sparkles } from 'lucide-react'
+import { NO_INDEX_METADATA } from '@/lib/seo'
+
+export const metadata = NO_INDEX_METADATA
 
 const benefits = [
   { icon: BrainCircuit, label: 'AI-powered coaching and form analysis' },
