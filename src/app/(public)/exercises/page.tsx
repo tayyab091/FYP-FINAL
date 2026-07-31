@@ -102,7 +102,7 @@ function ExerciseCard({ exercise }: { exercise: Exercise }) {
       <Link href={`/exercises/${exercise.id}`} className="block">
         <CatalogImageFrame
           src={exercise.gifUrl}
-          alt={exercise.name}
+          alt={`${exercise.name} — ${exercise.muscle} exercise demo`}
           variant="card"
           fit="contain"
           hasError={imgError}
@@ -310,7 +310,7 @@ export default function ExercisesPage() {
     <div className="min-h-screen pt-8 pb-24">
       <div className="max-w-6xl mx-auto px-6">
         <FadeIn>
-          <div className="page-hero mb-6 px-6 py-10 sm:px-10 md:py-14 gym-floor">
+          <div className="page-hero mb-6 px-6 py-10 sm:px-10 md:py-14 gym-floor min-h-[14rem] md:min-h-[16rem]">
             <p className="eyebrow mb-3">Exercise Library</p>
             <h1 className="display-title text-4xl md:text-6xl text-white mb-3">Master Every Movement</h1>
             <p className="max-w-xl text-muted-foreground">
