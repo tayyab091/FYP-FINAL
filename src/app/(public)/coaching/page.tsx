@@ -70,7 +70,7 @@ function TrainerCard({ trainer, connectable, onConnect }: { trainer: Trainer; co
     >
       <Link href={isPreview ? '/coaching' : trainerPublicPath(trainer)} className="relative h-40 bg-gradient-to-br from-primary/10 to-sky-400/5 flex items-center justify-center">
         {image ? (
-          <Image src={image} alt={name} width={80} height={80}
+          <Image src={image} alt={`${name} — fitness trainer profile photo`} width={80} height={80}
             className="h-20 w-20 rounded-full object-cover ring-4 ring-background shadow-xl" />
         ) : (
           <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-sky-400 flex items-center justify-center text-black font-black text-2xl ring-4 ring-background">
@@ -224,7 +224,7 @@ export default function CoachingPage() {
   return (
     <div className="min-h-screen pt-8 pb-24">
       <FadeIn>
-        <div className="page-hero max-w-6xl mx-4 px-6 py-10 sm:mx-6 sm:px-10 md:mx-auto md:py-14 gym-floor">
+        <div className="page-hero max-w-6xl mx-4 px-6 py-10 sm:mx-6 sm:px-10 md:mx-auto md:py-14 gym-floor min-h-[14rem] md:min-h-[16rem]">
           <p className="eyebrow mb-3">Trainer Marketplace</p>
           <h1 className="display-title text-balance text-4xl md:text-6xl text-white mb-4">Find Your Perfect Trainer</h1>
           <p className="max-w-xl text-muted-foreground">Discover verified coaches matched to your goals, training style, and location.</p>
