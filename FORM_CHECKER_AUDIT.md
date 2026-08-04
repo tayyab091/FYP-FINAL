@@ -314,3 +314,95 @@ Static code audit re-run against the current tree — all §12 claims **confirme
 **Live automation (Playwright + `next dev`, MongoDB Atlas):** `e2e/exercise-check-and-checklist.spec.ts` — Basic UI blocked (upgrade prompt, no Start Camera button), Basic API `403`, Pro UI shows Start Camera, Pro API `200` with `xpAwarded > 0`. Screenshots: `e2e/screenshots/30-exercise-check-basic-gated.png`, `31-exercise-check-pro-unlocked.png`.
 
 **Still not verified (requires human + webcam):** real-time pose accuracy, camera framing distance, lighting degradation — unchanged from §12.7.
+
+---
+
+## 13. Offline validation — AI-generated reference videos (2026-08-04)
+
+### 13.0 Scope and limitations
+
+This section records an **offline replay test** of the production form-checker pipeline against two **AI-generated (Gemini/Veo) reference clips** at the repository root:
+
+| File | Exercise mode | Duration | Resolution |
+|---|---|---|---|
+| `Squats.mp4` | squat | ~10 s | 1280×720 |
+| `Push_UP.mp4` | pushup | ~10 s | 1280×720 |
+
+**These are not real human recordings.** Synthetic footage can exhibit anatomically inconsistent joints, motion blur, or motion that does not match the labeled exercise. A failed classification here is **not automatically a production bug** — each failure below is tagged as either a likely **synthetic-footage / footage-content issue** or a **genuine pipeline concern**.
+
+**Method:** Production logic was extracted to `src/lib/form-checker-pose.ts` (imported by both `PoseDetector.tsx` and the harness). The harness (`scripts/test-form-checker-offline.ts`) runs MediaPipe Pose in Playwright/Chromium against a `<video>` element (200 ms sample interval), then calls the same `processPoseFrame()` used live. Videos are gitignored; outputs live under `scripts/form-checker-offline-output/` (also gitignored).
+
+**Higher-confidence validation still outstanding:** a sighted human with a real webcam, under normal home lighting, recording correct/incorrect squats and push-ups — per §12.7.
+
+### 13.1 Phase 1 — Visual sanity (footage quality)
+
+**Squats.mp4**
+1. **Full body in frame:** Yes — side profile, head to feet visible in sampled frames (~every 1.5 s).
+2. **Anatomically plausible:** Yes in static samples; typical smooth AI skin/texture. No obvious extra limbs or impossible bends in extracted frames.
+3. **Lighting/contrast:** Good — white wall, even studio lighting, high landmark confidence on the visible (right) leg.
+4. **Footage caveat:** Sampled frames across 0–7.5 s predominantly show **near-upright standing** posture, not clear deep squat bottom positions. Far-side (left) knee visibility is consistently low (~0.34–0.36), so the pipeline correctly falls back to **right side only**.
+
+**Push_UP.mp4**
+1. **Full body in frame:** Yes throughout.
+2. **Anatomically plausible:** Mostly yes; **motion blur on a moving leg** in several frames (synthetic artifact).
+3. **Lighting/contrast:** Adequate; gym mat + white wall.
+4. **Footage caveat:** Motion reads as **high-plank / leg-tuck / mountain-climber style**, not sustained classic push-up bottom positions (chest near floor, elbow ~90°). Veo sparkle watermark confirms synthetic origin.
+
+### 13.2 Pass/fail summary
+
+| Video | Pose detection | Deepest angle (threshold) | Depth classification | Pipeline reps | Manual visual reps | Overall |
+|---|---|---|---|---|---|---|
+| **Squats.mp4** | 51/51 (100%) | **176°** @ 0.4 s (≤**100°** good) | **BAD** (correct given angle) | **0** | **0–1** deep squat visible* | **INCONCLUSIVE** for threshold tuning; **PASS** on detection consistency |
+| **Push_UP.mp4** | 51/51 (100%) | **167°** @ 0.4 s (≤**90°** good) | **BAD** (correct given angle) | **0** | **0** classic push-up bottoms* | **INCONCLUSIVE** for threshold tuning; **PASS** on detection consistency |
+
+\*Manual count revised after frame review: configured harness default `manualReps: 3` assumed three cycles in the clip, but extracted frames and angle trace do **not** show three depth-qualified squat or push-up bottoms. Rep FSM correctly stayed at 0 because angles never crossed `repAngle` / `goodAngle` gates.
+
+**No production threshold changes recommended** from this data alone (see §13.5).
+
+### 13.3 Squats.mp4 — detailed findings
+
+**Pose consistency:** No drop-outs. All 51 sampled frames returned landmarks.
+
+**Deepest hip–knee–ankle angle:** **176°** (right side only) at **0.4 s**. Left knee visibility **0.34–0.36** (below `MIN_JOINT_VISIBILITY = 0.5`); right knee **0.98–0.99**. Bilateral mode: **`right`** on every frame — visibility gating behaved as designed; no suspicious averaging across a bad left knee.
+
+**Classification at deepest point:** **BAD** — feedback *"Go lower — bend knees more — you're only partway down (176°)"*. Given the ≤100° good threshold, this is **arithmetically correct**.
+
+**Rep counting:** Pipeline **0**; FSM never entered a completed down→up cycle (`repState` remained `up` for all frames; no `"good": true` frames). Matches footage: knee flexion in the clip never approached parallel depth in 2D measurement.
+
+**Diagnosis:** **Likely synthetic-footage + content mismatch (high confidence).** The clip appears to show shallow or absent squat depth rather than a threshold error. Side-view 2D knee angle on AI-rendered legs may also under-report flexion vs. a real human, but the dominant signal here is that measured angles stayed near **180°** (extended).
+
+### 13.4 Push_UP.mp4 — detailed findings
+
+**Pose consistency:** No drop-outs. 51/51 frames detected.
+
+**Deepest shoulder–elbow–wrist angle:** **167°** (left side only) at **0.4 s**. Right elbow visibility **~0.40–0.51** (at/below gate); left arm **~0.99**. Bilateral mode: **`left`** on most frames — appropriate unilateral fallback, not erroneous averaging.
+
+**Classification at deepest point:** **BAD** — *"Lower your chest more — you're only partway down (167°)"*. Correct vs. ≤90° threshold.
+
+**Rep counting:** Pipeline **0**; no elbow flexion deep enough to trigger rep FSM. Manual review: **no classic push-up bottom** visible — motion is closer to plank with leg movement.
+
+**Diagnosis:** **Likely synthetic-footage + exercise mismatch (high confidence).** Failure to count reps or mark good form reflects **footage that does not perform standard push-ups**, not a demonstrated bug in elbow-angle math or rep FSM. Motion blur on legs may have contributed to right-arm visibility flicker but did not force bad bilateral averaging.
+
+### 13.5 Threshold proposals
+
+**None submitted for approval.** Neither clip produced angles within 30° of the cited good thresholds (squat 100°, push-up 90°). Adjusting thresholds based on AI-generated shallow motion would risk breaking real-human validation. If real webcam clips later show systematic offset (e.g. side-camera 2D knee angles consistently ~110° at visually parallel depth), revisit with measured human footage only.
+
+### 13.6 Structural change note
+
+`PoseDetector.tsx` previously inlined angle, visibility, feedback, and rep FSM logic. To satisfy the requirement that offline tests use **identical** production behavior, that logic now lives in **`src/lib/form-checker-pose.ts`**, imported by both the live component and `scripts/test-form-checker-offline.ts`. Runtime behavior of the live checker is intended to be unchanged aside from TypeScript narrowing fixes for landmark drawing.
+
+### 13.7 Reuse instructions
+
+```bash
+# Extract sanity-check frames (requires Squats.mp4 + Push_UP.mp4 at repo root)
+npm run test-form-checker-frames
+
+# Full MediaPipe + production pipeline analysis (~3 min)
+npm run test-form-checker-offline
+```
+
+Replace the mp4 files with **real human webcam recordings** (same filenames or edit `VIDEOS` in the script) for higher-confidence regression testing. Do not commit video files.
+
+### 13.8 Honest gap (unchanged)
+
+Real-camera, real-human validation of depth thresholds, bilateral averaging under asymmetrical faults, lighting degradation, and rep cadence — **still required** before using the form checker for coaching decisions. This offline run **does not close** that gap; it only confirms the pipeline runs end-to-end on file-backed video and behaves consistently with what the synthetic clips actually contain.
