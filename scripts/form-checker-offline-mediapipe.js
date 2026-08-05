@@ -1,5 +1,7 @@
 /* Browser-side MediaPipe helper for offline form-checker tests. */
 ;(function () {
+  let pendingResolve = null
+
   async function waitForPose() {
     const start = Date.now()
     while (!window.Pose) {
@@ -24,6 +26,15 @@
       minTrackingConfidence: 0.5,
     })
     await pose.initialize()
+
+    pose.onResults((r) => {
+      if (pendingResolve) {
+        const resolve = pendingResolve
+        pendingResolve = null
+        resolve(r)
+      }
+    })
+
     window.__offlinePose = pose
     window.__offlineVideo = video
     return { duration: video.duration, width: video.videoWidth, height: video.videoHeight }
@@ -35,9 +46,22 @@
     if (!pose || !video) return null
     video.currentTime = sec
     await new Promise((r) => video.addEventListener('seeked', r, { once: true }))
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+
     const result = await new Promise((resolve) => {
-      pose.onResults((r) => resolve(r))
-      pose.send({ image: video }).catch(() => resolve(null))
+      const timeout = setTimeout(() => {
+        pendingResolve = null
+        resolve(null)
+      }, 8000)
+      pendingResolve = (r) => {
+        clearTimeout(timeout)
+        resolve(r)
+      }
+      pose.send({ image: video }).catch(() => {
+        clearTimeout(timeout)
+        pendingResolve = null
+        resolve(null)
+      })
     })
     return result && result.poseLandmarks ? result.poseLandmarks : null
   }

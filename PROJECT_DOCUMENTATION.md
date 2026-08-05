@@ -96,11 +96,68 @@ Enforcement lives in `src/lib/subscription.ts` (+ `subscription-server.ts` for D
 | Live sessions (join) | — | — | ✓ |
 | Live sessions (create) | Trainer role + Jitsi Meet | | |
 
-Privileged roles (admin / trainer / gym_owner) bypass member subscription gates where noted in code.
+Privileged roles (admin / trainer / gym_owner) bypass member subscription gates where noted in code. Per-role routes, APIs, bypasses, and restrictions are detailed in §5.
 
 ---
 
-## 5. Main UI routes
+## 5. Role features
+
+Privileged platform roles beyond member and trainer flows. Enforcement lives in route handlers, `proxy.ts`, and `src/lib/access.ts`.
+
+### Admin (`admin`)
+
+| Area | Details |
+|------|---------|
+| **Home** | `/admin` (Admin Console) |
+| **Tabs** | overview, users, trainers, gyms, verifications, audit, subscriptions |
+| **Pages** | `/admin/exercises`, `/admin/nutrition` (read-only catalogs); `/settings` (Admin Controls tab) |
+| **APIs** | All `/api/admin/*` — stats, users, suspend, trainer/gym verify, audit-logs, subscriptions |
+
+**Subscription bypass:** analytics, meal plans, community, AI form checker.
+
+**Live sessions:** treated as Elite for **join** only (hosting requires trainer role).
+
+**Cannot:** trainer dashboard, gym-owner workspace, suspend other admins, change admin subscriptions.
+
+### Super admin (`super_admin`)
+
+Functionally **identical** to admin — no exclusive capabilities. Every authorization check uses `['admin', 'super_admin'].includes(role)`. Differences are cosmetic only (red badge vs purple, sidebar label). `super_admin` must be set manually in MongoDB; no API creates it.
+
+### Gym owner (`gym_owner`)
+
+| Area | Details |
+|------|---------|
+| **Home** | `/gym-owner` |
+| **Tabs** | My Gym (profile edit), My Trainers (link by email, approve/remove), Analytics |
+| **Pages** | `/gym-owner/exercises`, `/gym-owner/nutrition` (read-only); `/chat`; `/settings` (Facility tab) |
+| **APIs** | `/api/gym-owner/gym` (GET/PUT), `/api/gym-owner/trainers` (GET/POST/PUT); register via `/api/auth/register-gym-owner` |
+
+**Subscription bypass:** analytics, meal plans, community, form checker. **Not** live sessions — Elite plan required.
+
+**Cannot:** admin console, trainer dashboard, member `/dashboard`, platform verification (admin only).
+
+**Gym verification:** view status only; admin approves via `/api/admin/gyms/[id]/verify`.
+
+### Role comparison
+
+| Capability | Admin | Super admin | Gym owner |
+|------------|:-----:|:-----------:|:---------:|
+| Admin Console (`/admin`) | ✓ | ✓ | — |
+| Suspend users (non-admin) | ✓ | ✓ | — |
+| Suspend admins | — | — | — |
+| Verify trainers / gyms | ✓ | ✓ | — |
+| Manage subscriptions (non-admin) | ✓ | ✓ | — |
+| Change admin subscriptions | — | — | — |
+| Gym-owner workspace | — | — | ✓ |
+| Trainer dashboard | — | — | — |
+| Analytics / meal plans / community / form checker bypass | ✓ | ✓ | ✓ |
+| Live sessions (join as Elite) | ✓ | ✓ | — (needs Elite) |
+| Live sessions (host) | — (trainer only) | — | — |
+| Distinct from admin beyond UI | — | cosmetic only | — |
+
+---
+
+## 6. Main UI routes
 
 | Path | Audience |
 |------|----------|
@@ -116,7 +173,7 @@ Privileged roles (admin / trainer / gym_owner) bypass member subscription gates 
 
 ---
 
-## 6. API routes (summary)
+## 7. API routes (summary)
 
 ### Auth & user
 `/api/auth/register`, `register-trainer`, `register-gym-owner`, `login`, `logout`, `me`, `forgot-password`, `reset-password`, `verify-email`, `oauth/google`, `oauth/google/callback`, `create-admin`  
@@ -147,7 +204,7 @@ Privileged roles (admin / trainer / gym_owner) bypass member subscription gates 
 
 ---
 
-## 7. Environment variables
+## 8. Environment variables
 
 See `.env.example`. Minimum to run locally:
 
@@ -174,7 +231,7 @@ JWT_SECRET=...
 
 ---
 
-## 8. Local development
+## 9. Local development
 
 ```bash
 npm install
@@ -190,7 +247,7 @@ Verification helper: `node scripts/live-verify.mjs` (server must be running).
 
 ---
 
-## 9. Known gaps & suggested next steps
+## 10. Known gaps & suggested next steps
 
 **Gaps (env / product):**
 
@@ -218,7 +275,7 @@ Verification helper: `node scripts/live-verify.mjs` (server must be running).
 
 ---
 
-## 10. Related docs
+## 11. Related docs
 
 - `docs/LIVE_VERIFICATION_REPORT.md` — live probe results (latest: 69/69 pass)  
 - `docs/SECURITY_AUDIT_REPORT.md` — NoSQL / XSS / CSP / rate-limit audit  
@@ -230,7 +287,7 @@ Verification helper: `node scripts/live-verify.mjs` (server must be running).
 
 ---
 
-## 11. Branch integration (2026-07-29)
+## 12. Branch integration (2026-07-29)
 
 - **`musadiq`** merged **`remotes/fyp-final/main`** (integration main; includes Tayyab UI/admin work). Local branch **`tayyab`** was already contained after that merge.
 - Local git branch **`main`** has **unrelated history** to `musadiq`; use **`fyp-final/main`** for integration, not local `main`, unless histories are reconciled deliberately.
