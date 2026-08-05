@@ -403,6 +403,94 @@ npm run test-form-checker-offline
 
 Replace the mp4 files with **real human webcam recordings** (same filenames or edit `VIDEOS` in the script) for higher-confidence regression testing. Do not commit video files.
 
-### 13.8 Honest gap (unchanged)
+### 13.8 Honest gap (unchanged from AI run)
 
 Real-camera, real-human validation of depth thresholds, bilateral averaging under asymmetrical faults, lighting degradation, and rep cadence — **still required** before using the form checker for coaching decisions. This offline run **does not close** that gap; it only confirms the pipeline runs end-to-end on file-backed video and behaves consistently with what the synthetic clips actually contain.
+
+---
+
+## 13.9 Re-validation — real human footage (2026-08-05)
+
+### 13.9.0 Scope
+
+Re-ran `npm run test-form-checker-offline` against **real human** reference clips at the repo root (replacing the AI-generated Squats/Push_UP files and adding Lunges/Plank):
+
+| File | Exercise mode | Duration | Resolution | Camera notes (frame review) |
+|---|---|---|---|---|
+| `Squats.mp4` | squat | ~33 s | 1076×1014 | **Front-facing** full-body |
+| `Push_UP.mp4` | pushup | ~27.7 s | 1048×984 | **High/overhead angle** |
+| `Lunges.mp4` | lunge | ~42.8 s | 1246×980 | Side profile; **screen-recording UI** visible |
+| `Plank.mp4` | plank | ~30.8 s | 1192×428 | **Side profile** outdoor |
+
+Harness updates this run: added `Lunges.mp4` + `Plank.mp4` to `VIDEOS`; fixed plank peak-angle reporting (max not min); fixed MediaPipe `onResults` listener stacking in `form-checker-offline-mediapipe.js`. Production thresholds **unchanged**.
+
+### 13.9.1 Pass/fail summary
+
+| Video | Pose detection | Peak depth / alignment (threshold) | Classification at peak | Good-form frames | Pipeline reps/holds | Manual visual estimate | Overall |
+|---|---|---|---|---|---|---|---|
+| **Squats.mp4** | 166/166 (100%) | **174°** min (≤**100°**) | **BAD** (correct vs angle) | 0/166 | **0** reps | **~5** reps (33 s clip) | **FAIL** rep counting; **2D camera limitation** |
+| **Push_UP.mp4** | 139/139 (100%) | **141°** min (≤**90°**); R arm **133°** | **BAD** (correct vs angle) | 0/139 | **0** reps | **~3** reps | **FAIL** rep counting; **2D camera limitation** |
+| **Lunges.mp4** | **0/214 (0%)** | n/a | n/a | 0 | **0** reps | **~4–6** lunge cycles visible | **FAIL** — detection outage |
+| **Plank.mp4** | 155/155 (100%) | **173°** best (≥**160°**) | **GOOD** | 155/155 | **3** hold credits @ 10/20/30 s | **~30 s** continuous hold | **PASS** |
+
+### 13.9.2 Squats.mp4 — detailed findings
+
+**Pose consistency:** 100% detection; bilateral averaging on both legs (visibility ~1.0 on all joints).
+
+**Angle trace:** Hip–knee–ankle angle stayed **174–175°** for the entire 33 s clip (spread **1°**), including frames at visual squat bottom (e.g. ~20 s). Front-facing camera geometry collapses sagittal knee flexion into near-180° 2D measurements even when depth looks correct on screen.
+
+**Rep counting:** Pipeline **0** vs **~5** estimated visual reps — FSM never saw `angle ≤ 100°`, so no down→up cycles registered. **Not a rep-FSM bug** given measured angles.
+
+**Diagnosis:** **Camera-angle / 2D-math limitation (high confidence).** Not evidence that the 100° threshold is wrong for side-on footage. **Recommend side-profile camera** (per §12.7) for squat validation.
+
+### 13.9.3 Push_UP.mp4 — detailed findings
+
+**Pose consistency:** 100% detection.
+
+**Angle trace:** Shoulder–elbow–wrist minimum **141°** (bilateral avg); right arm reached **133°** at deepest. Push-up bottoms at ~10 s and ~20 s look visually correct in frame review, but overhead camera foreshortens the elbow angle in 2D.
+
+**Rep counting:** Pipeline **0** vs **~3** visual reps.
+
+**Diagnosis:** **Camera-angle / 2D-math limitation (high confidence)** for the 90° threshold as measured. The checker correctly classifies BAD relative to current math, but **good-form reps are not measurable** from this camera angle.
+
+### 13.9.4 Lunges.mp4 — detailed findings
+
+**Pose consistency:** **Complete failure** — MediaPipe returned **zero landmarks** on every sampled frame (214/214 drop-outs). Feedback: *"No pose detected"*. Re-tested at t = 0–40 s with the same result. Frame review shows a valid side-profile lunge bottom (~90° front knee visually), but footage includes a **screen-recording “Pause recording” overlay** and may be a cropped screen capture — likely confusing MediaPipe or degrading decode quality.
+
+**Diagnosis:** **Footage / capture artifact (high confidence)** — not a lunge threshold or FSM issue. **Re-record without screen UI**, full-body in frame, side-on, direct MP4 (not screen capture) before judging lunge logic.
+
+### 13.9.5 Plank.mp4 — detailed findings
+
+**Pose consistency:** 100% detection.
+
+**Alignment:** Shoulder–hip–ankle **171–173°** throughout; **155/155** frames classified **GOOD** (≥160°).
+
+**Hold credits:** Pipeline awarded **3** credits at **10 s, 20 s, 30 s** — matches a ~31 s continuous plank clip. **Rep/hold accuracy: PASS.**
+
+**Diagnosis:** **No issues found** on this footage. Plank path (alignment check + 10 s hold increments) behaves as designed.
+
+### 13.9.6 Threshold proposals (awaiting your approval — NOT applied)
+
+| Exercise | Current | Proposal | Evidence | Confidence | Recommendation |
+|---|---|---|---|---|---|
+| Squat | 100° good | **No change** | Front-camera 2D min 174° at visual parallel depth | High that issue is camera, not threshold | Require side-on footage before any change |
+| Push-up | 90° good | **Optional ~130–135°** only if high-angle camera is a deliberate supported setup | Deepest measured 133° (right) at visual full rep | **Low** — would over-permit shallow reps on side camera | **Do not change** unless product accepts overhead camera as primary |
+| Lunge | 100° good | **No change** | No angle data (detection failed) | n/a | Fix footage first |
+| Plank | 160° good | **No change** | 173° measured; 100% good | High | Keep as-is |
+
+### 13.9.7 Updated honest gap
+
+| Area | Status after real-footage run |
+|---|---|
+| Plank alignment + hold credits | **Validated** on side-profile real human clip |
+| Squat / push-up depth thresholds | **Still unvalidated** on side-profile real human clips — front/overhead test footage incompatible with 2D joint-angle math |
+| Lunge pipeline | **Blocked** — need clean re-record without screen-capture artifacts |
+| Live webcam UX (framing prompts, lighting) | Still outstanding per §12.7 |
+
+### 13.9.8 Reuse
+
+```bash
+npm run test-form-checker-offline   # all four clips at repo root
+```
+
+Debug frame captures from this session: `scripts/form-checker-offline-output/debug-frames/` (gitignored).

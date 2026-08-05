@@ -1,5 +1,5 @@
 /**
- * Offline form-checker validation against local reference videos (Squats.mp4, Push_UP.mp4).
+ * Offline form-checker validation against local reference videos at repo root.
  * MediaPipe runs in Playwright/Chromium; angle/rep logic imported from src/lib/form-checker-pose.ts.
  */
 import { chromium, type Browser, type Page } from '@playwright/test'
@@ -22,6 +22,8 @@ const FRAME_DIR = path.join(OUT_DIR, 'frames')
 const VIDEOS: { file: string; exercise: ExerciseKey; manualReps: number }[] = [
   { file: 'Squats.mp4', exercise: 'squat', manualReps: 3 },
   { file: 'Push_UP.mp4', exercise: 'pushup', manualReps: 3 },
+  { file: 'Lunges.mp4', exercise: 'lunge', manualReps: 3 },
+  { file: 'Plank.mp4', exercise: 'plank', manualReps: 0 },
 ]
 
 const SAMPLE_MS = 200
@@ -40,6 +42,7 @@ interface FrameLog {
   repState: string
   repCount: number
   repCompleted: boolean
+  holdSeconds?: number
 }
 
 function startVideoServer(): Promise<{ port: number; close: () => void; baseUrl: string }> {
@@ -167,28 +170,38 @@ async function runVideoAnalysis(page: Page, baseUrl: string, file: string, exerc
       repState: processed.repState,
       repCount: processed.repCount,
       repCompleted: processed.repCompletedThisFrame,
+      holdSeconds: processed.holdSeconds,
     })
   }
 
   const detectedFrames = logs.filter((l) => l.detected && l.angle !== null)
   const ex = EXERCISES[exercise]
-  const deepest = detectedFrames.reduce<FrameLog | null>((best, f) => {
+  const isPlank = exercise === 'plank'
+  const peakForm = detectedFrames.reduce<FrameLog | null>((best, f) => {
     if (f.angle === null) return best
-    if (!best || best.angle === null || f.angle < best.angle) return f
-    return best
+    if (!best || best.angle === null) return f
+    if (isPlank) return f.angle > best.angle ? f : best
+    return f.angle < best.angle ? f : best
   }, null)
-  const depthFrames = detectedFrames.filter((l) => l.angle !== null && l.angle <= ex.goodAngle + 15)
+  const depthFrames = detectedFrames.filter((l) => {
+    if (l.angle === null) return false
+    return isPlank ? l.angle >= ex.goodAngle - 15 : l.angle <= ex.goodAngle + 15
+  })
+  const goodFrames = detectedFrames.filter((l) => l.good)
 
   return {
     meta: setup,
     logs,
     dropouts,
     dropoutRate: dropouts / logs.length,
-    deepest,
+    deepest: peakForm,
     depthFrames,
+    goodFrames,
+    goodFrameCount: goodFrames.length,
     repEvents: logs.filter((l) => l.repCompleted),
     finalRepCount: session.repCount,
     threshold: ex.goodAngle,
+    exercise,
   }
 }
 
@@ -203,22 +216,10 @@ async function main() {
   })
 
   const visualNotes: string[] = [
-    '# Visual sanity — AI-generated reference footage (Gemini/Veo)',
+    '# Visual sanity — real human reference footage',
     '',
-    'Squats.mp4 and Push_UP.mp4 are **synthetic**, not real human video.',
+    'Squats.mp4, Push_UP.mp4, Lunges.mp4, and Plank.mp4 are **real human** recordings at the repo root.',
     'Inspect PNGs under `scripts/form-checker-offline-output/frames/`.',
-    '',
-    '### Squats.mp4 (manual frame review)',
-    '- Side-profile studio shot; full body in frame (head to feet).',
-    '- Anatomically plausible in sampled frames; smooth AI skin texture.',
-    '- Plain white wall, even lighting — good contrast for pose detection.',
-    '- Arms extended forward; side view may occlude far-side joints (tests unilateral fallback).',
-    '',
-    '### Push_UP.mp4 (manual frame review)',
-    '- Full body visible; gym mat + white wall background.',
-    '- Some frames show motion blur on moving leg (AI artifact) — may lower landmark confidence.',
-    '- Clip includes high-plank / leg-tuck style motion, not only classic push-up bottom positions.',
-    '- Veo sparkle watermark bottom-right (synthetic footage marker).',
     '',
   ]
 
@@ -288,17 +289,26 @@ function formatSummary(
   result: Awaited<ReturnType<typeof runVideoAnalysis>>,
 ) {
   const lines: string[] = []
+  const isPlank = exercise === 'plank'
   lines.push(`## ${label} (${exercise})`)
   lines.push(`- Pose detected: ${result.logs.length - result.dropouts}/${result.logs.length} (${((1 - result.dropoutRate) * 100).toFixed(0)}%)`)
+  lines.push(`- Good-form frames: ${result.goodFrameCount}/${result.logs.length - result.dropouts}`)
   if (result.deepest) {
+    const cmp = isPlank ? `≥${result.threshold}°` : `≤${result.threshold}°`
+    const labelPeak = isPlank ? 'Best alignment' : 'Deepest'
     lines.push(
-      `- Deepest: ${result.deepest.angle}° @ ${result.deepest.timeSec}s (≤${result.threshold}°) → ${result.deepest.good ? 'GOOD' : 'BAD'} — "${result.deepest.feedback}"`,
+      `- ${labelPeak}: ${result.deepest.angle}° @ ${result.deepest.timeSec}s (${cmp}) → ${result.deepest.good ? 'GOOD' : 'BAD'} — "${result.deepest.feedback}"`,
     )
-    lines.push(`- Bilateral at deepest: L=${result.deepest.leftAngle}° R=${result.deepest.rightAngle}° (${result.deepest.bilateralMode})`)
+    lines.push(`- Bilateral at peak: L=${result.deepest.leftAngle}° R=${result.deepest.rightAngle}° (${result.deepest.bilateralMode})`)
   }
-  lines.push(`- Reps: pipeline=${result.finalRepCount}, manual≈${manualReps}`)
+  if (isPlank) {
+    const maxHold = Math.max(...result.logs.map((l) => l.holdSeconds ?? 0))
+    lines.push(`- Hold credits: pipeline=${result.finalRepCount} (10s increments), max hold=${maxHold}s`)
+  } else {
+    lines.push(`- Reps: pipeline=${result.finalRepCount}, manual≈${manualReps}`)
+  }
   if (result.repEvents.length) {
-    lines.push(`- Rep events @ ${result.repEvents.map((r) => r.timeSec).join('s, ')}s`)
+    lines.push(`- Rep/hold events @ ${result.repEvents.map((r) => r.timeSec).join('s, ')}s`)
   }
   return lines.join('\n')
 }
