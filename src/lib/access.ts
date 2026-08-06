@@ -10,6 +10,29 @@ export type UserRole = 'user' | 'trainer' | 'gym_owner' | 'admin' | 'super_admin
 
 const PRIVILEGED_ROLES: UserRole[] = ['admin', 'super_admin', 'trainer', 'gym_owner']
 
+const ADMIN_CONSOLE_ROLES: UserRole[] = ['admin', 'super_admin']
+
+export function isAdminConsoleRole(role?: string): role is 'admin' | 'super_admin' {
+  return ADMIN_CONSOLE_ROLES.includes(role as UserRole)
+}
+
+export function isSuperAdmin(role?: string): role is 'super_admin' {
+  return role === 'super_admin'
+}
+
+/** Platform operators with shared admin-console access (not elevated super powers). */
+export function isAdminOnly(role?: string): role is 'admin' {
+  return role === 'admin'
+}
+
+export function canModerateAdminAccounts(role?: string): boolean {
+  return isSuperAdmin(role)
+}
+
+export function canCreateAdminAccounts(role?: string): boolean {
+  return isSuperAdmin(role)
+}
+
 export function bypassesSubscriptionGate(role?: string): boolean {
   return PRIVILEGED_ROLES.includes(role as UserRole)
 }

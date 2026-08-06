@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import User from '@/models/User'
-import { writeAuditLog } from '@/lib/audit-log'
 import { getUser } from '@/lib/auth'
-import { parseJsonBody, parseObjectIdParam, suspendSchema } from '@/lib/validation'
+import { canModerateAdminAccounts } from '@/lib/access'
+import { writeAuditLog } from '@/lib/audit-log'
+import { parseJsonBody, parseObjectIdParam, superAdminSuspendSchema } from '@/lib/validation'
 
 export async function PUT(
   req: NextRequest,
@@ -12,23 +13,23 @@ export async function PUT(
   try {
     const tokenUser = await getUser(req)
     if (!tokenUser) return NextResponse.json({ message: 'Not authenticated' }, { status: 401 })
-    if (!['admin', 'super_admin'].includes(tokenUser.role)) {
-      return NextResponse.json({ message: 'Admin access required' }, { status: 403 })
+    if (!canModerateAdminAccounts(tokenUser.role)) {
+      return NextResponse.json({ message: 'Super admin access required' }, { status: 403 })
     }
 
     const { id: rawId } = await params
     const idResult = parseObjectIdParam(rawId, 'user id')
     if ('error' in idResult) return idResult.error
 
-    const parsed = await parseJsonBody(req, suspendSchema)
+    const parsed = await parseJsonBody(req, superAdminSuspendSchema)
     if ('error' in parsed) return parsed.error
     const { suspend, reason } = parsed.data
 
     await connectDB()
     const target = await User.findById(idResult.id).select('fullName email role isSuspended')
     if (!target) return NextResponse.json({ message: 'User not found' }, { status: 404 })
-    if (['admin', 'super_admin'].includes(target.role)) {
-      return NextResponse.json({ message: 'Cannot suspend admin accounts' }, { status: 403 })
+    if (target.role !== 'admin') {
+      return NextResponse.json({ message: 'Target must be an admin account' }, { status: 403 })
     }
 
     target.isSuspended = suspend
@@ -36,7 +37,7 @@ export async function PUT(
 
     await writeAuditLog({
       actorId: tokenUser.userId,
-      action: suspend ? 'USER_SUSPENDED' : 'USER_UNSUSPENDED',
+      action: suspend ? 'ADMIN_SUSPENDED' : 'ADMIN_UNSUSPENDED',
       targetId: target._id,
       targetModel: 'User',
       reason,
@@ -44,7 +45,7 @@ export async function PUT(
     })
 
     return NextResponse.json({
-      message: suspend ? 'User suspended' : 'User unsuspended',
+      message: suspend ? 'Admin suspended' : 'Admin reinstated',
       user: { _id: target._id, isSuspended: target.isSuspended },
     })
   } catch {
