@@ -3,6 +3,7 @@ import WorkoutLog from '@/models/WorkoutLog'
 import MealLog from '@/models/MealLog'
 import Relationship from '@/models/Relationship'
 import User from '@/models/User'
+import { USER_AVATAR_POPULATE_SELECT, resolveAvatarUrl } from '@/lib/avatar'
 import { calculateDailyCalories } from '@/lib/nutrition'
 import {
   ACHIEVEMENT_DEFINITIONS,
@@ -339,19 +340,23 @@ export async function getLeaderboard(userId: string, limit = 10): Promise<Gamifi
 
   const userIds = top.map((p) => p.userId)
   const users = await User.find({ _id: { $in: userIds } })
-    .select('fullName')
+    .select(USER_AVATAR_POPULATE_SELECT)
     .lean()
-  const nameById = new Map(users.map((u) => [String(u._id), u.fullName || 'Member']))
+  const userById = new Map(users.map((u) => [String(u._id), u]))
 
   const leaderboard: LeaderboardEntry[] = top.map((profile, index) => {
     const id = String(profile.userId)
-    const fullName = nameById.get(id) || 'Member'
+    const user = userById.get(id)
+    const fullName = user?.fullName || 'Member'
+    const avatarUrl = resolveAvatarUrl(user) || ''
     const levelInfo = levelFromXp(profile.xp)
     return {
       rank: index + 1,
       userId: id,
       fullName,
       initials: initialsFromName(fullName),
+      profileImage: avatarUrl || user?.profileImage || '',
+      avatarUrl,
       level: levelInfo.level,
       xp: profile.xp,
       isCurrentUser: id === String(userId),

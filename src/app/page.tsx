@@ -2,7 +2,6 @@
 
 import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/hooks/useAuth'
@@ -15,6 +14,7 @@ import { MARKETING_PLANS } from '@/lib/plans'
 import { ACHIEVEMENT_DEFINITIONS, JOURNEY_LEVELS } from '@/lib/achievements'
 import { Bot, BadgeCheck, Apple, BarChart3, MessageCircle, Building2, Search, Zap } from 'lucide-react'
 import { easeTransition } from '@/lib/motion'
+import { Avatar } from '@/components/shared/Avatar'
 
 const STATS = [
   { value: 1500, label: 'Exercise GIFs', suffix: '+' },
@@ -258,13 +258,7 @@ function GuestPage() {
               {trainers.map(t => (
                 <div key={t._id} className="group elite-panel interactive-lift card-athletic rounded-2xl p-6">
                   <div className="flex items-start gap-4">
-                    <div className="relative w-14 h-14 rounded-full bg-muted overflow-hidden flex-shrink-0">
-                      {t.profileImage ? (
-                        <Image src={t.profileImage} alt={t.name} fill sizes="56px" className="object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-primary font-bold">{t.name[0]}</div>
-                      )}
-                    </div>
+                    <Avatar name={t.name} avatarUrl={t.profileImage} size="md" />
                     <div className="flex-1 min-w-0">
                       <h3 className="font-bold group-hover:text-primary transition-colors">{t.name}</h3>
                       <p className="text-muted-foreground text-xs mt-0.5">{t.gymName || t.country}</p>

@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { useParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
@@ -14,12 +13,14 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { PageLoader } from '@/components/shared/PageLoader'
 import { SignInGate } from '@/components/shared/AccessGate'
 import { ArrowLeft, ImagePlus, MessageCircle, Send } from 'lucide-react'
+import { Avatar } from '@/components/shared/Avatar'
 
 interface ConversationInfo {
   otherUser: {
     _id: string
     fullName: string
     profileImage?: string
+    avatarUrl?: string
     role?: string
   }
   lastMessageTime?: string
@@ -257,15 +258,12 @@ export default function ChatConversationPage() {
         <Link href="/chat" aria-label="Back to conversations" className="flex size-9 items-center justify-center rounded-xl border border-white/[.08] text-[#8f9993] hover:text-white">
           <ArrowLeft className="size-4" />
         </Link>
-        <div className="relative size-10 overflow-hidden rounded-xl border border-primary/15 bg-primary/[.08] flex items-center justify-center">
-          {conversation?.otherUser?.profileImage ? (
-            <Image src={conversation.otherUser.profileImage} alt="" fill sizes="40px" className="object-cover" />
-          ) : (
-            <span className="text-primary font-bold">
-              {conversation?.otherUser?.fullName?.[0] || <MessageCircle className="size-4.5" />}
-            </span>
-          )}
-        </div>
+        <Avatar
+          name={conversation?.otherUser?.fullName}
+          avatarUrl={conversation?.otherUser?.avatarUrl || conversation?.otherUser?.profileImage}
+          size="sm"
+          rounded="xl"
+        />
         <div>
           <div className="font-semibold text-sm">{conversation?.otherUser?.fullName || 'Conversation'}</div>
           <div className={`text-xs ${otherUserTyping ? 'text-primary' : 'text-muted-foreground'}`}>
@@ -286,7 +284,15 @@ export default function ChatConversationPage() {
             const isMine = msg.senderId === user.id || msg.senderId === user._id
             const isOptimistic = msg._id.startsWith('temp-')
             return (
-              <div key={msg._id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+              <div key={msg._id} className={`flex items-end gap-2 ${isMine ? 'justify-end' : 'justify-start'}`}>
+                {!isMine && (
+                  <Avatar
+                    name={msg.senderName || conversation?.otherUser?.fullName}
+                    avatarUrl={conversation?.otherUser?.avatarUrl || conversation?.otherUser?.profileImage}
+                    size="xs"
+                    className="mb-1"
+                  />
+                )}
                 <div className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-sm ${
                   isMine
                     ? 'bg-gradient-to-br from-[#55ffb1] to-primary text-primary-foreground rounded-br-md shadow-[0_10px_28px_rgba(34,245,154,.12)]'
@@ -356,6 +362,14 @@ export default function ChatConversationPage() {
                     {isOptimistic && ' · sending...'}
                   </div>
                 </div>
+                {isMine && (
+                  <Avatar
+                    name={user.fullName}
+                    avatarUrl={user.avatarUrl || user.profileImage}
+                    size="xs"
+                    className="mb-1"
+                  />
+                )}
               </div>
             )
           })

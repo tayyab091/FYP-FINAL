@@ -80,3 +80,73 @@ export async function uploadChatImage(file: File): Promise<{ url: string; public
 
   return { url: result.secure_url, publicId: result.public_id }
 }
+
+const AVATAR_MAX_BYTES = 5 * 1024 * 1024
+const AVATAR_MIME = new Set(['image/jpeg', 'image/png', 'image/webp'])
+
+function configureCloudinary() {
+  const { cloudName, apiKey, apiSecret } = getCloudinaryConfig()
+  cloudinary.config({
+    cloud_name: cloudName,
+    api_key: apiKey,
+    api_secret: apiSecret,
+    secure: true,
+  })
+}
+
+export async function uploadAvatarImage(
+  file: File,
+  userId: string,
+): Promise<{ url: string; publicId: string }> {
+  if (!AVATAR_MIME.has(file.type)) {
+    throw new Error('Only JPEG, PNG, and WebP images are allowed')
+  }
+  if (file.size > AVATAR_MAX_BYTES) {
+    throw new Error('Image must be 5MB or smaller')
+  }
+  if (!isCloudinaryConfigured()) {
+    throw new Error(
+      'Cloudinary storage is not configured (CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET)',
+    )
+  }
+
+  configureCloudinary()
+
+  const arrayBuffer = await file.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+  const format = FORMAT_BY_MIME[file.type]
+  const folder = `avatars/${userId.replace(/[^a-zA-Z0-9_-]/g, '')}`
+
+  const result = await new Promise<{ secure_url: string; public_id: string }>((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder,
+        resource_type: 'image',
+        format,
+        public_id: crypto.randomUUID(),
+        overwrite: false,
+      },
+      (error, uploadResult) => {
+        if (error) {
+          reject(error)
+          return
+        }
+        if (!uploadResult?.secure_url || !uploadResult.public_id) {
+          reject(new Error('Cloudinary did not return an upload URL'))
+          return
+        }
+        resolve({ secure_url: uploadResult.secure_url, public_id: uploadResult.public_id })
+      },
+    )
+
+    stream.end(buffer)
+  })
+
+  return { url: result.secure_url, publicId: result.public_id }
+}
+
+export async function deleteCloudinaryAsset(publicId: string): Promise<void> {
+  if (!publicId || !isCloudinaryConfigured()) return
+  configureCloudinary()
+  await cloudinary.uploader.destroy(publicId, { resource_type: 'image' })
+}

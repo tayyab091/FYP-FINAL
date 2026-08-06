@@ -27,6 +27,8 @@ export interface LeaderboardEntry {
   userId: string
   fullName: string
   initials: string
+  profileImage?: string
+  avatarUrl?: string
   level: number
   xp: number
   isCurrentUser: boolean

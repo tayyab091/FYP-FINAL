@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
 import { AccessGate } from '@/components/shared/AccessGate'
 import { PageLoader } from '@/components/shared/PageLoader'
+import { Avatar } from '@/components/shared/Avatar'
 import { ArrowLeft, Shield } from 'lucide-react'
 
 const VALID_TABS = ['overview', 'users', 'trainers', 'gyms', 'verifications', 'audit', 'subscriptions'] as const
@@ -33,6 +34,8 @@ interface AdminUser {
   fullName: string
   email: string
   role: string
+  avatarUrl?: string
+  profileImage?: string
   isSuspended?: boolean
   createdAt: string
   subscription?: {
@@ -61,6 +64,8 @@ interface AdminTrainer {
   _id: string
   name: string
   email: string
+  profileImage?: string
+  userId?: { profileImage?: string; avatarUrl?: string }
   specialty?: string[]
   adminVerificationStatus?: string
   gymVerificationStatus?: string
@@ -419,8 +424,18 @@ export default function AdminPageClient() {
                     {users.map((u) => (
                       <tr key={u._id} className="border-b border-white/5 transition-colors hover:bg-white/[.02]">
                         <td className="px-4 py-3">
-                          <p className="font-medium text-white">{u.fullName}</p>
-                          <p className="text-xs text-[#a0a0a0]">{u.email}</p>
+                          <div className="flex items-center gap-3">
+                            <Avatar
+                              name={u.fullName}
+                              avatarUrl={u.avatarUrl || u.profileImage}
+                              size="sm"
+                              rounded="xl"
+                            />
+                            <div>
+                              <p className="font-medium text-white">{u.fullName}</p>
+                              <p className="text-xs text-[#a0a0a0]">{u.email}</p>
+                            </div>
+                          </div>
                         </td>
                         <td className="px-4 py-3">
                           <span className={`badge-accent text-xs ${ROLE_COLORS[u.role] || ''}`}>{u.role}</span>
@@ -489,8 +504,21 @@ export default function AdminPageClient() {
                     {trainers.map((t) => (
                       <tr key={t._id} className="border-b border-white/5 hover:bg-white/[.02]">
                         <td className="px-4 py-3">
-                          <p className="font-medium text-white">{t.name}</p>
-                          <p className="text-xs text-[#a0a0a0]">{t.email}</p>
+                          <div className="flex items-center gap-3">
+                            <Avatar
+                              name={t.name}
+                              avatarUrl={
+                                t.profileImage ||
+                                (typeof t.userId === 'object' ? t.userId?.avatarUrl || t.userId?.profileImage : undefined)
+                              }
+                              size="sm"
+                              rounded="xl"
+                            />
+                            <div>
+                              <p className="font-medium text-white">{t.name}</p>
+                              <p className="text-xs text-[#a0a0a0]">{t.email}</p>
+                            </div>
+                          </div>
                         </td>
                         <td className="hidden px-4 py-3 md:table-cell">
                           <div className="flex flex-wrap gap-1">
@@ -640,12 +668,23 @@ export default function AdminPageClient() {
                   <div className="space-y-3">
                     {pendingTrainers.map((t) => (
                       <div key={t._id} className="tile flex-row flex-wrap items-center justify-between gap-4">
-                        <div>
-                          <p className="font-bold text-white">{t.name}</p>
-                          <p className="text-sm text-[#a0a0a0]">
-                            {t.email} · {(t.specialty || []).join(', ')}
-                          </p>
-                          <p className="mt-1 text-xs text-[#555]">Gym status: {t.gymVerificationStatus}</p>
+                        <div className="flex items-center gap-3">
+                          <Avatar
+                            name={t.name}
+                            avatarUrl={
+                              t.profileImage ||
+                              (typeof t.userId === 'object' ? t.userId?.avatarUrl || t.userId?.profileImage : undefined)
+                            }
+                            size="sm"
+                            rounded="xl"
+                          />
+                          <div>
+                            <p className="font-bold text-white">{t.name}</p>
+                            <p className="text-sm text-[#a0a0a0]">
+                              {t.email} · {(t.specialty || []).join(', ')}
+                            </p>
+                            <p className="mt-1 text-xs text-[#555]">Gym status: {t.gymVerificationStatus}</p>
+                          </div>
                         </div>
                         <div className="flex gap-2">
                           <button

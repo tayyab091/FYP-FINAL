@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/mongodb'
 import User from '@/models/User'
 import { getUser } from '@/lib/auth'
 import { parseJsonBody, profileUpdateSchema } from '@/lib/validation'
+import { resolveAvatarUrl } from '@/lib/avatar'
 
 export async function PUT(req: NextRequest) {
   try {
@@ -29,7 +30,14 @@ export async function PUT(req: NextRequest) {
       runValidators: true,
     }).select('-password')
 
-    return NextResponse.json({ user, message: 'Profile updated' })
+    const avatarUrl = resolveAvatarUrl(user) || ''
+    const serialized = user?.toObject()
+    if (serialized) {
+      serialized.avatarUrl = avatarUrl
+      serialized.profileImage = avatarUrl || serialized.profileImage
+    }
+
+    return NextResponse.json({ user: serialized, message: 'Profile updated' })
   } catch {
     return NextResponse.json({ message: 'Server error' }, { status: 500 })
   }

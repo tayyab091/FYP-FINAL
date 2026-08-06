@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { useAuth } from '@/hooks/useAuth'
 import { Conversation } from '@/types'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { SignInGate } from '@/components/shared/AccessGate'
 import { PageLoader } from '@/components/shared/PageLoader'
+import { Avatar } from '@/components/shared/Avatar'
 
 export default function ChatListPage() {
   const { user, isLoading: authLoading } = useAuth()
@@ -50,13 +50,11 @@ export default function ChatListPage() {
             {conversations.map(c => (
               <Link key={c._id} href={`/chat/${c._id}`}
                 className="elite-panel interactive-lift flex items-center gap-4 rounded-2xl p-4">
-                <div className="relative w-12 h-12 rounded-full bg-muted overflow-hidden flex-shrink-0 flex items-center justify-center">
-                  {c.otherUser?.profileImage ? (
-                    <Image src={c.otherUser.profileImage} alt="" fill sizes="48px" className="object-cover" />
-                  ) : (
-                    <span className="text-primary font-bold text-lg">{c.otherUser?.fullName?.[0] || '?'}</span>
-                  )}
-                </div>
+                <Avatar
+                  name={c.otherUser?.fullName}
+                  avatarUrl={c.otherUser?.avatarUrl || c.otherUser?.profileImage}
+                  size="md"
+                />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold">{c.otherUser?.fullName || 'Unknown'}</span>

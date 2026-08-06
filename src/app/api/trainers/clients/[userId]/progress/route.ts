@@ -9,6 +9,7 @@ import WorkoutLog from '@/models/WorkoutLog'
 import MealLog from '@/models/MealLog'
 import { getUser } from '@/lib/auth'
 import mongoose from 'mongoose'
+import { USER_AVATAR_POPULATE_SELECT } from '@/lib/avatar'
 
 export async function GET(
   req: NextRequest,
@@ -40,7 +41,7 @@ export async function GET(
     }
 
     const client = await User.findById(userId)
-      .select('fullName email profileImage country fitnessGoal activityLevel currentWeight targetWeight')
+      .select(`${USER_AVATAR_POPULATE_SELECT} country fitnessGoal activityLevel currentWeight targetWeight`)
       .lean()
     if (!client) return NextResponse.json({ message: 'Client not found' }, { status: 404 })
 
