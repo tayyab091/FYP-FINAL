@@ -8,6 +8,7 @@ import Trainer from '@/models/Trainer'
 import User from '@/models/User'
 import Relationship from '@/models/Relationship'
 import { parseJsonBody, reviewSchema } from '@/lib/validation'
+import { USER_AVATAR_POPULATE_SELECT, resolveAvatarUrl } from '@/lib/avatar'
 
 async function getReviewStats(trainerId: string) {
   const stats = await Review.aggregate([
@@ -39,7 +40,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const reviews = await Review.find({ trainerId: id })
       .sort({ createdAt: -1 })
-      .populate('userId', 'fullName')
+      .populate('userId', USER_AVATAR_POPULATE_SELECT)
       .lean()
 
     const { averageRating, reviewCount } = await getReviewStats(id)
@@ -65,6 +66,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         comment: review.comment,
         createdAt: review.createdAt,
         authorName: (review.userId as { fullName?: string } | null)?.fullName || 'Anonymous',
+        authorImage:
+          resolveAvatarUrl(
+            review.userId as { avatarUrl?: string; profileImage?: string } | null,
+          ) ||
+          (review.userId as { profileImage?: string } | null)?.profileImage ||
+          '',
       })),
       averageRating: reviewCount > 0 ? Math.round(averageRating * 10) / 10 : 0,
       reviewCount,
@@ -111,7 +118,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       )
     }
 
-    const user = await User.findById(tokenUser.userId).select('fullName').lean()
+    const user = await User.findById(tokenUser.userId).select('fullName profileImage avatarUrl').lean()
     if (!user) return NextResponse.json({ message: 'User not found' }, { status: 404 })
 
     const existing = await Review.findOne({ trainerId: id, userId: tokenUser.userId })
@@ -147,6 +154,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         comment: review.comment,
         createdAt: review.createdAt,
         authorName: user.fullName,
+        authorImage: resolveAvatarUrl(user) || user.profileImage || '',
       },
       averageRating: roundedRating,
       reviewCount,

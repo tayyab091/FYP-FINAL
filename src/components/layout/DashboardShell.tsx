@@ -26,6 +26,7 @@ import {
 import { useAuth } from '@/hooks/useAuth'
 import { getRoleHomePath } from '@/lib/access'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
+import { Avatar } from '@/components/shared/Avatar'
 
 type UserRole = 'user' | 'trainer' | 'gym_owner' | 'admin' | 'super_admin'
 
@@ -215,9 +216,12 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
       <div className="border-t border-white/5 p-3">
         <div className="mb-2 flex items-center gap-3 rounded-xl px-3 py-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#55ffb1] to-[#3dbdff] text-sm font-black text-[#03130b] shadow-[0_8px_25px_rgba(34,245,154,.14)]">
-            {user?.fullName?.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase() || 'U'}
-          </div>
+          <Avatar
+            name={user?.fullName}
+            avatarUrl={user?.avatarUrl || user?.profileImage}
+            size="sm"
+            rounded="xl"
+          />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-white">{user?.fullName || 'Account'}</p>
             <p className="truncate text-[11px] capitalize text-[#666]">{role.replace('_', ' ')}</p>
@@ -292,6 +296,14 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             Back to site
           </Link>
           <NotificationBell />
+          <Link href="/settings" className="md:hidden">
+            <Avatar
+              name={user?.fullName}
+              avatarUrl={user?.avatarUrl || user?.profileImage}
+              size="sm"
+              rounded="xl"
+            />
+          </Link>
           <div className="hidden items-center gap-2 text-xs text-[#666] md:flex">
             <span className="h-2 w-2 animate-pulse rounded-full bg-primary shadow-[0_0_10px_rgba(34,245,154,.7)]" />
             Secure session

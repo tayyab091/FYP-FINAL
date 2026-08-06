@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useAuth } from '@/hooks/useAuth'
 import { SignInGate } from '@/components/shared/AccessGate'
 import { PageLoader } from '@/components/shared/PageLoader'
+import { Avatar } from '@/components/shared/Avatar'
 
 export default function LeaderboardPage() {
   const { user, isLoading: authLoading } = useAuth()
@@ -14,6 +15,7 @@ export default function LeaderboardPage() {
       userId: string
       fullName: string
       profileImage?: string
+      avatarUrl?: string
       role?: string
       xp: number
       level: number
@@ -114,24 +116,13 @@ export default function LeaderboardPage() {
                     )}
                   </div>
 
-                  <div
-                    className={`w-11 h-11 rounded-xl flex items-center justify-center font-black text-sm flex-shrink-0 overflow-hidden ${
-                      isCurrentUser
-                        ? 'bg-gradient-to-br from-[#00ff87] to-[#00d4ff] text-black'
-                        : 'bg-white/10 text-white'
-                    }`}
-                  >
-                    {leader.profileImage ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={leader.profileImage}
-                        alt={leader.fullName}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      initials
-                    )}
-                  </div>
+                  <Avatar
+                    name={leader.fullName}
+                    avatarUrl={leader.avatarUrl || leader.profileImage}
+                    size="sm"
+                    rounded="xl"
+                    className={isCurrentUser ? 'ring-2 ring-[#00ff87]/40' : undefined}
+                  />
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">

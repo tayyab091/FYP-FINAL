@@ -5,6 +5,7 @@ import bcrypt from 'bcryptjs'
 import { createToken, cookieOptions } from '@/lib/auth'
 import { loginBodySchema, parseJsonBody } from '@/lib/validation'
 import { rateLimitAuth } from '@/lib/rate-limit'
+import { resolveAvatarUrl } from '@/lib/avatar'
 
 export async function POST(req: NextRequest) {
   try {
@@ -46,7 +47,8 @@ export async function POST(req: NextRequest) {
         email: user.email,
         role: user.role,
         country: user.country,
-        profileImage: user.profileImage,
+        profileImage: resolveAvatarUrl(user) || user.profileImage,
+        avatarUrl: resolveAvatarUrl(user) || '',
         subscription: user.subscription,
       },
     })

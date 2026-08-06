@@ -1,6 +1,5 @@
 'use client'
 import { useState, useEffect } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/hooks/useAuth'
@@ -10,6 +9,7 @@ import { Search } from 'lucide-react'
 import { FadeIn } from '@/components/motion'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { easeTransition } from '@/lib/motion'
+import { Avatar } from '@/components/shared/Avatar'
 
 interface Trainer {
   _id: string
@@ -41,9 +41,7 @@ function parseTrainersResponse(data: unknown): { trainers: Trainer[]; meta?: Tra
 function TrainerCard({ trainer, connectable, onConnect }: { trainer: Trainer; connectable: boolean; onConnect: (id: string) => Promise<void> }) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'sent' | 'pending'>('idle')
   const name = trainer.name || trainer.fullName || 'Trainer'
-  const initials = name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
   const specialties = Array.isArray(trainer.specialty) ? trainer.specialty : [trainer.specialty].filter(Boolean)
-  const image = trainer.profileImage
 
   const handleConnect = async () => {
     setStatus('loading')
@@ -67,14 +65,12 @@ function TrainerCard({ trainer, connectable, onConnect }: { trainer: Trainer; co
       className="elite-panel interactive-lift card-athletic flex flex-col overflow-hidden rounded-2xl"
     >
       <Link href={isPreview ? '/coaching' : `/coaching/${trainer._id}`} className="relative h-40 bg-gradient-to-br from-primary/10 to-sky-400/5 flex items-center justify-center">
-        {image ? (
-          <Image src={image} alt={name} width={80} height={80}
-            className="h-20 w-20 rounded-full object-cover ring-4 ring-background shadow-xl" />
-        ) : (
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-sky-400 flex items-center justify-center text-black font-black text-2xl ring-4 ring-background">
-            {initials}
-          </div>
-        )}
+        <Avatar
+          name={name}
+          avatarUrl={trainer.profileImage}
+          size="lg"
+          className="ring-4 ring-background shadow-xl"
+        />
         <div className="absolute top-3 right-3 flex items-center gap-1 bg-background/80 px-2 py-1 rounded-full">
           <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
           <span className="text-[10px] text-primary font-medium">{isPreview ? 'Preview' : 'Verified'}</span>

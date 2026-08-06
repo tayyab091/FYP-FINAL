@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/mongodb'
 import Relationship from '@/models/Relationship'
 import Trainer from '@/models/Trainer'
 import { getUser } from '@/lib/auth'
+import { USER_AVATAR_POPULATE_SELECT } from '@/lib/avatar'
 
 export async function GET(req: NextRequest) {
   try {
@@ -15,7 +16,7 @@ export async function GET(req: NextRequest) {
     if (!trainer) return NextResponse.json([])
 
     const requests = await Relationship.find({ trainerId: trainer._id, status: 'pending' })
-      .populate('userId', 'fullName email profileImage country')
+      .populate('userId', `${USER_AVATAR_POPULATE_SELECT} country`)
       .lean()
 
     return NextResponse.json(requests)

@@ -9,6 +9,7 @@ import CommunityPost from '@/models/CommunityPost'
 import CommunityComment from '@/models/CommunityComment'
 import User from '@/models/User'
 import { communityPostSchema, parseJsonBody } from '@/lib/validation'
+import { USER_AVATAR_POPULATE_SELECT, resolveAvatarUrl } from '@/lib/avatar'
 import { z } from 'zod'
 import { parseSearchParams } from '@/lib/validation'
 
@@ -55,6 +56,7 @@ function shapePost(
           _id?: { toString(): string }
           fullName?: string
           profileImage?: string
+          avatarUrl?: string
           role?: string
         })
       : null
@@ -71,7 +73,7 @@ function shapePost(
     _id: post._id.toString(),
     authorId,
     authorName: author?.fullName || post.authorName || 'Member',
-    authorImage: author?.profileImage || '',
+    authorImage: resolveAvatarUrl(author) || author?.profileImage || '',
     authorRole: author?.role || 'user',
     content: post.content,
     category: post.category || 'Motivation',
@@ -96,7 +98,7 @@ export async function GET(req: NextRequest) {
 
     await connectDB()
     const posts = await CommunityPost.find({})
-      .populate('authorId', 'fullName profileImage role')
+      .populate('authorId', USER_AVATAR_POPULATE_SELECT)
       .sort({ createdAt: -1 })
       .limit(query.data.limit)
       .lean()
@@ -131,7 +133,7 @@ export async function POST(req: NextRequest) {
 
     await connectDB()
     const user = await User.findById(tokenUser.userId)
-      .select('fullName profileImage role')
+      .select(USER_AVATAR_POPULATE_SELECT)
       .lean()
     const authorName = user?.fullName || tokenUser.email
 
@@ -147,7 +149,7 @@ export async function POST(req: NextRequest) {
       _id: post._id.toString(),
       authorId: tokenUser.userId,
       authorName,
-      authorImage: user?.profileImage || '',
+      authorImage: resolveAvatarUrl(user) || user?.profileImage || '',
       authorRole: user?.role || tokenUser.role || 'user',
       content: post.content,
       category: post.category || parsed.data.category,

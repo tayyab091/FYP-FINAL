@@ -11,6 +11,7 @@ import { PageLoader } from '@/components/shared/PageLoader'
 import { AccessGate, SignInGate } from '@/components/shared/AccessGate'
 import { BackButton } from '@/components/shared/BackButton'
 import { UserAvatar } from '@/components/shared/UserAvatar'
+import { Avatar } from '@/components/shared/Avatar'
 import { FadeIn } from '@/components/motion'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -39,6 +40,7 @@ interface CommunityPostItem {
 interface CommunityCommentItem {
   _id: string
   authorName: string
+  authorImage?: string
   content: string
   createdAt: string
 }
@@ -419,14 +421,21 @@ export default function CommunityPage() {
                           <p className="text-xs text-muted-foreground">No comments yet.</p>
                         ) : (
                           (comments[post._id] || []).map((c) => (
-                            <div key={c._id} className="rounded-lg bg-black/20 px-3 py-2">
-                              <div className="flex items-center justify-between gap-2">
-                                <p className="text-xs font-semibold text-primary">{c.authorName}</p>
-                                <time className="text-[10px] text-muted-foreground">
-                                  {new Date(c.createdAt).toLocaleString()}
-                                </time>
+                            <div key={c._id} className="flex gap-2 rounded-lg bg-black/20 px-3 py-2">
+                              <UserAvatar
+                                name={c.authorName}
+                                image={c.authorImage}
+                                size={32}
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="text-xs font-semibold text-primary">{c.authorName}</p>
+                                  <time className="text-[10px] text-muted-foreground">
+                                    {new Date(c.createdAt).toLocaleString()}
+                                  </time>
+                                </div>
+                                <p className="mt-0.5 text-sm text-[#c8d0cb]">{c.content}</p>
                               </div>
-                              <p className="mt-0.5 text-sm text-[#c8d0cb]">{c.content}</p>
                             </div>
                           ))
                         )}
@@ -568,9 +577,11 @@ export default function CommunityPage() {
                         <span className="w-6 text-center text-sm font-bold text-muted-foreground">
                           {entry.rank}
                         </span>
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-xs font-bold text-primary">
-                          {entry.initials}
-                        </div>
+                        <Avatar
+                          name={entry.fullName}
+                          avatarUrl={entry.avatarUrl || entry.profileImage}
+                          size={36}
+                        />
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-semibold text-white">
                             {entry.fullName}
