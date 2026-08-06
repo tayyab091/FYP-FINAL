@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import User from '@/models/User'
-import { writeAuditLog } from '@/lib/audit-log'
 import { getUser } from '@/lib/auth'
+import { canModerateAdminAccounts } from '@/lib/access'
+import { writeAuditLog } from '@/lib/audit-log'
 import type { PlanId } from '@/lib/plans'
 import { normalizePlan } from '@/lib/subscription'
 import {
@@ -32,13 +33,17 @@ export async function PUT(
   try {
     const tokenUser = await getUser(req)
     if (!tokenUser) return NextResponse.json({ message: 'Not authenticated' }, { status: 401 })
-    if (!['admin', 'super_admin'].includes(tokenUser.role)) {
-      return NextResponse.json({ message: 'Admin access required' }, { status: 403 })
+    if (!canModerateAdminAccounts(tokenUser.role)) {
+      return NextResponse.json({ message: 'Super admin access required' }, { status: 403 })
     }
 
     const { userId } = await params
     const body = await req.json()
     const action = body?.action
+    const reason = typeof body?.reason === 'string' ? body.reason.trim().slice(0, 500) : undefined
+    if (!reason || reason.length < 3) {
+      return NextResponse.json({ message: 'reason is required (min 3 characters)' }, { status: 400 })
+    }
     if (!isAction(action)) {
       return NextResponse.json(
         { message: "action must be 'grant' | 'revoke' | 'renew' | 'set'" },
@@ -47,16 +52,12 @@ export async function PUT(
     }
 
     const months = parseMonths(body?.months)
-    const reason = typeof body?.reason === 'string' ? body.reason.trim().slice(0, 500) : undefined
 
     await connectDB()
     const target = await User.findById(userId).select('fullName email role subscription')
     if (!target) return NextResponse.json({ message: 'User not found' }, { status: 404 })
-    if (['admin', 'super_admin'].includes(target.role)) {
-      return NextResponse.json(
-        { message: 'Cannot change admin account subscriptions' },
-        { status: 403 },
-      )
+    if (target.role !== 'admin') {
+      return NextResponse.json({ message: 'Target must be an admin account' }, { status: 403 })
     }
 
     const previous = {
@@ -84,15 +85,15 @@ export async function PUT(
         plan = normalizePlan(body?.plan)
       }
       updated = await adminAssignSubscription(userId, plan, months)
-      auditAction = action === 'grant' ? 'SUBSCRIPTION_GRANTED' : 'SUBSCRIPTION_SET'
+      auditAction = action === 'grant' ? 'ADMIN_SUBSCRIPTION_GRANTED' : 'ADMIN_SUBSCRIPTION_SET'
     } else if (action === 'revoke') {
       updated = await adminRevokeSubscription(userId)
       plan = 'basic'
-      auditAction = 'SUBSCRIPTION_REVOKED'
+      auditAction = 'ADMIN_SUBSCRIPTION_REVOKED'
     } else {
       updated = await adminExtendSubscription(userId, months)
       plan = normalizePlan(updated?.subscription?.plan)
-      auditAction = 'SUBSCRIPTION_RENEWED'
+      auditAction = 'ADMIN_SUBSCRIPTION_RENEWED'
     }
 
     if (!updated) return NextResponse.json({ message: 'User not found' }, { status: 404 })
@@ -111,12 +112,12 @@ export async function PUT(
         months,
         previous,
         subscription: updated.subscription,
-        note: 'Manual admin override (platform DB only; not synced to Stripe)',
+        note: 'Super admin override (platform DB only; not synced to Stripe)',
       },
     })
 
     return NextResponse.json({
-      message: `Subscription ${action} applied`,
+      message: `Admin subscription ${action} applied`,
       user: {
         _id: updated._id,
         fullName: updated.fullName,
