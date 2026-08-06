@@ -42,8 +42,17 @@ async function validateTokenUser(payload: TokenPayload | null): Promise<TokenPay
   }
 }
 
+export function extractTokenFromRequest(req: NextRequest): string | null {
+  const authHeader = req.headers.get('authorization')
+  if (authHeader?.startsWith('Bearer ')) {
+    const bearer = authHeader.slice(7).trim()
+    if (bearer) return bearer
+  }
+  return req.cookies.get('token')?.value ?? null
+}
+
 export async function getUser(req: NextRequest): Promise<TokenPayload | null> {
-  const token = req.cookies.get('token')?.value
+  const token = extractTokenFromRequest(req)
   if (!token) return null
   return validateTokenUser(verifyToken(token))
 }
