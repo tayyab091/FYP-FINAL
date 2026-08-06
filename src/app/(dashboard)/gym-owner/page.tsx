@@ -20,6 +20,7 @@ import { AccessGate } from '@/components/shared/AccessGate'
 import { PageLoader } from '@/components/shared/PageLoader'
 import { StatCard } from '@/components/shared/StatCard'
 import { StaggerChildren } from '@/components/motion'
+import { Avatar } from '@/components/shared/Avatar'
 
 interface GymDetails {
   name: string
@@ -308,9 +309,7 @@ export default function GymOwnerPage() {
                   <Card key={t._id}>
                     <CardContent className="pt-6">
                       <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-primary font-bold">
-                          {t.name[0]}
-                        </div>
+                        <Avatar name={t.name} avatarUrl={t.profileImage} size="md" />
                         <div className="flex-1">
                           <div className="font-bold">{t.name}</div>
                           <div className="text-muted-foreground text-sm">{t.email}</div>

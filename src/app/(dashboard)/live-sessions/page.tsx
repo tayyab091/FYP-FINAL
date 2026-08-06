@@ -8,6 +8,7 @@ import { Calendar, Plus, Radio, Users } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { SignInGate, AccessGate } from '@/components/shared/AccessGate'
 import { PageLoader } from '@/components/shared/PageLoader'
+import { Avatar } from '@/components/shared/Avatar'
 import { Button } from '@/components/ui/button'
 import { AuthField } from '@/components/auth/AuthField'
 import { Label } from '@/components/ui/label'
@@ -32,8 +33,8 @@ interface LiveSessionItem {
   roomId: string
   trainerId: string
   clientId?: string | null
-  trainer?: { fullName: string; profileImage?: string } | null
-  client?: { fullName: string; profileImage?: string } | null
+  trainer?: { fullName: string; profileImage?: string; avatarUrl?: string } | null
+  client?: { fullName: string; profileImage?: string; avatarUrl?: string } | null
 }
 
 interface ActiveClient {
@@ -203,39 +204,47 @@ export default function LiveSessionsPage() {
           completed ? 'opacity-55 grayscale-[0.35]' : ''
         }`}
       >
-        <div>
-          <div className="mb-1 flex flex-wrap items-center gap-2">
-            <h3
-              className={`font-heading text-lg font-bold ${completed ? 'text-muted-foreground' : 'text-white'}`}
-            >
-              {session.title}
-            </h3>
-            <span
-              className={`rounded-md px-2 py-0.5 text-xs font-semibold uppercase ${
-                completed
-                  ? 'bg-white/5 text-muted-foreground'
-                  : session.status === 'live'
-                    ? 'bg-primary/20 text-primary'
-                    : 'bg-white/10 text-muted-foreground'
-              }`}
-            >
-              {completed ? 'Completed' : session.status}
-            </span>
+        <div className="flex items-start gap-4">
+          <Avatar
+            name={session.trainer?.fullName || 'Trainer'}
+            avatarUrl={session.trainer?.avatarUrl || session.trainer?.profileImage}
+            size="md"
+            rounded="xl"
+          />
+          <div>
+            <div className="mb-1 flex flex-wrap items-center gap-2">
+              <h3
+                className={`font-heading text-lg font-bold ${completed ? 'text-muted-foreground' : 'text-white'}`}
+              >
+                {session.title}
+              </h3>
+              <span
+                className={`rounded-md px-2 py-0.5 text-xs font-semibold uppercase ${
+                  completed
+                    ? 'bg-white/5 text-muted-foreground'
+                    : session.status === 'live'
+                      ? 'bg-primary/20 text-primary'
+                      : 'bg-white/10 text-muted-foreground'
+                }`}
+              >
+                {completed ? 'Completed' : session.status}
+              </span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {session.trainer?.fullName || 'Trainer'}
+              {session.client?.fullName ? ` · with ${session.client.fullName}` : ''}
+              {' · '}
+              {session.durationMinutes} min
+            </p>
+            <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Calendar className="size-3.5" />
+              {new Date(session.scheduledAt).toLocaleString()}
+            </p>
+            <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Users className="size-3.5" />
+              {session.participantIds.length}/{session.maxParticipants} joined
+            </p>
           </div>
-          <p className="text-sm text-muted-foreground">
-            {session.trainer?.fullName || 'Trainer'}
-            {session.client?.fullName ? ` · with ${session.client.fullName}` : ''}
-            {' · '}
-            {session.durationMinutes} min
-          </p>
-          <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Calendar className="size-3.5" />
-            {new Date(session.scheduledAt).toLocaleString()}
-          </p>
-          <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Users className="size-3.5" />
-            {session.participantIds.length}/{session.maxParticipants} joined
-          </p>
         </div>
         {completed ? (
           <Button disabled variant="outline" className="shrink-0 text-muted-foreground">

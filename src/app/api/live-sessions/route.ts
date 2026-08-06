@@ -10,6 +10,7 @@ import { createJitsiRoom, isJitsiConfigured } from '@/lib/jitsi'
 import { createNotification } from '@/lib/notifications'
 import { normalizePlan, canAccessLiveSessions } from '@/lib/subscription'
 import { liveSessionCreateSchema, parseJsonBody } from '@/lib/validation'
+import { USER_AVATAR_POPULATE_SELECT, resolveAvatarUrl } from '@/lib/avatar'
 
 function sessionEndTime(scheduledAt: Date, durationMinutes: number) {
   return new Date(scheduledAt.getTime() + durationMinutes * 60_000)
@@ -25,8 +26,8 @@ function shapeSession(
     durationMinutes: number
     status: string
   },
-  trainerMap: Map<string, { fullName: string; profileImage?: string }>,
-  clientMap: Map<string, { fullName: string; profileImage?: string }>,
+  trainerMap: Map<string, { fullName: string; profileImage?: string; avatarUrl?: string }>,
+  clientMap: Map<string, { fullName: string; profileImage?: string; avatarUrl?: string }>,
 ) {
   const endAt = sessionEndTime(new Date(s.scheduledAt), s.durationMinutes)
   const isPast = s.status === 'ended' || endAt.getTime() < Date.now()
@@ -42,13 +43,18 @@ function shapeSession(
     trainer: trainerMap.get(s.trainerId.toString())
       ? {
           fullName: trainerMap.get(s.trainerId.toString())!.fullName,
-          profileImage: trainerMap.get(s.trainerId.toString())!.profileImage,
+          profileImage:
+            resolveAvatarUrl(trainerMap.get(s.trainerId.toString())) ||
+            trainerMap.get(s.trainerId.toString())!.profileImage,
+          avatarUrl: resolveAvatarUrl(trainerMap.get(s.trainerId.toString())) || '',
         }
       : null,
     client: clientId && clientMap.get(clientId)
       ? {
           fullName: clientMap.get(clientId)!.fullName,
-          profileImage: clientMap.get(clientId)!.profileImage,
+          profileImage:
+            resolveAvatarUrl(clientMap.get(clientId)) || clientMap.get(clientId)!.profileImage,
+          avatarUrl: resolveAvatarUrl(clientMap.get(clientId)) || '',
         }
       : null,
   }
@@ -107,7 +113,7 @@ export async function GET(req: NextRequest) {
       ),
     ]
     const users = await User.find({ _id: { $in: [...trainerIds, ...clientIds] } })
-      .select('fullName profileImage')
+      .select(USER_AVATAR_POPULATE_SELECT)
       .lean()
     const userMap = new Map(users.map((u) => [u._id.toString(), u]))
 

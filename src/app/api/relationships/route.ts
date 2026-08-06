@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import Relationship from '@/models/Relationship'
 import { getUser } from '@/lib/auth'
+import { USER_AVATAR_POPULATE_SELECT } from '@/lib/avatar'
 
 export async function GET(req: NextRequest) {
   try {
@@ -26,7 +27,7 @@ export async function GET(req: NextRequest) {
     if (status) query.status = status
 
     const relationships = await Relationship.find(query)
-      .populate('userId', 'fullName email profileImage country')
+      .populate('userId', `${USER_AVATAR_POPULATE_SELECT} country`)
       .populate('trainerId', 'name email profileImage specialty country rating')
       .lean()
 

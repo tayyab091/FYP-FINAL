@@ -109,6 +109,7 @@ export async function GET(req: NextRequest) {
         password: randomPassword,
         role: 'user',
         profileImage: profile.picture || '',
+        avatarUrl: profile.picture || '',
         emailVerified: profile.verified_email !== false,
         googleId,
         authProviders: ['google'],
@@ -150,6 +151,10 @@ export async function GET(req: NextRequest) {
       }
       if (!user.profileImage && profile.picture) {
         user.profileImage = profile.picture
+        user.avatarUrl = profile.picture
+        dirty = true
+      } else if (!user.avatarUrl && profile.picture) {
+        user.avatarUrl = profile.picture
         dirty = true
       }
       if (dirty) await user.save()

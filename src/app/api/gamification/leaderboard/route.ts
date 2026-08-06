@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import GamificationProfile from '@/models/GamificationProfile'
 import User from '@/models/User'
+import { USER_AVATAR_POPULATE_SELECT, resolveAvatarUrl } from '@/lib/avatar'
 
 export async function GET(req: NextRequest) {
   try {
@@ -15,7 +16,7 @@ export async function GET(req: NextRequest) {
 
     const userIds = profiles.map((p) => p.userId)
     const users = await User.find({ _id: { $in: userIds } })
-      .select('fullName profileImage role')
+      .select(USER_AVATAR_POPULATE_SELECT)
       .lean()
     const userById = new Map(users.map((u) => [String(u._id), u]))
 
@@ -30,7 +31,8 @@ export async function GET(req: NextRequest) {
         _id: String(l._id),
         userId: String(l.userId),
         fullName: u?.fullName || 'Anonymous',
-        profileImage: u?.profileImage || '',
+        profileImage: resolveAvatarUrl(u) || u?.profileImage || '',
+        avatarUrl: resolveAvatarUrl(u) || '',
         role: u?.role || 'user',
         xp,
         level: l.level || 1,
