@@ -285,10 +285,23 @@ export const verifyEmailSchema = z.object({
 
 export const adminActionSchema = z.object({
   action: z.enum(['verify', 'reject']),
+  reason: optionalPlainTextSchema(500),
 })
 
 export const suspendSchema = z.object({
   suspend: z.boolean(),
+  reason: optionalPlainTextSchema(500),
+})
+
+export const superAdminCreateSchema = z.object({
+  fullName: plainTextSchema(100, 2),
+  email: emailSchema,
+  password: passwordSchema,
+})
+
+export const superAdminSuspendSchema = z.object({
+  suspend: z.boolean(),
+  reason: plainTextSchema(500, 3),
 })
 
 export const progressBodySchema = z.object({
