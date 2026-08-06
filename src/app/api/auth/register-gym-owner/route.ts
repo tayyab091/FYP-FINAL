@@ -59,6 +59,7 @@ export async function POST(req: NextRequest) {
     const token = createToken({ userId: user._id.toString(), role: 'gym_owner', email: user.email })
     const response = NextResponse.json({
       message: 'Gym owner account created. Pending verification.',
+      token,
       user: { id: user._id, fullName, email, role: 'gym_owner' },
     }, { status: 201 })
     response.cookies.set('token', token, cookieOptions())
