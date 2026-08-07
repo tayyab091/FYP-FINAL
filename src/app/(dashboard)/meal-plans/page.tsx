@@ -62,6 +62,7 @@ function sortMeals(meals: MealItem[]) {
 export default function MealPlansPage() {
   const { user, isLoading: authLoading } = useAuth()
   const [plans, setPlans] = useState<MealPlan[]>([])
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({})
@@ -87,10 +88,13 @@ export default function MealPlansPage() {
     if (user && canAccessMealPlansForUser(user)) loadPlans()
   }, [user, loadPlans])
 
-  const activePlan = useMemo(
-    () => plans.find((p) => p.status === 'active') || plans[0] || null,
-    [plans],
-  )
+  const activePlan = useMemo(() => {
+    if (selectedPlanId) {
+      const selected = plans.find((p) => p._id === selectedPlanId)
+      if (selected) return selected
+    }
+    return plans.find((p) => p.status === 'active') || plans[0] || null
+  }, [plans, selectedPlanId])
 
   useEffect(() => {
     if (!activePlan?.days?.length) return
@@ -110,6 +114,7 @@ export default function MealPlansPage() {
       if (!res.ok) throw new Error(data.message || 'Failed to generate')
       toast.success('Meal plan generated')
       setShowGenerate(false)
+      if (data?._id) setSelectedPlanId(data._id)
       await loadPlans()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Generation failed')

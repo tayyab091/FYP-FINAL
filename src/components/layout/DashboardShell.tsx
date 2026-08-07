@@ -26,6 +26,7 @@ import {
 import { useAuth } from '@/hooks/useAuth'
 import { getRoleHomePath } from '@/lib/access'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
+import { ThemeToggle } from '@/components/shared/ThemeToggle'
 
 type UserRole = 'user' | 'trainer' | 'gym_owner' | 'admin' | 'super_admin'
 
@@ -269,7 +270,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </Suspense>
       </aside>
 
-      <header className="fixed inset-x-0 top-0 z-50 flex h-16 items-center justify-between border-b border-white/[.09] bg-[#070908]/92 px-4 backdrop-blur-2xl lg:left-72 lg:px-8">
+      <header className="fixed inset-x-0 top-0 z-50 flex h-16 items-center justify-between border-b border-border bg-background/92 px-4 backdrop-blur-2xl lg:left-72 lg:px-8">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -291,6 +292,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           >
             Back to site
           </Link>
+          <ThemeToggle />
           <NotificationBell />
           <div className="hidden items-center gap-2 text-xs text-[#666] md:flex">
             <span className="h-2 w-2 animate-pulse rounded-full bg-primary shadow-[0_0_10px_rgba(34,245,154,.7)]" />
