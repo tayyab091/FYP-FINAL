@@ -682,7 +682,7 @@ export default function NutritionPage() {
                             </div>
                           }
                           badge={
-                            <span className="absolute left-3 top-3 rounded-full border border-primary/20 bg-black/60 px-2 py-0.5 text-[10px] font-bold text-primary backdrop-blur">
+                            <span className="absolute left-3 top-3 rounded-full border border-border bg-background/85 px-2 py-0.5 text-[10px] font-bold text-foreground backdrop-blur">
                               {recipe.category}
                             </span>
                           }
