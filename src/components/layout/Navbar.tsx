@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { shouldHidePublicNavbar } from '@/lib/shell-routes'
 import { easeTransition } from '@/lib/motion'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
+import { ThemeToggle } from '@/components/shared/ThemeToggle'
 import { getRoleHomePath } from '@/lib/access'
 
 const NAV_LINKS = [
@@ -55,8 +56,8 @@ export function Navbar() {
       <nav
         className={`fixed inset-x-0 top-0 z-50 h-16 border-b transition-colors duration-300 ${
           scrolled || menuOpen
-            ? 'border-white/[.09] bg-[#070908]/92 shadow-[0_12px_40px_rgba(0,0,0,.35)] backdrop-blur-2xl'
-            : 'border-transparent bg-[#070908]/72 backdrop-blur-xl'
+            ? 'border-border bg-background/92 shadow-[0_12px_40px_rgba(0,0,0,.15)] backdrop-blur-2xl'
+            : 'border-transparent bg-background/72 backdrop-blur-xl'
         }`}
       >
         <div className="mx-auto flex h-full max-w-6xl items-center gap-3 px-4 sm:px-6">
@@ -67,7 +68,7 @@ export function Navbar() {
             >
               <Activity className="size-4.5" strokeWidth={2.6} />
             </motion.span>
-            <span className="font-heading text-lg font-black tracking-[-.045em] text-white">T.E.S.T.</span>
+            <span className="font-heading text-lg font-black tracking-[-.045em] text-foreground">T.E.S.T.</span>
           </Link>
 
           <div className="ml-2 hidden flex-1 items-center justify-center md:flex">
@@ -97,6 +98,7 @@ export function Navbar() {
           </div>
 
           <div className="ml-auto hidden items-center gap-2.5 md:flex">
+            <ThemeToggle />
             {isLoading ? (
               <div className="h-8 w-28 animate-pulse rounded-full bg-white/[.06]" />
             ) : user ? (
@@ -138,6 +140,7 @@ export function Navbar() {
           </div>
 
           <div className="ml-auto flex items-center gap-2 md:hidden">
+            <ThemeToggle />
             {!isLoading && !user && (
               <Link href="/signup" className="btn-accent btn-sm px-3.5">
                 Join
@@ -184,7 +187,7 @@ export function Navbar() {
               animate={{ x: 0 }}
               exit={reduceMotion ? undefined : { x: '100%' }}
               transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 380, damping: 34 }}
-              className="absolute inset-y-0 right-0 flex w-[min(100%,20rem)] flex-col border-l border-white/[.09] bg-[#070908] shadow-2xl"
+              className="absolute inset-y-0 right-0 flex w-[min(100%,20rem)] flex-col border-l border-border bg-background shadow-2xl"
             >
               <div className="flex h-16 items-center justify-between border-b border-white/[.08] px-4">
                 <span className="font-heading text-base font-black tracking-[-.04em] text-white">Menu</span>

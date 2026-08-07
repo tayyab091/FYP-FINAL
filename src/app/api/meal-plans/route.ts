@@ -194,9 +194,15 @@ export async function POST(req: NextRequest) {
       dailyCaloriesOverride: body.dailyCalories,
     })
 
+    await MealPlan.updateMany(
+      { userId: tokenUser.userId, status: 'active' },
+      { status: 'draft' },
+    )
+
     const plan = await MealPlan.create({
       userId: tokenUser.userId,
       ...generated,
+      status: 'active',
     })
 
     return NextResponse.json(plan, { status: 201 })
