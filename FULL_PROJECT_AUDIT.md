@@ -1,8 +1,30 @@
 # Full Project Playwright Audit
 
-**Generated:** 2026-08-07T14:47:44.058Z  
+**Generated:** 2026-08-07T15:01:16.363Z  
 **Tool:** Playwright (Chromium) via `e2e/full-project-audit.spec.ts`  
 **Summary:** 102 PASS · 0 WARN · 0 FAIL · 0 SKIP (102 total checks)
+
+## Launch Blocker Fixes (2026-08-07)
+
+| Issue | Before (baseline audit) | After (verified) | Evidence |
+|-------|-------------------------|------------------|----------|
+| Basic `/exercise-check` bypass | WARN — gate not detected; user2 had stale `pro` plan in DB | PASS — `subscription-gate` visible; API POST `/api/gamification/form-check` → **403** | `e2e/plan-gate-verify.spec.ts`, seed reset |
+| Basic `/analytics` bypass | WARN — gate not detected | PASS — `subscription-gate` visible; API GET `/api/analytics/summary` → **403** | Playwright plan gates 6/6 PASS |
+| Elite `/live-sessions` false gate | WARN — hero text "Elite Live" matched upgrade regex | PASS — no `subscription-gate`; API GET `/api/live-sessions` → **200** | Renamed eyebrow to "Live Training" |
+| Trainer availability form | FAIL — 0 time inputs, save hidden | PASS — 10 time inputs, save visible | `data-testid="availability-form"` |
+| Nutrition duplicate React keys | WARN on 3 role nutrition pages | PASS — no console key warnings | Deduped meal keys + category/area metadata |
+
+**Root causes (plan gates):**
+1. **Stale seed data** — `user2@test.com` was created as Basic but later held `pro` in MongoDB; seed only set plan on first insert.
+2. **Missing import** — `ExerciseCheckSteps` referenced without import crashed logged-in `/exercise-check` before gate could render.
+3. **Misleading UI** — marketing steps rendered below gate made Basic users appear to have access.
+4. **False-positive detection** — audit matched page copy "Elite"/"upgrade" instead of actual `AccessGate` component.
+
+**API enforcement confirmed independent of UI:**
+- Basic → `POST /api/gamification/form-check` = 403
+- Basic → `GET /api/analytics/summary` = 403
+- Elite → `GET /api/live-sessions` = 200
+- Elite → `POST /api/live-sessions/{id}/join` = 403 only for non-Elite (join route checks `normalizePlan(plan) !== 'elite'`)
 
 ## Executive Summary
 
@@ -47,7 +69,7 @@
 | Status | Role | Route | Test | Detail |
 |--------|------|-------|------|--------|
 | ✅ | guest | / | Page load: / | Loaded OK — 3 buttons, 0 inputs, 36 links, 0 forms |
-| ✅ | guest | /coaching | Page load: /coaching | Loaded OK — 27 buttons, 1 inputs, 44 links, 0 forms |
+| ✅ | guest | /coaching | Page load: /coaching | Loaded OK — 17 buttons, 1 inputs, 14 links, 0 forms |
 | ✅ | guest | /exercises | Page load: /exercises | Loaded OK — 9 buttons, 5 inputs, 14 links, 0 forms |
 | ✅ | guest | /nutrition | Page load: /nutrition | Loaded OK — 31 buttons, 4 inputs, 15 links, 0 forms |
 | ✅ | guest | /subscription | Page load: /subscription | Loaded OK — 6 buttons, 0 inputs, 15 links, 0 forms |
@@ -105,8 +127,8 @@
 |--------|------|-------|------|--------|
 | ✅ | user (Pro) | /dashboard | Page load: /dashboard | Loaded OK — 6 buttons, 0 inputs, 20 links, 0 forms |
 | ✅ | user (Pro) | /my-fitness | Page load: /my-fitness | Loaded OK — 10 buttons, 0 inputs, 13 links, 0 forms |
-| ✅ | user (Pro) | /meal-plans | Page load: /meal-plans | Loaded OK — 14 buttons, 0 inputs, 13 links, 0 forms |
-| ✅ | user (Pro) | /community | Page load: /community | Loaded OK — 24 buttons, 2 inputs, 13 links, 1 forms |
+| ✅ | user (Pro) | /meal-plans | Page load: /meal-plans | Loaded OK — 6 buttons, 0 inputs, 12 links, 0 forms |
+| ✅ | user (Pro) | /community | Page load: /community | Loaded OK — 8 buttons, 2 inputs, 13 links, 1 forms |
 | ✅ | user (Pro) | /chat | Page load: /chat | Loaded OK — 4 buttons, 0 inputs, 13 links, 0 forms |
 | ✅ | user (Pro) | /leaderboard | Page load: /leaderboard | Loaded OK — 12 buttons, 0 inputs, 26 links, 0 forms |
 | ✅ | user (Pro) | /analytics | Page load: /analytics | Loaded OK — 7 buttons, 0 inputs, 12 links, 0 forms |
@@ -116,7 +138,7 @@
 | ✅ | user (Pro) | /exercise-check | Page load: /exercise-check | Loaded OK — 11 buttons, 0 inputs, 14 links, 0 forms |
 | ✅ | user (Basic) | /dashboard | Page load: /dashboard | Loaded OK — 6 buttons, 0 inputs, 21 links, 0 forms |
 | ✅ | user (Basic) | /my-fitness | Page load: /my-fitness | Loaded OK — 10 buttons, 0 inputs, 14 links, 0 forms |
-| ✅ | user (Basic) | /community | Page load: /community | Loaded OK — 24 buttons, 2 inputs, 14 links, 1 forms |
+| ✅ | user (Basic) | /community | Page load: /community | Loaded OK — 8 buttons, 2 inputs, 14 links, 1 forms |
 | ✅ | user (Basic) | /analytics | Page load: /analytics | Loaded OK — 6 buttons, 0 inputs, 14 links, 0 forms |
 | ✅ | user (Basic) | /exercise-check | Page load: /exercise-check | Loaded OK — 6 buttons, 0 inputs, 15 links, 0 forms |
 | ✅ | user (Basic) | /live-sessions | Page load: /live-sessions | Loaded OK — 6 buttons, 0 inputs, 14 links, 0 forms |
@@ -124,11 +146,11 @@
 | ✅ | user (Elite) | /live-sessions | Page load: /live-sessions | Loaded OK — 6 buttons, 0 inputs, 12 links, 0 forms |
 | ✅ | user (Elite) | /exercise-check | Page load: /exercise-check | Loaded OK — 11 buttons, 0 inputs, 14 links, 0 forms |
 | ✅ | user (Elite) | /analytics | Page load: /analytics | Loaded OK — 7 buttons, 0 inputs, 12 links, 0 forms |
-| ✅ | trainer | /trainer-dashboard | Page load: /trainer-dashboard | Loaded OK — 14 buttons, 0 inputs, 18 links, 0 forms |
+| ✅ | trainer | /trainer-dashboard | Page load: /trainer-dashboard | Loaded OK — 12 buttons, 0 inputs, 12 links, 0 forms |
 | ✅ | trainer | /trainer-dashboard/exercises | Page load: /trainer-dashboard/exercises | Loaded OK — 7 buttons, 3 inputs, 34 links, 0 forms |
 | ✅ | trainer | /trainer-dashboard/nutrition | Page load: /trainer-dashboard/nutrition | Loaded OK — 7 buttons, 3 inputs, 10 links, 0 forms |
-| ✅ | trainer | /meal-plans | Page load: /meal-plans | Loaded OK — 7 buttons, 0 inputs, 10 links, 0 forms |
-| ✅ | trainer | /live-sessions | Page load: /live-sessions | Loaded OK — 8 buttons, 0 inputs, 9 links, 0 forms |
+| ✅ | trainer | /meal-plans | Page load: /meal-plans | Loaded OK — 6 buttons, 0 inputs, 9 links, 0 forms |
+| ✅ | trainer | /live-sessions | Page load: /live-sessions | Loaded OK — 7 buttons, 0 inputs, 9 links, 0 forms |
 | ✅ | trainer | /chat | Page load: /chat | Loaded OK — 4 buttons, 0 inputs, 11 links, 0 forms |
 | ✅ | trainer | /settings | Page load: /settings | Loaded OK — 14 buttons, 5 inputs, 9 links, 0 forms |
 | ✅ | gym_owner | /gym-owner | Page load: /gym-owner | Loaded OK — 11 buttons, 8 inputs, 11 links, 2 forms |
@@ -189,7 +211,7 @@
 
 ## UI Element Inventory (aggregated per role routes)
 
-Across audited pages: **726** visible buttons, **110** inputs/selects/textareas, **804** links, **10** forms.
+Across audited pages: **672** visible buttons, **110** inputs/selects/textareas, **766** links, **10** forms.
 
 ## Security Findings
 
