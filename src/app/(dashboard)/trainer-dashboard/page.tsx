@@ -393,7 +393,7 @@ export default function TrainerDashboardPage() {
                     </div>
                   ))}
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="dashboard-action-grid">
                   {[0, 1, 2, 3].map((i) => (
                     <div key={i} className="tile min-h-[7.5rem] space-y-3">
                       <Skeleton className="h-5 w-32 bg-muted" />
@@ -401,7 +401,7 @@ export default function TrainerDashboardPage() {
                     </div>
                   ))}
                 </div>
-                <div className="grid gap-6 lg:grid-cols-2">
+                <div className="grid gap-6 xl:grid-cols-2">
                   {[0, 1].map((i) => (
                     <div key={i} className="tile min-h-[240px] space-y-3">
                       <Skeleton className="h-6 w-40 bg-muted" />
@@ -420,7 +420,7 @@ export default function TrainerDashboardPage() {
                   <StatCard label="Active Plans" value={activePlanCount} icon={Dumbbell} variant="sky" />
                 </StaggerChildren>
 
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="dashboard-action-grid">
                   {[
                     { href: '/chat', label: 'Message Clients', desc: `${conversations.filter((c) => c.unreadCount > 0).length} unread` },
                     { href: '/trainer-dashboard/exercises', label: 'Exercise Library', desc: 'Build programs' },
@@ -464,7 +464,7 @@ export default function TrainerDashboardPage() {
                   </div>
                 )}
 
-                <div className="grid gap-6 lg:grid-cols-2">
+                <div className="grid gap-6 xl:grid-cols-2">
                   <div className="tile min-h-[240px]">
                     <h2 className="mb-3 text-lg font-bold">Active Clients</h2>
                     {clients.length === 0 ? (
@@ -472,12 +472,12 @@ export default function TrainerDashboardPage() {
                     ) : (
                       <div className="space-y-2">
                         {clients.slice(0, 5).map((client) => (
-                          <div key={client._id} className="flex items-center justify-between rounded-xl border border-border bg-card/40 p-3">
-                            <div>
-                              <p className="font-medium text-foreground">{client.userId?.fullName}</p>
-                              <p className="text-xs text-muted-foreground">{client.userId?.email}</p>
+                          <div key={client._id} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card/40 p-3">
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate font-medium text-foreground">{client.userId?.fullName}</p>
+                              <p className="truncate text-xs text-muted-foreground">{client.userId?.email}</p>
                             </div>
-                            <Button size="sm" variant="outline" onClick={() => { setSelectedClient(client); setPlanModalOpen(true) }}>
+                            <Button size="sm" variant="outline" className="shrink-0" onClick={() => { setSelectedClient(client); setPlanModalOpen(true) }}>
                               Plan
                             </Button>
                           </div>
@@ -495,14 +495,14 @@ export default function TrainerDashboardPage() {
                           <Link
                             key={conversation._id}
                             href={`/chat/${conversation._id}`}
-                            className="flex items-center justify-between rounded-xl border border-border bg-card/40 p-3 hover:border-primary/30"
+                            className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card/40 p-3 hover:border-primary/30"
                           >
-                            <div>
-                              <div className="font-medium">{conversation.otherUser?.fullName}</div>
-                              <div className="text-sm text-muted-foreground">{conversation.lastMessage || 'No messages yet'}</div>
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate font-medium">{conversation.otherUser?.fullName}</div>
+                              <div className="truncate text-sm text-muted-foreground">{conversation.lastMessage || 'No messages yet'}</div>
                             </div>
                             {conversation.unreadCount > 0 && (
-                              <Badge className="bg-primary text-primary-foreground">{conversation.unreadCount}</Badge>
+                              <Badge className="shrink-0 bg-primary text-primary-foreground">{conversation.unreadCount}</Badge>
                             )}
                           </Link>
                         ))}
