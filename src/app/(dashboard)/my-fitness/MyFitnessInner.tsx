@@ -16,6 +16,7 @@ import { chartTheme } from '@/lib/chart-theme'
 import { PageLoader } from '@/components/shared/PageLoader'
 import { SignInGate } from '@/components/shared/AccessGate'
 import { GamificationBar } from '@/components/gamification/GamificationBar'
+import { Avatar } from '@/components/shared/Avatar'
 import type { GamificationMeResponse } from '@/types/gamification'
 import { AIGeneratorTab } from './AIGeneratorTab'
 
@@ -464,9 +465,19 @@ export default function MyFitnessInner({
     <div className="min-h-screen overflow-x-hidden px-4 pb-28 pt-6 sm:px-6">
       <div className="mx-auto max-w-6xl space-y-6 overflow-x-hidden">
         <div className="page-hero px-6 py-8 sm:px-8">
-          <p className="eyebrow mb-2">Performance Hub</p>
-          <h1 className="display-title text-3xl md:text-4xl">My Fitness</h1>
-          <p className="mt-2 text-muted-foreground">Train, fuel, and measure every win</p>
+          <div className="flex flex-wrap items-center gap-4">
+            <Avatar
+              name={user.fullName}
+              avatarUrl={user.avatarUrl || user.profileImage}
+              size="lg"
+              rounded="2xl"
+            />
+            <div>
+              <p className="eyebrow mb-2">Performance Hub</p>
+              <h1 className="display-title text-3xl md:text-4xl">My Fitness</h1>
+              <p className="mt-2 text-muted-foreground">Train, fuel, and measure every win</p>
+            </div>
+          </div>
         </div>
 
         <GamificationBar data={gamification} />

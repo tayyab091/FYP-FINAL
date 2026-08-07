@@ -4,6 +4,7 @@ import User from '@/models/User'
 import { getUser } from '@/lib/auth'
 import { syncUserSubscription } from '@/lib/subscription-server'
 import { calculateDailyCalories } from '@/lib/nutrition'
+import { resolveAvatarUrl } from '@/lib/avatar'
 
 export async function GET(req: NextRequest) {
   try {
@@ -28,10 +29,14 @@ export async function GET(req: NextRequest) {
         })
       : undefined
 
+    const avatarUrl = resolveAvatarUrl(user) || ''
+
     return NextResponse.json({
       user: {
         ...user,
         id: user._id.toString(),
+        avatarUrl,
+        profileImage: avatarUrl || user.profileImage,
         subscription: subscription ?? user.subscription,
         calorieGoal,
       },

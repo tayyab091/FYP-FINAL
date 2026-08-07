@@ -8,6 +8,10 @@ import { useAuth } from '@/hooks/useAuth'
 import { SignInGate } from '@/components/shared/AccessGate'
 import { PageLoader } from '@/components/shared/PageLoader'
 import { BackButton } from '@/components/shared/BackButton'
+import { Avatar } from '@/components/shared/Avatar'
+
+const AVATAR_MAX_BYTES = 5 * 1024 * 1024
+const AVATAR_ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
 const COUNTRIES = ['Pakistan', 'UAE', 'Saudi Arabia', 'UK', 'USA', 'Canada', 'Australia', 'Germany', 'India']
 const FITNESS_GOALS = [
@@ -45,6 +49,7 @@ export default function SettingsPage() {
     country: 'Pakistan',
     bio: '',
     profileImage: '',
+    avatarUrl: '',
     currentWeight: '',
     targetWeight: '',
     fitnessGoal: 'general_fitness',
@@ -59,6 +64,7 @@ export default function SettingsPage() {
   })
   const [passwords, setPasswords] = useState({ current: '', newPass: '', confirm: '' })
   const [saving, setSaving] = useState(false)
+  const [avatarUploading, setAvatarUploading] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState('')
   const [deleting, setDeleting] = useState(false)
 
@@ -84,7 +90,8 @@ export default function SettingsPage() {
             fullName: u.fullName || '',
             country: u.country || 'Pakistan',
             bio: u.bio || '',
-            profileImage: u.profileImage || '',
+            profileImage: u.profileImage || u.avatarUrl || '',
+            avatarUrl: u.avatarUrl || u.profileImage || '',
             currentWeight: u.currentWeight?.toString() || '',
             targetWeight: u.targetWeight?.toString() || '',
             fitnessGoal: u.fitnessGoal || 'general_fitness',
@@ -139,7 +146,6 @@ export default function SettingsPage() {
           fullName: profile.fullName,
           country: profile.country,
           bio: profile.bio,
-          profileImage: profile.profileImage,
           fitnessGoal: profile.fitnessGoal,
           activityLevel: profile.activityLevel,
           currentWeight: profile.currentWeight ? parseFloat(profile.currentWeight) : undefined,
@@ -179,6 +185,36 @@ export default function SettingsPage() {
       toast.error('Network error')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const uploadAvatar = async (file: File) => {
+    if (!AVATAR_ALLOWED_TYPES.has(file.type)) {
+      toast.error('Only JPG, PNG, and WebP images are allowed')
+      return
+    }
+    if (file.size > AVATAR_MAX_BYTES) {
+      toast.error('Image must be 5MB or smaller')
+      return
+    }
+
+    setAvatarUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('avatar', file)
+      const res = await fetch('/api/user/profile/avatar', { method: 'POST', body: formData })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.message || 'Failed to upload avatar')
+      }
+      const nextUrl = data.avatarUrl || data.profileImage || ''
+      setProfile((p) => ({ ...p, avatarUrl: nextUrl, profileImage: nextUrl }))
+      await refreshUser()
+      toast.success('Profile photo updated')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to upload avatar')
+    } finally {
+      setAvatarUploading(false)
     }
   }
 
@@ -256,18 +292,31 @@ export default function SettingsPage() {
                 <h2 className="text-xl font-bold text-white">Profile Information</h2>
                 <p className="mt-1 text-sm text-[#a0a0a0]">Update your personal information</p>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#00ff87] to-[#00d4ff] text-2xl font-black text-black">
-                  {profile.fullName?.charAt(0) || '?'}
-                </div>
-                <div className="flex-1">
-                  <label className="mb-1 block text-xs text-[#a0a0a0]">Profile Image URL</label>
-                  <input
-                    value={profile.profileImage}
-                    onChange={(e) => setProfile((p) => ({ ...p, profileImage: e.target.value }))}
-                    placeholder="https://..."
-                    className={inputClass}
-                  />
+              <div className="flex flex-wrap items-center gap-4">
+                <Avatar
+                  name={profile.fullName || user?.fullName}
+                  avatarUrl={profile.avatarUrl || profile.profileImage}
+                  size="lg"
+                  rounded="2xl"
+                  loading={avatarUploading}
+                />
+                <div className="flex-1 space-y-2">
+                  <p className="text-sm font-medium text-white">Profile photo</p>
+                  <p className="text-xs text-[#a0a0a0]">JPG, PNG, or WebP · max 5MB</p>
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10">
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="sr-only"
+                      disabled={avatarUploading}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) void uploadAvatar(file)
+                        e.target.value = ''
+                      }}
+                    />
+                    {avatarUploading ? 'Uploading…' : 'Change photo'}
+                  </label>
                 </div>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
