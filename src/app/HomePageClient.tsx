@@ -43,7 +43,7 @@ function GuestLanding() {
   return (
     <>
       <LandingLoader />
-      <div className={`landing-page${reduceMotion ? ' landing-page--reduced' : ''}`}>
+      <div className={`landing-page${reduceMotion ? ' landing-page--reduced' : ''}`} data-testid="landing-page">
         <div className="landing-scroll-progress">
           <ScrollProgress />
         </div>
