@@ -4,6 +4,8 @@ import User from '@/models/User'
 import { getUser } from '@/lib/auth'
 import { parseJsonBody, profileUpdateSchema } from '@/lib/validation'
 import { resolveAvatarUrl } from '@/lib/avatar'
+import Trainer from '@/models/Trainer'
+import { allocateTrainerSlug } from '@/lib/trainer-slug-server'
 
 export async function PUT(req: NextRequest) {
   try {
@@ -35,6 +37,18 @@ export async function PUT(req: NextRequest) {
     if (serialized) {
       serialized.avatarUrl = avatarUrl
       serialized.profileImage = avatarUrl || serialized.profileImage
+    }
+
+    if (user?.role === 'trainer' && data.fullName) {
+      const trainer = await Trainer.findOne({ userId: tokenUser.userId })
+      if (trainer) {
+        const nameChanged = trainer.name !== data.fullName
+        const trainerUpdate: Record<string, unknown> = { name: data.fullName }
+        if (nameChanged) {
+          trainerUpdate.slug = await allocateTrainerSlug(data.fullName, trainer._id)
+        }
+        await Trainer.updateOne({ _id: trainer._id }, { $set: trainerUpdate })
+      }
     }
 
     return NextResponse.json({ user: serialized, message: 'Profile updated' })

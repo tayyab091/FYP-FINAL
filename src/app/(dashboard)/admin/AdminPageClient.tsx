@@ -10,7 +10,7 @@ import { PageLoader } from '@/components/shared/PageLoader'
 import { Avatar } from '@/components/shared/Avatar'
 import { ArrowLeft, Shield } from 'lucide-react'
 
-const VALID_TABS = ['overview', 'users', 'trainers', 'gyms', 'verifications', 'audit', 'subscriptions'] as const
+const VALID_TABS = ['overview', 'users', 'trainers', 'gyms', 'verifications', 'audit', 'subscriptions', 'super'] as const
 
 const SECTIONS = [
   { id: 'overview', label: 'Overview' },
@@ -20,6 +20,7 @@ const SECTIONS = [
   { id: 'verifications', label: 'Verifications' },
   { id: 'audit', label: 'Audit' },
   { id: 'subscriptions', label: 'Subscriptions' },
+  { id: 'super', label: 'Super Admin', superOnly: true },
 ]
 
 interface AdminStats {
@@ -87,7 +88,21 @@ interface AuditLog {
   adminId?: { fullName?: string } | string
   targetModel?: string
   targetId?: { toString?: () => string } | string
+  details?: { reason?: string; email?: string; fullName?: string }
   createdAt: string
+}
+
+interface SuperAdminRow {
+  _id: string
+  fullName: string
+  email: string
+  role: string
+  isSuspended?: boolean
+  subscription?: {
+    plan?: string
+    status?: string
+    endDate?: string | null
+  }
 }
 
 export default function AdminPageClient() {
@@ -95,7 +110,7 @@ export default function AdminPageClient() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const tabParam = searchParams.get('tab') || 'overview'
-  const active = VALID_TABS.includes(tabParam as (typeof VALID_TABS)[number]) ? tabParam : 'overview'
+  const rawActive = VALID_TABS.includes(tabParam as (typeof VALID_TABS)[number]) ? tabParam : 'overview'
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [users, setUsers] = useState<AdminUser[]>([])
   const [trainers, setTrainers] = useState<AdminTrainer[]>([])
@@ -105,6 +120,9 @@ export default function AdminPageClient() {
   const [subCounts, setSubCounts] = useState({ basic: 0, pro: 0, elite: 0 })
   const [subActionId, setSubActionId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [platformAdmins, setPlatformAdmins] = useState<SuperAdminRow[]>([])
+  const [creatingAdmin, setCreatingAdmin] = useState(false)
+  const [newAdmin, setNewAdmin] = useState({ fullName: '', email: '', password: '' })
 
   const setActive = (id: string) => {
     if (id === 'overview') router.replace('/admin')
@@ -123,13 +141,17 @@ export default function AdminPageClient() {
       fetch('/api/admin/gyms', { signal: controller.signal }).then((r) => (r.ok ? r.json() : [])).catch(() => []),
       fetch('/api/admin/audit-logs', { signal: controller.signal }).then((r) => (r.ok ? r.json() : [])).catch(() => []),
       fetch('/api/admin/subscriptions', { signal: controller.signal }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      user.role === 'super_admin'
+        ? fetch('/api/admin/super/admins', { signal: controller.signal }).then((r) => (r.ok ? r.json() : [])).catch(() => [])
+        : Promise.resolve([]),
     ])
-      .then(([s, u, t, g, a, subs]) => {
+      .then(([s, u, t, g, a, subs, admins]) => {
         setStats(s)
         setUsers(Array.isArray(u) ? u : [])
         setTrainers(Array.isArray(t) ? t : [])
         setGyms(Array.isArray(g) ? g : [])
         setAuditLogs(Array.isArray(a) ? a : [])
+        setPlatformAdmins(Array.isArray(admins) ? admins : [])
         if (subs && Array.isArray(subs.subscriptions)) {
           setSubscriptions(subs.subscriptions)
           setSubCounts(subs.counts || { basic: 0, pro: 0, elite: 0 })
@@ -190,17 +212,89 @@ export default function AdminPageClient() {
     }
   }
 
-  const suspendUser = async (id: string, suspend: boolean) => {
-    const res = await fetch(`/api/admin/users/${id}/suspend`, {
+  const suspendUser = async (id: string, suspend: boolean, targetRole?: string) => {
+    const adminTarget = targetRole === 'admin'
+    const reason =
+      adminTarget && isSuperAdmin
+        ? window.prompt('Reason for admin suspension/reinstatement (required):')?.trim()
+        : window.prompt('Optional reason for audit log:')?.trim() || undefined
+    if (adminTarget && isSuperAdmin && (!reason || reason.length < 3)) {
+      toast.error('Reason required (min 3 characters)')
+      return
+    }
+    const url =
+      adminTarget && isSuperAdmin
+        ? `/api/admin/super/users/${id}/suspend`
+        : `/api/admin/users/${id}/suspend`
+    const res = await fetch(url, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ suspend }),
+      body: JSON.stringify({ suspend, reason }),
     })
     if (res.ok) {
       toast.success(suspend ? 'User suspended' : 'User reactivated')
       setUsers((u) => u.map((row) => (row._id === id ? { ...row, isSuspended: suspend } : row)))
+      setPlatformAdmins((rows) => rows.map((row) => (row._id === id ? { ...row, isSuspended: suspend } : row)))
     } else {
-      toast.error('Action failed')
+      const data = await res.json().catch(() => ({}))
+      toast.error(data.message || 'Action failed')
+    }
+  }
+
+  const createAdminAccount = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!isSuperAdmin) return
+    setCreatingAdmin(true)
+    try {
+      const res = await fetch('/api/admin/super/admins', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newAdmin),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data.message || 'Failed to create admin')
+        return
+      }
+      toast.success('Admin account created')
+      setNewAdmin({ fullName: '', email: '', password: '' })
+      const listRes = await fetch('/api/admin/super/admins')
+      if (listRes.ok) setPlatformAdmins(await listRes.json())
+      const usersRes = await fetch('/api/admin/users')
+      if (usersRes.ok) setUsers(await usersRes.json())
+    } finally {
+      setCreatingAdmin(false)
+    }
+  }
+
+  const manageAdminSubscription = async (
+    userId: string,
+    action: 'grant' | 'revoke' | 'renew' | 'set',
+    plan?: 'basic' | 'pro' | 'elite',
+    months = 1,
+  ) => {
+    const reason = window.prompt('Reason for admin subscription change (required):')?.trim()
+    if (!reason || reason.length < 3) {
+      toast.error('Reason required (min 3 characters)')
+      return
+    }
+    setSubActionId(userId)
+    try {
+      const res = await fetch(`/api/admin/super/subscriptions/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, plan, months, reason }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data.message || 'Subscription action failed')
+        return
+      }
+      toast.success('Admin subscription updated')
+      const listRes = await fetch('/api/admin/super/admins')
+      if (listRes.ok) setPlatformAdmins(await listRes.json())
+    } finally {
+      setSubActionId(null)
     }
   }
 
@@ -262,6 +356,10 @@ export default function AdminPageClient() {
     )
   }
 
+  const isSuperAdmin = user.role === 'super_admin'
+  const active = rawActive === 'super' && !isSuperAdmin ? 'overview' : rawActive
+  const visibleSections = SECTIONS.filter((s) => !('superOnly' in s && s.superOnly) || isSuperAdmin)
+
   const pendingTrainers = trainers.filter((t) => t.adminVerificationStatus !== 'approved')
   const pendingGyms = gyms.filter((g) => g.verificationStatus === 'pending')
   const pendingCount = pendingTrainers.length + pendingGyms.length
@@ -315,7 +413,7 @@ export default function AdminPageClient() {
         </div>
 
         <div className="flex gap-2 overflow-x-auto pb-1">
-          {SECTIONS.map((s) => (
+          {visibleSections.map((s) => (
             <button
               key={s.id}
               type="button"
@@ -456,17 +554,23 @@ export default function AdminPageClient() {
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <button
-                            type="button"
-                            onClick={() => suspendUser(u._id, !u.isSuspended)}
-                            className={`rounded-lg border px-3 py-1.5 text-xs transition-colors ${
-                              u.isSuspended
-                                ? 'border-green-500/30 text-green-400 hover:bg-green-500/10'
-                                : 'border-red-500/30 text-red-400 hover:bg-red-500/10'
-                            }`}
-                          >
-                            {u.isSuspended ? 'Reactivate' : 'Suspend'}
-                          </button>
+                          {u.role === 'admin' && !isSuperAdmin ? (
+                            <span className="text-xs text-[#a0a0a0]">Super admin only</span>
+                          ) : u.role === 'super_admin' ? (
+                            <span className="text-xs text-[#a0a0a0]">—</span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => suspendUser(u._id, !u.isSuspended, u.role)}
+                              className={`rounded-lg border px-3 py-1.5 text-xs transition-colors ${
+                                u.isSuspended
+                                  ? 'border-green-500/30 text-green-400 hover:bg-green-500/10'
+                                  : 'border-red-500/30 text-red-400 hover:bg-red-500/10'
+                              }`}
+                            >
+                              {u.isSuspended ? 'Reactivate' : 'Suspend'}
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -763,6 +867,7 @@ export default function AdminPageClient() {
                       <th className="px-4 py-3 font-medium">Action</th>
                       <th className="hidden px-4 py-3 font-medium md:table-cell">Admin</th>
                       <th className="hidden px-4 py-3 font-medium md:table-cell">Target</th>
+                      <th className="hidden px-4 py-3 font-medium md:table-cell">Reason</th>
                       <th className="px-4 py-3 font-medium">Time</th>
                     </tr>
                   </thead>
@@ -781,12 +886,15 @@ export default function AdminPageClient() {
                             ? log.targetId.toString().slice(-6)
                             : String(log.targetId || '').slice(-6)}
                         </td>
+                        <td className="hidden px-4 py-3 text-xs text-[#a0a0a0] md:table-cell">
+                          {log.details?.reason || '—'}
+                        </td>
                         <td className="px-4 py-3 text-xs text-[#a0a0a0]">{new Date(log.createdAt).toLocaleString()}</td>
                       </tr>
                     ))}
                     {auditLogs.length === 0 && (
                       <tr>
-                        <td colSpan={4} className="px-4 py-12 text-center text-[#a0a0a0]">
+                        <td colSpan={5} className="px-4 py-12 text-center text-[#a0a0a0]">
                           No audit logs yet
                         </td>
                       </tr>
@@ -931,6 +1039,126 @@ export default function AdminPageClient() {
                       <tr>
                         <td colSpan={5} className="px-4 py-12 text-center text-[#a0a0a0]">
                           No subscribers found
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {active === 'super' && isSuperAdmin && (
+            <div className="space-y-6">
+              <div>
+                <p className="section-eyebrow">Elevated access</p>
+                <h1 className="text-2xl font-black text-white">Super Admin</h1>
+                <p className="mt-1 text-sm text-[#a0a0a0]">Create admin accounts and moderate platform operators.</p>
+              </div>
+
+              <div className="tile space-y-4">
+                <h2 className="text-lg font-bold text-white">Create admin account</h2>
+                <form onSubmit={createAdminAccount} className="grid gap-3 sm:grid-cols-2">
+                  <input
+                    required
+                    placeholder="Full name"
+                    value={newAdmin.fullName}
+                    onChange={(e) => setNewAdmin((v) => ({ ...v, fullName: e.target.value }))}
+                    className="rounded-lg border border-white/10 bg-[#0f0f0f] px-3 py-2 text-sm text-white"
+                  />
+                  <input
+                    required
+                    type="email"
+                    placeholder="Email"
+                    value={newAdmin.email}
+                    onChange={(e) => setNewAdmin((v) => ({ ...v, email: e.target.value }))}
+                    className="rounded-lg border border-white/10 bg-[#0f0f0f] px-3 py-2 text-sm text-white"
+                  />
+                  <input
+                    required
+                    type="password"
+                    minLength={12}
+                    placeholder="Password (min 12 chars)"
+                    value={newAdmin.password}
+                    onChange={(e) => setNewAdmin((v) => ({ ...v, password: e.target.value }))}
+                    className="rounded-lg border border-white/10 bg-[#0f0f0f] px-3 py-2 text-sm text-white sm:col-span-2"
+                  />
+                  <button
+                    type="submit"
+                    disabled={creatingAdmin}
+                    className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-black sm:col-span-2 disabled:opacity-50"
+                  >
+                    {creatingAdmin ? 'Creating…' : 'Create admin'}
+                  </button>
+                </form>
+              </div>
+
+              <div className="tile overflow-hidden p-0">
+                <table className="w-full text-sm">
+                  <thead className="border-b border-white/5">
+                    <tr className="text-left text-[#a0a0a0]">
+                      <th className="px-4 py-3 font-medium">Admin</th>
+                      <th className="px-4 py-3 font-medium">Plan</th>
+                      <th className="px-4 py-3 font-medium">Status</th>
+                      <th className="px-4 py-3 font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {platformAdmins.map((row) => {
+                      const busy = subActionId === row._id
+                      return (
+                        <tr key={row._id} className="border-b border-white/5 hover:bg-white/[.02]">
+                          <td className="px-4 py-3">
+                            <p className="font-medium text-white">{row.fullName}</p>
+                            <p className="text-xs text-[#a0a0a0]">{row.email}</p>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`badge-accent text-xs ${PLAN_COLORS[row.subscription?.plan || 'basic'] || ''}`}>
+                              {row.subscription?.plan || 'basic'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={`badge-accent text-xs ${row.isSuspended ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}
+                            >
+                              {row.isSuspended ? 'Suspended' : 'Active'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => suspendUser(row._id, !row.isSuspended, 'admin')}
+                                className="rounded-lg border border-red-500/30 px-2.5 py-1 text-xs text-red-400 hover:bg-red-500/10"
+                              >
+                                {row.isSuspended ? 'Reinstate' : 'Suspend'}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => manageAdminSubscription(row._id, 'grant', 'pro')}
+                                className="rounded-lg border border-[#00ff87]/30 px-2.5 py-1 text-xs text-[#00ff87]"
+                              >
+                                Grant Pro
+                              </button>
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => manageAdminSubscription(row._id, 'revoke')}
+                                className="rounded-lg border border-white/10 px-2.5 py-1 text-xs text-[#a0a0a0]"
+                              >
+                                Revoke
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                    {platformAdmins.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="px-4 py-12 text-center text-[#a0a0a0]">
+                          No admin accounts
                         </td>
                       </tr>
                     )}

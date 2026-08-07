@@ -9,6 +9,7 @@ import User from '@/models/User'
 import Relationship from '@/models/Relationship'
 import { parseJsonBody, reviewSchema } from '@/lib/validation'
 import { USER_AVATAR_POPULATE_SELECT, resolveAvatarUrl } from '@/lib/avatar'
+import { findTrainerByIdOrSlug, resolveTrainerObjectId } from '@/lib/resolve-trainer'
 
 async function getReviewStats(trainerId: string) {
   const stats = await Review.aggregate([
@@ -30,20 +31,19 @@ async function getReviewStats(trainerId: string) {
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    if (!mongoose.isValidObjectId(id)) {
+    const trainerId = await resolveTrainerObjectId(id)
+    if (!trainerId) {
       return NextResponse.json({ message: 'Trainer not found' }, { status: 404 })
     }
 
     await connectDB()
-    const trainer = await Trainer.findById(id).select('_id').lean()
-    if (!trainer) return NextResponse.json({ message: 'Trainer not found' }, { status: 404 })
 
-    const reviews = await Review.find({ trainerId: id })
+    const reviews = await Review.find({ trainerId })
       .sort({ createdAt: -1 })
       .populate('userId', USER_AVATAR_POPULATE_SELECT)
       .lean()
 
-    const { averageRating, reviewCount } = await getReviewStats(id)
+    const { averageRating, reviewCount } = await getReviewStats(trainerId)
 
     const tokenUser = await getUser(req)
     let currentUserReview = null
@@ -89,9 +89,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!tokenUser) return NextResponse.json({ message: 'Not authenticated' }, { status: 401 })
 
     const { id } = await params
-    if (!mongoose.isValidObjectId(id)) {
+    const trainer = await findTrainerByIdOrSlug(id)
+    if (!trainer) {
       return NextResponse.json({ message: 'Trainer not found' }, { status: 404 })
     }
+    const trainerId = trainer._id.toString()
 
     const parsed = await parseJsonBody(req, reviewSchema)
     if ('error' in parsed) return parsed.error
@@ -99,16 +101,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     await connectDB()
 
-    const trainer = await Trainer.findById(id).select('_id userId').lean()
-    if (!trainer) return NextResponse.json({ message: 'Trainer not found' }, { status: 404 })
-
     if (trainer.userId?.toString() === tokenUser.userId) {
       return NextResponse.json({ message: 'You cannot review yourself' }, { status: 403 })
     }
 
     const relationship = await Relationship.findOne({
       userId: tokenUser.userId,
-      trainerId: id,
+      trainerId,
       status: 'active',
     }).select('_id')
     if (!relationship) {
@@ -121,29 +120,30 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const user = await User.findById(tokenUser.userId).select('fullName profileImage avatarUrl').lean()
     if (!user) return NextResponse.json({ message: 'User not found' }, { status: 404 })
 
-    const existing = await Review.findOne({ trainerId: id, userId: tokenUser.userId })
+    const existing = await Review.findOne({ trainerId, userId: tokenUser.userId })
     if (existing) {
       return NextResponse.json({ message: 'You have already reviewed this trainer' }, { status: 409 })
     }
 
     const review = await Review.create({
-      trainerId: id,
+      trainerId,
       userId: tokenUser.userId,
       rating,
       comment,
     })
 
-    const { averageRating, reviewCount } = await getReviewStats(id)
+    const { averageRating, reviewCount } = await getReviewStats(trainerId)
     const roundedRating = reviewCount > 0 ? Math.round(averageRating * 10) / 10 : 5
-    await Trainer.updateOne({ _id: id }, { $set: { rating: roundedRating } })
+    await Trainer.updateOne({ _id: trainerId }, { $set: { rating: roundedRating } })
 
     if (trainer.userId) {
+      const slug = typeof trainer.slug === 'string' ? trainer.slug : trainerId
       await createNotification({
         userId: trainer.userId,
         title: 'New review received',
         message: `${user.fullName} left you a ${rating}-star review`,
         type: 'trainer',
-        link: `/coaching/${id}`,
+        link: `/coaching/${slug}`,
       })
     }
 

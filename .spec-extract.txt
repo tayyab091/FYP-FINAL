@@ -1,0 +1,1555 @@
+<timestamp>Saturday, Jul 25, 2026, 3:14 PM (UTC+5)</timestamp>
+<user_query>
+You are the lead senior developer completing the T.E.S.T. fitness platform once and for all.
+Working directory: FYP-FINAL
+Live site: https://fyp-final-ten.vercel.app
+
+This is the FINAL completion pass. You will:
+1. Fix every known gap and bug
+2. Add 3 new high-impact features
+3. Run Playwright tests covering every role and every page
+4. Fix every test failure
+5. Build successfully
+6. Push to GitHub
+
+Do everything yourself. Do not ask questions. Do not stop until all tests pass and the build succeeds.
+
+==============================================================
+PHASE 0 — READ THE CODEBASE COMPLETELY FIRST
+==============================================================
+
+Run these before touching anything:
+
+```bash
+# Current state
+cat src/proxy.ts
+cat src/lib/route-access.ts
+cat src/lib/access.ts
+cat src/lib/stripe.ts
+cat src/lib/subscription.ts
+cat src/lib/realtime.ts
+cat src/lib/notifications.ts
+cat src/lib/jitsi.ts 2>/dev/null || echo "no jitsi.ts"
+
+# Check what pages exist
+find src/app -name "page.tsx" | grep -v node_modules | sort
+
+# Check middleware
+ls -la middleware.ts 2>/dev/null || echo "NO MIDDLEWARE.TS AT ROOT"
+ls -la src/middleware.ts 2>/dev/null || echo "NO MIDDLEWARE AT SRC"
+
+# Check models
+find src/models -name "*.ts" | xargs grep "export default" | sort
+
+# Start dev server
+npm run dev &
+sleep 25
+
+# Test all pages and APIs
+for path in / /login /signup /register-trainer /register-gym-owner /coaching /exercises /exercise-check /nutrition /subscription /dashboard /my-fitness /analytics /community /notifications /live-sessions /meal-plans /settings /admin /trainer-dashboard /gym-owner /chat; do
+  code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://localhost:3000$path)
+  echo "PAGE $path -> $code"
+done
+
+for path in /api/health /api/trainers /api/exercises /api/auth/me /api/gamification/me /api/notifications /api/community/posts /api/live-sessions /api/meal-plans /api/analytics/summary /api/tracking/plans/my-plan; do
+  code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://localhost:3000$path)
+  echo "API $path -> $code"
+done
+```
+
+Read every output. Build a complete picture of what works and what doesn't before writing a line of code.
+
+==============================================================
+FIX 1 — CRITICAL: Add middleware.ts at project root
+==============================================================
+
+The project uses src/proxy.ts but Next.js 16 requires middleware.ts at the PROJECT ROOT (not in src/).
+Without this, route protection does not work on Vercel.
+
+Check if middleware.ts exists at root. If not, create it:
+
+```typescript
+// middleware.ts (at project ROOT, same level as package.json)
+export { proxy as middleware } from './src/proxy'
+export { config } from './src/proxy'
+```
+
+This re-exports the proxy function as the Next.js middleware.
+Verify it works by checking that /my-fitness redirects to /login when not authenticated.
+
+==============================================================
+FIX 2 — Payments: Make subscription flow work end to end
+==============================================================
+
+Read src/lib/stripe.ts and src/app/api/subscription/route.ts
+
+The subscription must work even without real Stripe keys using simulation mode.
+
+Fix src/app/api/subscription/route.ts:
+```typescript
+import { NextRequest, NextResponse } from 'next/server'
+import { connectDB } from '@/lib/mongodb'
+import User from '@/models/User'
+import { getUser } from '@/lib/auth'
+
+export async function POST(req: NextRequest) {
+  try {
+    const tokenUser = await getUser(req)
+    if (!tokenUser) return NextResponse.json({ message: 'Not authenticated' }, { status: 401 })
+
+    await connectDB()
+    const { plan } = await req.json()
+
+    if (!['basic', 'pro', 'elite'].includes(plan)) {
+      return NextResponse.json({ message: 'Invalid plan' }, { status: 400 })
+    }
+
+    // Try real Stripe first
+    const STRIPE_KEY = process.env.STRIPE_SECRET_KEY
+    if (STRIPE_KEY && !STRIPE_KEY.includes('PASTE')) {
+      try {
+        const stripe = (await import('stripe')).default
+        const stripeClient = new stripe(STRIPE_KEY)
+        const PRICES: Record<string, string> = {
+          pro: process.env.STRIPE_PRO_PRICE_ID || '',
+          elite: process.env.STRIPE_ELITE_PRICE_ID || '',
+        }
+        if (plan !== 'basic' && PRICES[plan]) {
+          const session = await stripeClient.checkout.sessions.create({
+            mode: 'subscription',
+            payment_method_types: ['card'],
+            line_items: [{ price: PRICES[plan], quantity: 1 }],
+            success_url: `${process.env.NEXT_PUBLIC_APP_URL}/subscription?success=true&plan=${plan}`,
+            cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/subscription?cancelled=true`,
+            metadata: { userId: tokenUser.userId, plan },
+          })
+          return NextResponse.json({ url: session.url })
+        }
+      } catch (e) {
+        console.error('Stripe error, falling back to simulation:', e)
+      }
+    }
+
+    // Simulation mode — directly update the subscription
+    const endDate = new Date()
+    endDate.setDate(endDate.getDate() + 30)
+
+    await User.findByIdAndUpdate(tokenUser.userId, {
+      'subscription.plan': plan,
+      'subscription.status': 'active',
+      'subscription.startDate': new Date(),
+      'subscription.endDate': endDate,
+    })
+
+    return NextResponse.json({
+      success: true,
+      simulated: true,
+      message: `Successfully upgraded to ${plan} plan`,
+      plan,
+    })
+  } catch (error) {
+    console.error('Subscription error:', error)
+    return NextResponse.json({ message: 'Server error' }, { status: 500 })
+  }
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const tokenUser = await getUser(req)
+    if (!tokenUser) return NextResponse.json({ message: 'Not authenticated' }, { status: 401 })
+    await connectDB()
+    const user = await User.findById(tokenUser.userId).select('subscription').lean()
+    return NextResponse.json({ subscription: (user as any)?.subscription || { plan: 'basic', status: 'active' } })
+  } catch {
+    return NextResponse.json({ message: 'Server error' }, { status: 500 })
+  }
+}
+```
+
+Now fix the subscription page (src/app/(public)/subscription/page.tsx):
+- Show current plan for logged-in users (fetch GET /api/subscription)
+- "Get Started Free" for basic → sets plan to basic (free, no payment)
+- "Upgrade to Pro" → POST /api/subscription { plan: 'pro' }
+- "Get Elite" → POST /api/subscription { plan: 'elite' }
+- If response has { url } → window.location.href = url (real Stripe)
+- If response has { simulated: true } → toast.success('Plan activated! Welcome to [plan]!') + refresh subscription
+- Show current plan badge on the user's current plan card
+- Disabled button text: "Current Plan" on active plan
+
+==============================================================
+FIX 3 — Delete Account API
+==============================================================
+
+The delete account button exists in settings but has no API.
+
+Create src/app/api/user/delete/route.ts:
+```typescript
+import { NextRequest, NextResponse } from 'next/server'
+import { connectDB } from '@/lib/mongodb'
+import User from '@/models/User'
+import Trainer from '@/models/Trainer'
+import Relationship from '@/models/Relationship'
+import Conversation from '@/models/Conversation'
+import Message from '@/models/Message'
+import MealLog from '@/models/MealLog'
+import WorkoutPlan from '@/models/WorkoutPlan'
+import WorkoutLog from '@/models/WorkoutLog'
+import ProgressRecord from '@/models/ProgressRecord'
+import Notification from '@/models/Notification'
+import { getUser } from '@/lib/auth'
+import { cookieOptions } from '@/lib/auth'
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const tokenUser = await getUser(req)
+    if (!tokenUser) return NextResponse.json({ message: 'Not authenticated' }, { status: 401 })
+
+    await connectDB()
+    const userId = tokenUser.userId
+
+    // Delete all user data
+    await Promise.all([
+      Trainer.deleteMany({ userId }),
+      Relationship.deleteMany({ $or: [{ userId }, { trainerId: userId }] }),
+      MealLog.deleteMany({ userId }),
+      WorkoutPlan.deleteMany({ userId }),
+      WorkoutLog.deleteMany({ userId }),
+      ProgressRecord.deleteMany({ userId }),
+      Notification.deleteMany({ userId }),
+      User.findByIdAndDelete(userId),
+    ])
+
+    const response = NextResponse.json({ message: 'Account deleted successfully' })
+    response.cookies.set('token', '', { ...cookieOptions(), maxAge: 0 })
+    return response
+  } catch (error) {
+    console.error('Delete account error:', error)
+    return NextResponse.json({ message: 'Server error' }, { status: 500 })
+  }
+}
+```
+
+Wire this to the settings page delete button:
+```typescript
+const handleDeleteAccount = async () => {
+  if (deleteConfirm !== 'DELETE') return
+  setDeleting(true)
+  const res = await fetch('/api/user/delete', { method: 'DELETE' })
+  if (res.ok) {
+    toast.success('Account deleted')
+    router.replace('/')
+  } else {
+    toast.error('Failed to delete account')
+    setDeleting(false)
+  }
+}
+```
+
+==============================================================
+FIX 4 — Seed 10 real trainers so marketplace looks live
+==============================================================
+
+The fallback trainers have connectable: false. Fix the seed route to always
+populate real DB trainers that are fully connectable.
+
+Open src/app/api/seed/route.ts
+Make sure the seed creates these trainers as REAL DB documents (not just fallback objects):
+- All 6 original Pakistani trainers (Ali Hassan, Sarah Khan, Usman Malik, Fatima Rizvi, Bilal Ahmed, Zara Malik)
+- PLUS 4 more:
+  { name: 'Hassan Sheikh', email: 'hassan@test.com', specialty: ['Nutrition', 'Weight Loss'], country: 'Pakistan', rating: 4.7, bio: 'Certified nutritionist and weight loss coach. 300+ transformations in 4 years.', profileImage: 'https://randomuser.me/api/portraits/men/7.jpg' }
+  { name: 'Ayesha Tariq', email: 'ayesha@test.com', specialty: ['Pilates', 'Flexibility'], country: 'Pakistan', rating: 4.8, bio: 'Pilates instructor and flexibility specialist. Online and in-person sessions.', profileImage: 'https://randomuser.me/api/portraits/women/8.jpg' }
+  { name: 'Kamran Butt', email: 'kamran@test.com', specialty: ['Strength Training', 'Powerlifting'], country: 'UAE', rating: 4.9, bio: 'Elite powerlifting coach based in Dubai. Trained national-level athletes.', profileImage: 'https://randomuser.me/api/portraits/men/9.jpg' }
+  { name: 'Sana Mirza', email: 'sana@test.com', specialty: ['HIIT', 'Cardio', 'Dance Fitness'], country: 'Pakistan', rating: 4.8, bio: 'High energy HIIT and dance fitness instructor. Makes every session fun!', profileImage: 'https://randomuser.me/api/portraits/women/10.jpg' }
+
+All trainers: isFullyVerified: true, isActive: true, isFeatured for Ali Hassan only.
+
+After seeding, call /api/seed via curl and verify 10 trainers exist.
+
+==============================================================
+NEW FEATURE 1 — AI Workout Generator
+==============================================================
+
+This is the most important new feature. It directly justifies "Intelligent AI-Based" in your FYP title.
+
+Create src/app/api/ai/generate-plan/route.ts:
+```typescript
+import { NextRequest, NextResponse } from 'next/server'
+import { getUser } from '@/lib/auth'
+
+export async function POST(req: NextRequest) {
+  try {
+    const tokenUser = await getUser(req)
+    if (!tokenUser) return NextResponse.json({ message: 'Not authenticated' }, { status: 401 })
+
+    const { goal, daysPerWeek, equipment, fitnessLevel, targetMuscles } = await req.json()
+
+    const GEMINI_KEY = process.env.GEMINI_API_KEY
+
+    const prompt = `You are an expert personal trainer. Generate a complete ${daysPerWeek}-day per week workout plan.
+
+User details:
+- Goal: ${goal}
+- Fitness level: ${fitnessLevel}
+- Available equipment: ${equipment}
+- Target muscles/focus: ${targetMuscles || 'Full body'}
+
+Generate a complete weekly workout plan. Return ONLY valid JSON in this exact format:
+{
+  "title": "Plan title based on goal",
+  "goal": "${goal}",
+  "durationWeeks": 8,
+  "difficulty": "${fitnessLevel}",
+  "weeklySchedule": [
+    {
+      "day": "Monday",
+      "isRestDay": false,
+      "exercises": [
+        { "name": "Exercise Name", "sets": 3, "reps": "10-12", "restSeconds": 60, "notes": "Form tip" }
+      ]
+    }
+  ]
+}
+
+Rules:
+- Include exactly ${daysPerWeek} workout days and ${7 - parseInt(daysPerWeek)} rest days
+- Only include exercises possible with: ${equipment}
+- Match difficulty to: ${fitnessLevel}
+- Include 4-6 exercises per workout day
+- Progressive overload: later days in week should be slightly harder
+- Return ONLY the JSON object, no markdown, no explanation`
+
+    if (GEMINI_KEY && GEMINI_KEY !== 'PASTE_GEMINI_KEY_HERE') {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: { maxOutputTokens: 2000, temperature: 0.7 },
+          }),
+        }
+      )
+      const data = await res.json()
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+      try {
+        const clean = text.replace(/```json|```/g, '').trim()
+        const plan = JSON.parse(clean)
+        return NextResponse.json({ plan, generated: true })
+      } catch {
+        // Fall through to static plan
+      }
+    }
+
+    // Static fallback plan when no Gemini key
+    const GOALS_MAP: Record<string, any> = {
+      weight_loss: {
+        title: 'Fat Burning Circuit Program',
+        weeklySchedule: [
+          { day: 'Monday', isRestDay: false, exercises: [{ name: 'Burpees', sets: 3, reps: '15', restSeconds: 45, notes: 'Full explosive movement' }, { name: 'Mountain Climbers', sets: 3, reps: '30 sec', restSeconds: 30, notes: 'Keep hips level' }, { name: 'Jump Squats', sets: 3, reps: '20', restSeconds: 45, notes: 'Land softly' }, { name: 'Push-Ups', sets: 3, reps: '15', restSeconds: 45, notes: 'Full range' }, { name: 'High Knees', sets: 3, reps: '30 sec', restSeconds: 30, notes: 'Pump arms' }] },
+          { day: 'Tuesday', isRestDay: true, exercises: [] },
+          { day: 'Wednesday', isRestDay: false, exercises: [{ name: 'Squat to Press', sets: 3, reps: '12', restSeconds: 60, notes: 'Compound movement' }, { name: 'Reverse Lunges', sets: 3, reps: '12 each', restSeconds: 45, notes: 'Keep front knee over ankle' }, { name: 'Plank', sets: 3, reps: '45 sec', restSeconds: 30, notes: 'Keep body straight' }, { name: 'Tricep Dips', sets: 3, reps: '15', restSeconds: 45, notes: 'Use chair' }, { name: 'Bicycle Crunches', sets: 3, reps: '20 total', restSeconds: 30, notes: 'Slow and controlled' }] },
+          { day: 'Thursday', isRestDay: true, exercises: [] },
+          { day: 'Friday', isRestDay: false, exercises: [{ name: 'Box Jumps', sets: 4, reps: '10', restSeconds: 60, notes: 'Land with soft knees' }, { name: 'Push-Up to Row', sets: 3, reps: '10', restSeconds: 60, notes: 'Need dumbbells' }, { name: 'Bulgarian Split Squat', sets: 3, reps: '10 each', restSeconds: 60, notes: 'Rear foot elevated' }, { name: 'Russian Twists', sets: 3, reps: '20 total', restSeconds: 30, notes: 'Feet off ground' }, { name: 'Jumping Jacks', sets: 3, reps: '45 sec', restSeconds: 30, notes: 'Cooldown cardio' }] },
+          { day: 'Saturday', isRestDay: true, exercises: [] },
+          { day: 'Sunday', isRestDay: true, exercises: [] },
+        ]
+      },
+      muscle_gain: {
+        title: 'Hypertrophy Mass Builder',
+        weeklySchedule: [
+          { day: 'Monday', isRestDay: false, exercises: [{ name: 'Bench Press', sets: 4, reps: '8-10', restSeconds: 90, notes: 'Control the descent' }, { name: 'Incline Dumbbell Press', sets: 3, reps: '10-12', restSeconds: 75, notes: 'Upper chest focus' }, { name: 'Cable Flyes', sets: 3, reps: '12-15', restSeconds: 60, notes: 'Squeeze at peak' }, { name: 'Shoulder Press', sets: 4, reps: '8-10', restSeconds: 90, notes: 'Full ROM' }, { name: 'Lateral Raises', sets: 3, reps: '15', restSeconds: 45, notes: 'Control eccentric' }] },
+          { day: 'Tuesday', isRestDay: false, exercises: [{ name: 'Deadlift', sets: 4, reps: '5-6', restSeconds: 120, notes: 'Keep bar close to body' }, { name: 'Barbell Row', sets: 4, reps: '8-10', restSeconds: 90, notes: 'Squeeze shoulder blades' }, { name: 'Pull-Ups', sets: 3, reps: '8-10', restSeconds: 90, notes: 'Full dead hang' }, { name: 'Face Pulls', sets: 3, reps: '15', restSeconds: 45, notes: 'Rear delt focus' }, { name: 'Bicep Curls', sets: 3, reps: '12', restSeconds: 60, notes: 'Supinate at top' }] },
+          { day: 'Wednesday', isRestDay: true, exercises: [] },
+          { day: 'Thursday', isRestDay: false, exercises: [{ name: 'Squat', sets: 4, reps: '8-10', restSeconds: 120, notes: 'Depth below parallel' }, { name: 'Leg Press', sets: 3, reps: '12', restSeconds: 90, notes: 'Full range' }, { name: 'Romanian Deadlift', sets: 3, reps: '10-12', restSeconds: 75, notes: 'Hamstring stretch' }, { name: 'Leg Curls', sets: 3, reps: '12-15', restSeconds: 60, notes: 'Isolate hamstrings' }, { name: 'Calf Raises', sets: 4, reps: '20', restSeconds: 45, notes: 'Pause at top' }] },
+          { day: 'Friday', isRestDay: false, exercises: [{ name: 'Overhead Press', sets: 4, reps: '6-8', restSeconds: 90, notes: 'Brace core' }, { name: 'Arnold Press', sets: 3, reps: '10', restSeconds: 75, notes: 'Rotate through movement' }, { name: 'Tricep Pushdown', sets: 3, reps: '12-15', restSeconds: 60, notes: 'Elbows pinned' }, { name: 'Skull Crushers', sets: 3, reps: '10-12', restSeconds: 75, notes: 'Bar to forehead' }, { name: 'Hammer Curls', sets: 3, reps: '12', restSeconds: 60, notes: 'Brachialis focus' }] },
+          { day: 'Saturday', isRestDay: true, exercises: [] },
+          { day: 'Sunday', isRestDay: true, exercises: [] },
+        ]
+      },
+    }
+
+    const template = GOALS_MAP[goal] || GOALS_MAP['muscle_gain']
+    const plan = {
+      ...template,
+      goal,
+      durationWeeks: 8,
+      difficulty: fitnessLevel,
+      generated: false,
+    }
+    return NextResponse.json({ plan, generated: false })
+  } catch (error) {
+    console.error('AI plan error:', error)
+    return NextResponse.json({ message: 'Server error' }, { status: 500 })
+  }
+}
+```
+
+Now add the AI Plan Generator UI to the My Fitness page — add a new tab called "AI Generator":
+
+In src/app/(dashboard)/my-fitness/page.tsx, add an "AI Generator" tab:
+
+```tsx
+function AIGeneratorTab() {
+  const [form, setForm] = useState({
+    goal: 'muscle_gain',
+    daysPerWeek: '4',
+    equipment: 'Dumbbells, Barbell, Pull-up Bar',
+    fitnessLevel: 'intermediate',
+    targetMuscles: '',
+  })
+  const [loading, setLoading] = useState(false)
+  const [generatedPlan, setGeneratedPlan] = useState<any>(null)
+  const [saving, setSaving] = useState(false)
+
+  const generate = async () => {
+    setLoading(true)
+    setGeneratedPlan(null)
+    try {
+      const res = await fetch('/api/ai/generate-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setGeneratedPlan(data.plan)
+        if (data.generated) toast.success('AI generated your personalized plan! 🤖')
+        else toast.success('Plan ready! (Using template — add Gemini key for AI generation)')
+      } else {
+        toast.error(data.message || 'Failed to generate plan')
+      }
+    } catch {
+      toast.error('Network error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const savePlan = async () => {
+    if (!generatedPlan) return
+    setSaving(true)
+    try {
+      const res = await fetch('/api/tracking/plans', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...generatedPlan, activateNow: true }),
+      })
+      if (res.ok) {
+        toast.success('Plan saved and activated!')
+        setGeneratedPlan(null)
+      } else {
+        toast.error('Failed to save plan')
+      }
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const inputClass = "w-full bg-[#0e1a14] border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-[#00ff87] transition-colors"
+
+  return (
+    <div className="space-y-6 max-w-2xl">
+      <div>
+        <p className="section-eyebrow">Powered by Gemini AI</p>
+        <h2 className="text-2xl font-black text-white">Generate My Workout Plan</h2>
+        <p className="text-[#a0a0a0] text-sm mt-1">Answer 4 questions and AI builds your personalized plan</p>
+      </div>
+
+      <div className="tile space-y-4">
+        <div>
+          <label className="block text-xs text-[#a0a0a0] mb-1.5 font-medium">What is your primary goal?</label>
+          <select value={form.goal} onChange={e => setForm(f => ({ ...f, goal: e.target.value }))} className={inputClass}>
+            <option value="weight_loss">Weight Loss — Burn Fat</option>
+            <option value="muscle_gain">Muscle Gain — Build Size</option>
+            <option value="endurance">Endurance — Improve Stamina</option>
+            <option value="general_fitness">General Fitness — Stay Healthy</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-xs text-[#a0a0a0] mb-1.5 font-medium">How many days per week can you train?</label>
+          <div className="flex gap-3">
+            {['3', '4', '5', '6'].map(d => (
+              <button key={d} onClick={() => setForm(f => ({ ...f, daysPerWeek: d }))}
+                className={`flex-1 py-3 rounded-xl text-sm font-bold border transition-all ${
+                  form.daysPerWeek === d
+                    ? 'bg-[#00ff87] text-black border-[#00ff87]'
+                    : 'border-white/10 text-[#a0a0a0] hover:border-white/20'
+                }`}>
+                {d} days
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs text-[#a0a0a0] mb-1.5 font-medium">What equipment do you have access to?</label>
+          <div className="flex flex-wrap gap-2">
+            {['Bodyweight Only', 'Dumbbells', 'Barbell', 'Pull-up Bar', 'Resistance Bands', 'Full Gym'].map(eq => {
+              const selected = form.equipment.includes(eq)
+              return (
+                <button key={eq} onClick={() => {
+                  setForm(f => ({
+                    ...f,
+                    equipment: selected
+                      ? f.equipment.replace(eq, '').replace(', ,', ',').trim().replace(/^,|,$/g, '')
+                      : f.equipment ? `${f.equipment}, ${eq}` : eq
+                  }))
+                }}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                    selected
+                      ? 'bg-[#00ff87]/20 text-[#00ff87] border-[#00ff87]/40'
+                      : 'border-white/10 text-[#a0a0a0] hover:border-white/20'
+                  }`}>
+                  {eq}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs text-[#a0a0a0] mb-1.5 font-medium">Your fitness level</label>
+          <div className="flex gap-3">
+            {[{ v: 'beginner', l: 'Beginner', desc: 'Less than 6 months' }, { v: 'intermediate', l: 'Intermediate', desc: '6mo - 2 years' }, { v: 'advanced', l: 'Advanced', desc: '2+ years' }].map(level => (
+              <button key={level.v} onClick={() => setForm(f => ({ ...f, fitnessLevel: level.v }))}
+                className={`flex-1 py-3 px-2 rounded-xl text-sm font-bold border transition-all text-center ${
+                  form.fitnessLevel === level.v
+                    ? 'bg-[#00ff87] text-black border-[#00ff87]'
+                    : 'border-white/10 text-[#a0a0a0] hover:border-white/20'
+                }`}>
+                <div>{level.l}</div>
+                <div className="text-[10px] font-normal opacity-70">{level.desc}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <button onClick={generate} disabled={loading}
+          className="w-full py-4 rounded-2xl font-bold text-black text-base transition-all disabled:opacity-50"
+          style={{ background: loading ? '#555' : 'linear-gradient(135deg, #00ff87, #00d4ff)' }}>
+          {loading ? (
+            <span className="flex items-center justify-center gap-3">
+              <span className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+              AI is generating your plan...
+            </span>
+          ) : '🤖 Generate My Plan with AI'}
+        </button>
+      </div>
+
+      {generatedPlan && (
+        <div className="tile space-y-4 border-[#00ff87]/20">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <p className="text-[#00ff87] text-xs font-semibold uppercase tracking-wider">AI Generated</p>
+              <h3 className="text-xl font-black text-white">{generatedPlan.title}</h3>
+              <p className="text-[#a0a0a0] text-sm">{generatedPlan.durationWeeks} weeks · {generatedPlan.difficulty} · {form.daysPerWeek} days/week</p>
+            </div>
+            <button onClick={savePlan} disabled={saving}
+              className="btn-accent px-6 py-3 text-sm font-bold disabled:opacity-50">
+              {saving ? 'Saving...' : '✓ Activate This Plan'}
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {generatedPlan.weeklySchedule?.map((day: any) => (
+              <div key={day.day} className={`rounded-xl border p-4 ${day.isRestDay ? 'border-white/5 bg-white/[0.02]' : 'border-white/10 bg-white/[0.03]'}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="font-bold text-white text-sm">{day.day}</p>
+                  {day.isRestDay ? (
+                    <span className="badge-accent text-xs bg-blue-500/20 text-blue-400">Rest Day 😴</span>
+                  ) : (
+                    <span className="badge-accent text-xs">{day.exercises?.length} exercises</span>
+                  )}
+                </div>
+                {!day.isRestDay && day.exercises?.length > 0 && (
+                  <div className="space-y-1.5">
+                    {day.exercises.map((ex: any, i: number) => (
+                      <div key={i} className="flex items-center gap-3 text-sm">
+                        <span className="w-5 h-5 rounded-full bg-[#00ff87]/20 text-[#00ff87] text-xs flex items-center justify-center flex-shrink-0 font-bold">{i + 1}</span>
+                        <span className="text-white font-medium">{ex.name}</span>
+                        <span className="text-[#a0a0a0] text-xs">{ex.sets} × {ex.reps}</span>
+                        {ex.notes && <span className="text-[#555] text-xs hidden md:block">· {ex.notes}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+```
+
+Also fix the tracking/plans route to handle self-generated plans (no trainerId required):
+In src/app/api/tracking/plans/route.ts, make trainerId optional:
+```typescript
+// Remove the trainer-only check for self-generated plans
+// If no trainerId in body, allow user to save their own AI-generated plan
+const plan = await WorkoutPlan.create({
+  userId: tokenUser.userId,
+  trainerId: trainerId || undefined, // optional
+  title, goal, durationWeeks, difficulty, weeklySchedule,
+  status: activateNow ? 'active' : 'draft',
+  startDate: activateNow ? new Date() : undefined,
+})
+```
+
+==============================================================
+NEW FEATURE 2 — Leaderboard Page
+==============================================================
+
+Create src/app/(dashboard)/leaderboard/page.tsx:
+
+```tsx
+'use client'
+export const dynamic = 'force-dynamic'
+import { useState, useEffect } from 'react'
+import { useAuth } from '@/hooks/useAuth'
+
+export default function LeaderboardPage() {
+  const { user } = useAuth()
+  const [leaders, setLeaders] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [period, setPeriod] = useState<'week' | 'month' | 'all'>('week')
+
+  useEffect(() => {
+    const controller = new AbortController()
+    fetch(`/api/gamification/leaderboard?period=${period}`, { signal: controller.signal })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setLeaders(Array.isArray(data) ? data : data.leaders || []))
+      .catch(() => setLeaders([]))
+      .finally(() => setLoading(false))
+    return () => controller.abort()
+  }, [period])
+
+  const RANK_STYLES = [
+    'from-yellow-500/20 to-yellow-600/10 border-yellow-500/30',
+    'from-gray-400/20 to-gray-500/10 border-gray-400/30',
+    'from-orange-600/20 to-orange-700/10 border-orange-600/30',
+  ]
+  const RANK_EMOJIS = ['🥇', '🥈', '🥉']
+
+  return (
+    <div className="max-w-3xl mx-auto px-4 py-8">
+      <div className="mb-8">
+        <p className="section-eyebrow">Community</p>
+        <h1 className="text-3xl font-black text-white">Leaderboard 🏆</h1>
+        <p className="text-[#a0a0a0] mt-1">Top performers ranked by XP earned</p>
+      </div>
+
+      {/* Period filter */}
+      <div className="flex gap-2 mb-6">
+        {(['week', 'month', 'all'] as const).map(p => (
+          <button key={p} onClick={() => setPeriod(p)}
+            className={`px-5 py-2 rounded-full text-sm font-semibold border transition-all capitalize ${
+              period === p
+                ? 'bg-[#00ff87] text-black border-[#00ff87]'
+                : 'border-white/10 text-[#a0a0a0] hover:border-white/20'
+            }`}>
+            {p === 'all' ? 'All Time' : `This ${p.charAt(0).toUpperCase() + p.slice(1)}`}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="space-y-3">
+          {[...Array(10)].map((_, i) => (
+            <div key={i} className="tile skeleton h-20 min-h-0" />
+          ))}
+        </div>
+      ) : leaders.length === 0 ? (
+        <div className="tile items-center justify-center py-20 text-center">
+          <span className="text-5xl mb-4">🏆</span>
+          <p className="text-white font-bold text-lg">No rankings yet</p>
+          <p className="text-[#a0a0a0] text-sm mt-1">Complete workouts and log meals to earn XP and appear here</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {leaders.map((leader: any, index: number) => {
+            const isCurrentUser = leader.userId === user?.id || leader.userId === (user as any)?._id
+            const rank = index + 1
+            const initials = (leader.fullName || 'U').split(' ').map((n: string) => n[0]).join('').slice(0, 2)
+
+            return (
+              <div key={leader._id || index}
+                className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${
+                  rank <= 3
+                    ? `bg-gradient-to-r ${RANK_STYLES[rank - 1]}`
+                    : isCurrentUser
+                      ? 'border-[#00ff87]/30 bg-[#00ff87]/5'
+                      : 'tile min-h-0'
+                }`}>
+
+                {/* Rank */}
+                <div className="w-10 text-center flex-shrink-0">
+                  {rank <= 3 ? (
+                    <span className="text-2xl">{RANK_EMOJIS[rank - 1]}</span>
+                  ) : (
+                    <span className="text-lg font-black text-[#a0a0a0]">#{rank}</span>
+                  )}
+                </div>
+
+                {/* Avatar */}
+                <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-black text-sm flex-shrink-0 ${
+                  isCurrentUser
+                    ? 'bg-gradient-to-br from-[#00ff87] to-[#00d4ff] text-black'
+                    : 'bg-white/10 text-white'
+                }`}>
+                  {leader.profileImage ? (
+                    <img src={leader.profileImage} alt={leader.fullName} className="w-full h-full rounded-xl object-cover" />
+                  ) : initials}
+                </div>
+
+                {/* Name + role */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className={`font-bold text-sm truncate ${isCurrentUser ? 'text-[#00ff87]' : 'text-white'}`}>
+                      {leader.fullName || 'Anonymous'}
+                      {isCurrentUser && ' (You)'}
+                    </p>
+                    {leader.role && leader.role !== 'user' && (
+                      <span className="badge-accent text-xs capitalize flex-shrink-0">{leader.role}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 mt-0.5">
+                    <span className="text-xs text-[#a0a0a0]">Level {leader.level || 1}</span>
+                    {leader.streak > 0 && (
+                      <span className="text-xs text-orange-400">🔥 {leader.streak} day streak</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* XP */}
+                <div className="text-right flex-shrink-0">
+                  <p className={`font-black text-lg ${rank === 1 ? 'text-yellow-400' : rank === 2 ? 'text-gray-300' : rank === 3 ? 'text-orange-400' : 'text-[#00ff87]'}`}>
+                    {(leader.xp || 0).toLocaleString()}
+                  </p>
+                  <p className="text-xs text-[#a0a0a0]">XP</p>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Your position if not in top 10 */}
+      {!loading && leaders.length > 0 && !leaders.some(l => l.userId === user?.id || l.userId === (user as any)?._id) && (
+        <div className="mt-6 p-4 rounded-2xl border border-white/10 bg-white/[0.02] flex items-center justify-between">
+          <p className="text-[#a0a0a0] text-sm">You are not in the top 10 yet</p>
+          <a href="/my-fitness" className="badge-accent text-xs cursor-pointer hover:opacity-80">
+            Earn XP →
+          </a>
+        </div>
+      )}
+    </div>
+  )
+}
+```
+
+Create the leaderboard API endpoint src/app/api/gamification/leaderboard/route.ts:
+```typescript
+import { NextRequest, NextResponse } from 'next/server'
+import { connectDB } from '@/lib/mongodb'
+import mongoose from 'mongoose'
+
+export async function GET(req: NextRequest) {
+  try {
+    await connectDB()
+    const { searchParams } = req.nextUrl
+    const period = searchParams.get('period') || 'week'
+
+    // Get GamificationProfile model
+    const GamificationProfile = mongoose.models.GamificationProfile ||
+      mongoose.model('GamificationProfile', new mongoose.Schema({
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        xp: { type: Number, default: 0 },
+        level: { type: Number, default: 1 },
+        streak: { type: Number, default: 0 },
+        badges: [String],
+        weeklyXP: { type: Number, default: 0 },
+        monthlyXP: { type: Number, default: 0 },
+      }))
+
+    const sortField = period === 'week' ? 'weeklyXP' : period === 'month' ? 'monthlyXP' : 'xp'
+
+    const leaders = await GamificationProfile.find({})
+      .sort({ [sortField]: -1 })
+      .limit(10)
+      .populate('userId', 'fullName profileImage role')
+      .lean()
+
+    const shaped = leaders.map((l: any) => ({
+      _id: l._id,
+      userId: l.userId?._id || l.userId,
+      fullName: l.userId?.fullName || 'Anonymous',
+      profileImage: l.userId?.profileImage || '',
+      role: l.userId?.role || 'user',
+      xp: period === 'week' ? (l.weeklyXP || l.xp || 0) : period === 'month' ? (l.monthlyXP || l.xp || 0) : (l.xp || 0),
+      level: l.level || 1,
+      streak: l.streak || 0,
+      badges: l.badges || [],
+    }))
+
+    return NextResponse.json(shaped)
+  } catch (error) {
+    console.error('Leaderboard error:', error)
+    return NextResponse.json([])
+  }
+}
+```
+
+Add leaderboard to the navigation. In src/lib/route-access.ts or wherever nav links are defined, add:
+{ label: 'Leaderboard', href: '/leaderboard', icon: '🏆' }
+
+Also add it to the BottomNav for logged-in users.
+
+==============================================================
+NEW FEATURE 3 — Trainer Availability Calendar
+==============================================================
+
+Create src/app/api/trainer/availability/route.ts:
+```typescript
+import { NextRequest, NextResponse } from 'next/server'
+import { connectDB } from '@/lib/mongodb'
+import { getUser } from '@/lib/auth'
+import Trainer from '@/models/Trainer'
+import mongoose from 'mongoose'
+
+// Simple availability schema — store as array of slots
+const AvailabilitySchema = new mongoose.Schema({
+  trainerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Trainer', unique: true },
+  slots: [{
+    dayOfWeek: { type: Number }, // 0=Sunday, 1=Monday...
+    startTime: String, // "09:00"
+    endTime: String,   // "17:00"
+    isAvailable: { type: Boolean, default: true },
+  }],
+  timezone: { type: String, default: 'Asia/Karachi' },
+}, { timestamps: true })
+
+const Availability = mongoose.models.TrainerAvailability ||
+  mongoose.model('TrainerAvailability', AvailabilitySchema)
+
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = req.nextUrl
+    const trainerId = searchParams.get('trainerId')
+    if (!trainerId) return NextResponse.json({ message: 'trainerId required' }, { status: 400 })
+    await connectDB()
+    const availability = await Availability.findOne({ trainerId }).lean()
+    return NextResponse.json(availability || { slots: [] })
+  } catch {
+    return NextResponse.json({ message: 'Server error' }, { status: 500 })
+  }
+}
+
+export async function PUT(req: NextRequest) {
+  try {
+    const tokenUser = await getUser(req)
+    if (!tokenUser || tokenUser.role !== 'trainer') {
+      return NextResponse.json({ message: 'Trainers only' }, { status: 403 })
+    }
+    await connectDB()
+    const trainer = await Trainer.findOne({ userId: tokenUser.userId })
+    if (!trainer) return NextResponse.json({ message: 'Trainer profile not found' }, { status: 404 })
+
+    const { slots, timezone } = await req.json()
+    const availability = await Availability.findOneAndUpdate(
+      { trainerId: trainer._id },
+      { trainerId: trainer._id, slots, timezone },
+      { upsert: true, new: true }
+    )
+    return NextResponse.json(availability)
+  } catch {
+    return NextResponse.json({ message: 'Server error' }, { status: 500 })
+  }
+}
+```
+
+Add an Availability tab to the trainer dashboard (src/app/(dashboard)/trainer-dashboard/page.tsx):
+
+```tsx
+function AvailabilityTab() {
+  const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+  const [slots, setSlots] = useState(
+    DAYS.map((_, i) => ({ dayOfWeek: i, startTime: '09:00', endTime: '17:00', isAvailable: i >= 1 && i <= 5 }))
+  )
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/trainer/availability?' + new URLSearchParams({ trainerId: '' }))
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.slots?.length) setSlots(data.slots) })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  const save = async () => {
+    setSaving(true)
+    const res = await fetch('/api/trainer/availability', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slots, timezone: 'Asia/Karachi' }),
+    })
+    if (res.ok) toast.success('Availability saved!')
+    else toast.error('Failed to save')
+    setSaving(false)
+  }
+
+  if (loading) return <div className="tile skeleton h-80" />
+
+  return (
+    <div className="space-y-4 max-w-xl">
+      <div>
+        <h2 className="text-xl font-black text-white">Set Your Availability</h2>
+        <p className="text-[#a0a0a0] text-sm mt-1">Clients will see these hours when booking sessions</p>
+      </div>
+      <div className="tile space-y-3">
+        {slots.map((slot, i) => (
+          <div key={i} className="flex items-center gap-4 py-2 border-b border-white/5 last:border-0 flex-wrap gap-y-2">
+            <div className="w-28 flex-shrink-0 flex items-center gap-2">
+              <button onClick={() => setSlots(s => s.map((sl, idx) => idx === i ? { ...sl, isAvailable: !sl.isAvailable } : sl))}
+                className={`w-10 h-5 rounded-full transition-colors relative flex-shrink-0 ${slot.isAvailable ? 'bg-[#00ff87]' : 'bg-white/10'}`}>
+                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${slot.isAvailable ? 'right-0.5' : 'left-0.5'}`} />
+              </button>
+              <span className={`text-sm font-medium ${slot.isAvailable ? 'text-white' : 'text-[#555]'}`}>{DAYS[i]}</span>
+            </div>
+            {slot.isAvailable && (
+              <div className="flex items-center gap-2">
+                <input type="time" value={slot.startTime}
+                  onChange={e => setSlots(s => s.map((sl, idx) => idx === i ? { ...sl, startTime: e.target.value } : sl))}
+                  className="bg-[#0e1a14] border border-white/10 rounded-lg px-3 py-1.5 text-white text-sm outline-none focus:border-[#00ff87]" />
+                <span className="text-[#555] text-sm">to</span>
+                <input type="time" value={slot.endTime}
+                  onChange={e => setSlots(s => s.map((sl, idx) => idx === i ? { ...sl, endTime: e.target.value } : sl))}
+                  className="bg-[#0e1a14] border border-white/10 rounded-lg px-3 py-1.5 text-white text-sm outline-none focus:border-[#00ff87]" />
+              </div>
+            )}
+            {!slot.isAvailable && <span className="text-xs text-[#555] italic">Not available</span>}
+          </div>
+        ))}
+      </div>
+      <button onClick={save} disabled={saving} className="btn-accent w-full py-3 text-sm font-bold disabled:opacity-50">
+        {saving ? 'Saving...' : 'Save Availability'}
+      </button>
+    </div>
+  )
+}
+```
+
+Show the trainer's availability on their public profile page (/coaching/[id]).
+After the trainer stats row, add an "Availability" section:
+- Show which days they are available with their hours
+- Fetch GET /api/trainer/availability?trainerId=X
+
+==============================================================
+FIX 5 — Community: Verify all users posts load
+==============================================================
+
+Open src/app/api/community/posts/route.ts
+Make sure GET populates author and returns ALL posts:
+```typescript
+// Must have this exact populate
+const posts = await CommunityPost.find({})
+  .populate('authorId', 'fullName profileImage role')
+  .sort({ createdAt: -1 })
+  .limit(50)
+  .lean()
+```
+
+If the model field is `author` instead of `authorId` check the CommunityPost model
+and fix the populate to match the actual field name.
+
+==============================================================
+FIX 6 — Workout plan sent by trainer must open for user
+==============================================================
+
+In the chat page (src/app/(dashboard)/chat/[id]/page.tsx):
+Find where messages of type 'workout_plan' render.
+Make sure the plan card has an 'Open Plan' button that works.
+
+If message.attachedPlanId exists:
+```tsx
+{message.type === 'workout_plan' && (
+  <div className="mt-2 p-4 rounded-2xl border border-[#00ff87]/20 bg-[#00ff87]/5">
+    <p className="text-[#00ff87] text-xs font-semibold uppercase tracking-wider mb-1">Workout Plan</p>
+    <p className="font-bold text-white">{message.content}</p>
+    <button
+      onClick={async () => {
+        // Activate this plan for the user
+        const res = await fetch(`/api/tracking/plans/${message.attachedPlanId}/activate`, { method: 'PUT' })
+        if (res.ok) {
+          toast.success('Plan activated! Check My Fitness.')
+          router.push('/my-fitness')
+        } else {
+          // Plan might already exist, just navigate
+          router.push('/my-fitness')
+        }
+      }}
+      className="mt-3 px-4 py-2 rounded-xl bg-[#00ff87] text-black text-sm font-bold hover:bg-[#00cc6a] transition-colors">
+      View & Activate Plan →
+    </button>
+  </div>
+)}
+```
+
+Also fix /api/tracking/plans/my-plan to return draft plans:
+```typescript
+const plan = await WorkoutPlan.findOne({
+  userId: tokenUser.userId,
+  status: { $in: ['active', 'draft'] },
+}).sort({ updatedAt: -1 }).lean()
+```
+
+==============================================================
+FIX 7 — Add Leaderboard to navigation
+==============================================================
+
+Find where nav links are defined (likely in DashboardShell, BottomNav, or a shell-routes file).
+Add the leaderboard link:
+- In desktop sidebar: '🏆 Leaderboard' → /leaderboard
+- In bottom mobile nav: replace least-used link or add if space allows
+- In community page: add a tab or link to the leaderboard
+
+==============================================================
+PHASE — INSTALL AND RUN PLAYWRIGHT TESTS
+==============================================================
+
+```bash
+npm install -D @playwright/test 2>/dev/null || true
+npx playwright install chromium --with-deps 2>/dev/null || true
+mkdir -p e2e/screenshots
+```
+
+Create e2e/final-complete.spec.ts:
+
+```typescript
+import { test, expect, Page, BrowserContext } from '@playwright/test'
+
+const BASE = 'http://localhost:3000'
+const CREDS = {
+  admin: { email: 'admin@test.com', password: 'Admin@123' },
+  trainer: { email: 'ali@test.com', password: 'Trainer@123' },
+  user: { email: 'user1@test.com', password: 'User@123' },
+}
+
+async function ss(page: Page, name: string) {
+  await page.screenshot({ path: `e2e/screenshots/${name}.png`, fullPage: true })
+  console.log(`📸 ${name}`)
+}
+
+async function login(page: Page, role: keyof typeof CREDS) {
+  await page.goto(`${BASE}/login`)
+  await page.waitForLoadState('networkidle')
+  await page.locator('input[type="email"]').first().fill(CREDS[role].email)
+  await page.locator('input[type="password"]').first().fill(CREDS[role].password)
+  const [response] = await Promise.all([
+    page.waitForResponse(r => r.url().includes('/api/auth/login'), { timeout: 10000 }),
+    page.locator('button[type="submit"]').first().click(),
+  ])
+  await page.waitForTimeout(2000)
+  console.log(`Login as ${role}: ${response.status()}`)
+  return response.status()
+}
+
+// ── CRITICAL INFRASTRUCTURE ──────────────────────────────
+test.describe('Infrastructure', () => {
+  test('Health endpoint works', async ({ request }) => {
+    const res = await request.get(`${BASE}/api/health`)
+    expect(res.status()).toBe(200)
+    const data = await res.json()
+    console.log('Health:', data)
+    expect(data.status).toBe('ok')
+  })
+
+  test('Route protection works — /my-fitness redirects to login', async ({ page }) => {
+    await page.goto(`${BASE}/my-fitness`)
+    await page.waitForTimeout(2000)
+    const url = page.url()
+    console.log('Unauthed /my-fitness redirected to:', url)
+    expect(url).toContain('/login')
+  })
+
+  test('Route protection works — /admin redirects to login', async ({ page }) => {
+    await page.goto(`${BASE}/admin`)
+    await page.waitForTimeout(2000)
+    expect(page.url()).toContain('/login')
+  })
+
+  test('Trainers API returns data', async ({ request }) => {
+    const res = await request.get(`${BASE}/api/trainers`)
+    const data = await res.json()
+    const list = Array.isArray(data) ? data : data.trainers || []
+    console.log(`Trainers in DB: ${list.length}`)
+    expect(list.length).toBeGreaterThan(0)
+  })
+
+  test('Exercises API returns data', async ({ request }) => {
+    const res = await request.get(`${BASE}/api/exercises`)
+    const data = await res.json()
+    const list = Array.isArray(data) ? data : data.exercises || []
+    console.log(`Exercises: ${list.length}`)
+    expect(list.length).toBeGreaterThan(0)
+  })
+})
+
+// ── PUBLIC PAGES ─────────────────────────────────────────
+test.describe('Public pages', () => {
+  test('Home page loads', async ({ page }) => {
+    await page.goto(BASE)
+    await page.waitForLoadState('networkidle')
+    await ss(page, '01-home')
+    expect(page.url()).toBeTruthy()
+  })
+
+  test('Coaching page shows trainer cards', async ({ page }) => {
+    await page.goto(`${BASE}/coaching`)
+    await page.waitForTimeout(5000)
+    await ss(page, '02-coaching')
+    const cards = await page.locator('[class*="card"], [class*="tile"]').count()
+    console.log('Trainer cards found:', cards)
+    expect(cards).toBeGreaterThan(0)
+  })
+
+  test('Coaching trainer profile page works', async ({ page }) => {
+    await page.goto(`${BASE}/coaching`)
+    await page.waitForTimeout(4000)
+    const firstTrainer = page.locator('a[href*="/coaching/"]').first()
+    if (await firstTrainer.isVisible()) {
+      await firstTrainer.click()
+      await page.waitForTimeout(3000)
+      await ss(page, '03-trainer-profile')
+      const hasName = await page.locator('h1, h2').first().isVisible()
+      console.log('Trainer profile page loaded:', hasName)
+    } else {
+      console.log('No trainer profile links found — trainer cards may not link to profiles')
+    }
+  })
+
+  test('Exercises page has body part filters', async ({ page }) => {
+    await page.goto(`${BASE}/exercises`)
+    await page.waitForTimeout(3000)
+    await ss(page, '04-exercises')
+    const hasUpper = await page.locator('text=Upper Body').first().isVisible().catch(() => false)
+    console.log('Has Upper Body filter:', hasUpper)
+  })
+
+  test('Nutrition page loads without infinite spinner', async ({ page }) => {
+    await page.goto(`${BASE}/nutrition`)
+    await page.waitForTimeout(8000)
+    await ss(page, '05-nutrition')
+    const hasSpinner = await page.locator('text=Loading your meal plan').isVisible().catch(() => false)
+    expect(hasSpinner).toBe(false)
+  })
+
+  test('Subscription page loads', async ({ page }) => {
+    await page.goto(`${BASE}/subscription`)
+    await page.waitForLoadState('networkidle')
+    await ss(page, '06-subscription')
+    await expect(page.locator('text=Pro').first()).toBeVisible()
+  })
+})
+
+// ── AUTH ─────────────────────────────────────────────────
+test.describe('Authentication', () => {
+  test('Signup page has correct fields', async ({ page }) => {
+    await page.goto(`${BASE}/signup`)
+    await page.waitForLoadState('networkidle')
+    await ss(page, '07-signup')
+    await expect(page.locator('input[type="email"]').first()).toBeVisible()
+    await expect(page.locator('input[type="password"]').first()).toBeVisible()
+  })
+
+  test('New user can sign up', async ({ page }) => {
+    const email = `newuser${Date.now()}@test.com`
+    await page.goto(`${BASE}/signup`)
+    await page.waitForLoadState('networkidle')
+
+    const nameInput = page.locator('input[name="fullName"], input[placeholder*="name" i]').first()
+    if (await nameInput.isVisible()) await nameInput.fill('New Test User')
+    await page.locator('input[type="email"]').first().fill(email)
+    await page.locator('input[type="password"]').first().fill('TestPass123!')
+    const confirm = page.locator('input[name="confirmPassword"], input[placeholder*="confirm" i]').first()
+    if (await confirm.isVisible()) await confirm.fill('TestPass123!')
+    const checkbox = page.locator('input[type="checkbox"]').first()
+    if (await checkbox.isVisible()) await checkbox.check()
+
+    const [res] = await Promise.all([
+      page.waitForResponse(r => r.url().includes('/api/auth/register'), { timeout: 15000 }),
+      page.locator('button[type="submit"]').first().click(),
+    ])
+    await ss(page, '08-after-signup')
+    console.log('Signup status:', res.status())
+    expect(res.status()).toBeLessThan(400)
+  })
+
+  test('Admin login redirects to /admin', async ({ page }) => {
+    const status = await login(page, 'admin')
+    await ss(page, '09-admin-login')
+    console.log('Admin URL after login:', page.url())
+    expect(status).toBe(200)
+    expect(page.url()).toContain('/admin')
+  })
+
+  test('Trainer login redirects to /trainer-dashboard', async ({ page }) => {
+    const status = await login(page, 'trainer')
+    await ss(page, '10-trainer-login')
+    console.log('Trainer URL after login:', page.url())
+    expect(status).toBe(200)
+    expect(page.url()).toContain('trainer')
+  })
+
+  test('User login redirects to dashboard', async ({ page }) => {
+    const status = await login(page, 'user')
+    await ss(page, '11-user-login')
+    console.log('User URL after login:', page.url())
+    expect(status).toBe(200)
+  })
+})
+
+// ── USER FLOWS ───────────────────────────────────────────
+test.describe('User flows', () => {
+  test('My Fitness page loads correctly', async ({ page }) => {
+    await login(page, 'user')
+    await page.goto(`${BASE}/my-fitness`)
+    await page.waitForTimeout(4000)
+    await ss(page, '12-my-fitness')
+    const hasOverflow = await page.evaluate(() =>
+      document.documentElement.scrollWidth > document.documentElement.clientWidth + 5
+    )
+    console.log('Has horizontal overflow:', hasOverflow)
+    expect(hasOverflow).toBe(false)
+  })
+
+  test('AI Generator tab exists on My Fitness', async ({ page }) => {
+    await login(page, 'user')
+    await page.goto(`${BASE}/my-fitness`)
+    await page.waitForTimeout(2000)
+    await ss(page, '13-my-fitness-tabs')
+    const hasAI = await page.locator('text=AI Generator, text=AI Plan, text=Generate').first().isVisible().catch(() => false)
+    console.log('Has AI Generator tab:', hasAI)
+  })
+
+  test('AI Plan Generator works', async ({ page }) => {
+    await login(page, 'user')
+    await page.goto(`${BASE}/my-fitness`)
+    await page.waitForTimeout(2000)
+    const aiTab = page.locator('text=AI Generator, text=Generate Plan').first()
+    if (await aiTab.isVisible()) {
+      await aiTab.click()
+      await page.waitForTimeout(1000)
+      const generateBtn = page.locator('text=Generate My Plan, button:has-text("AI")').first()
+      if (await generateBtn.isVisible()) {
+        await generateBtn.click()
+        await page.waitForTimeout(8000)
+        await ss(page, '14-ai-plan-generated')
+        const hasPlan = await page.locator('text=Activate This Plan, text=Monday, text=exercises').first().isVisible().catch(() => false)
+        console.log('AI plan generated and shown:', hasPlan)
+      }
+    }
+  })
+
+  test('Subscription upgrade works', async ({ page }) => {
+    await login(page, 'user')
+    await page.goto(`${BASE}/subscription`)
+    await page.waitForTimeout(2000)
+    await ss(page, '15-subscription')
+    const upgradeBtn = page.locator('button:has-text("Pro"), button:has-text("Upgrade")').first()
+    if (await upgradeBtn.isVisible()) {
+      const [res] = await Promise.all([
+        page.waitForResponse(r => r.url().includes('/api/subscription'), { timeout: 10000 }),
+        upgradeBtn.click(),
+      ])
+      await page.waitForTimeout(2000)
+      await ss(page, '16-after-upgrade')
+      console.log('Subscription API status:', res.status())
+      expect(res.status()).toBe(200)
+    }
+  })
+
+  test('Nutrition has Log Meal button', async ({ page }) => {
+    await login(page, 'user')
+    await page.goto(`${BASE}/nutrition`)
+    await page.waitForTimeout(4000)
+    await ss(page, '17-nutrition')
+    const hasLog = await page.locator('text=Log, text=Log Meal, text=Add Meal, button:has-text("Log")').first().isVisible().catch(() => false)
+    console.log('Has log meal button:', hasLog)
+  })
+
+  test('Analytics page has charts', async ({ page }) => {
+    await login(page, 'user')
+    await page.goto(`${BASE}/analytics`)
+    await page.waitForTimeout(5000)
+    await ss(page, '18-analytics')
+    const svgCount = await page.locator('svg').count()
+    console.log('SVG elements (charts):', svgCount)
+    expect(svgCount).toBeGreaterThan(0)
+  })
+
+  test('Settings page has 5 tabs', async ({ page }) => {
+    await login(page, 'user')
+    await page.goto(`${BASE}/settings`)
+    await page.waitForTimeout(2000)
+    await ss(page, '19-settings')
+    const hasSecurity = await page.locator('text=Security').first().isVisible().catch(() => false)
+    const hasFitness = await page.locator('text=Fitness Goals').first().isVisible().catch(() => false)
+    console.log('Has Security tab:', hasSecurity, '| Has Fitness Goals tab:', hasFitness)
+  })
+
+  test('Leaderboard page works', async ({ page }) => {
+    await login(page, 'user')
+    await page.goto(`${BASE}/leaderboard`)
+    await page.waitForTimeout(3000)
+    await ss(page, '20-leaderboard')
+    const hasContent = await page.locator('text=Leaderboard, text=XP, text=Level').first().isVisible().catch(() => false)
+    console.log('Leaderboard has content:', hasContent)
+  })
+
+  test('Floating messages button visible', async ({ page }) => {
+    await login(page, 'user')
+    await page.goto(`${BASE}/my-fitness`)
+    await page.waitForTimeout(2000)
+    await ss(page, '21-floating-chat')
+    const hasFloat = await page.locator('[aria-label="Messages"]').isVisible().catch(() => false)
+    console.log('Floating messages button:', hasFloat)
+  })
+
+  test('Community shows posts from all users', async ({ page }) => {
+    await login(page, 'user')
+    await page.goto(`${BASE}/community`)
+    await page.waitForTimeout(4000)
+    await ss(page, '22-community')
+    const hasPosts = await page.locator('[class*="post"], [class*="card"]').count()
+    console.log('Community post cards:', hasPosts)
+  })
+
+  test('Notifications bell is in navbar', async ({ page }) => {
+    await login(page, 'user')
+    await page.goto(`${BASE}/my-fitness`)
+    await page.waitForTimeout(2000)
+    await ss(page, '23-notifications')
+    const hasBell = await page.locator('[aria-label*="notification" i], [aria-label*="bell" i]').first().isVisible().catch(() => false)
+    console.log('Notification bell visible:', hasBell)
+  })
+})
+
+// ── ADMIN ────────────────────────────────────────────────
+test.describe('Admin dashboard', () => {
+  test('Admin has sidebar with all sections', async ({ page }) => {
+    await login(page, 'admin')
+    await page.waitForTimeout(2000)
+    await ss(page, '24-admin-overview')
+    const sections = ['Users', 'Trainers', 'Gyms', 'Audit']
+    for (const s of sections) {
+      const visible = await page.locator(`text=${s}`).first().isVisible().catch(() => false)
+      console.log(`Admin has ${s} section:`, visible)
+    }
+  })
+
+  test('Admin users table shows data', async ({ page }) => {
+    await login(page, 'admin')
+    await page.waitForTimeout(2000)
+    const usersLink = page.locator('text=Users').first()
+    if (await usersLink.isVisible()) await usersLink.click()
+    await page.waitForTimeout(2000)
+    await ss(page, '25-admin-users')
+    const hasTable = await page.locator('table, [class*="table"]').isVisible().catch(() => false)
+    console.log('Admin users table:', hasTable)
+  })
+
+  test('Admin can verify a trainer', async ({ page }) => {
+    await login(page, 'admin')
+    await page.waitForTimeout(2000)
+    const verLink = page.locator('text=Verifications, text=Pending').first()
+    if (await verLink.isVisible()) await verLink.click()
+    await page.waitForTimeout(2000)
+    await ss(page, '26-admin-verifications')
+    const hasVerifyBtn = await page.locator('button:has-text("Verify")').first().isVisible().catch(() => false)
+    console.log('Verify button present:', hasVerifyBtn)
+  })
+})
+
+// ── TRAINER ──────────────────────────────────────────────
+test.describe('Trainer dashboard', () => {
+  test('Trainer dashboard loads', async ({ page }) => {
+    await login(page, 'trainer')
+    await page.waitForTimeout(2000)
+    await ss(page, '27-trainer-dashboard')
+    const hasContent = await page.locator('h1, h2').first().isVisible()
+    console.log('Trainer dashboard has content:', hasContent)
+  })
+
+  test('Trainer availability tab exists', async ({ page }) => {
+    await login(page, 'trainer')
+    await page.waitForTimeout(2000)
+    const availTab = page.locator('text=Availability').first()
+    const hasTab = await availTab.isVisible().catch(() => false)
+    if (hasTab) await availTab.click()
+    await page.waitForTimeout(1000)
+    await ss(page, '28-trainer-availability')
+    console.log('Trainer availability tab:', hasTab)
+  })
+
+  test('Trainer settings has proper tabs', async ({ page }) => {
+    await login(page, 'trainer')
+    await page.goto(`${BASE}/settings`)
+    await page.waitForTimeout(2000)
+    await ss(page, '29-trainer-settings')
+    const hasTabs = await page.locator('text=Security, text=Profile').first().isVisible().catch(() => false)
+    console.log('Trainer settings has tabs:', hasTabs)
+  })
+})
+
+// ── NEW FEATURES ─────────────────────────────────────────
+test.describe('New features', () => {
+  test('AI plan generator API works', async ({ request }) => {
+    // Login first to get cookie
+    const loginRes = await request.post(`${BASE}/api/auth/login`, {
+      data: { email: CREDS.user.email, password: CREDS.user.password },
+    })
+    expect(loginRes.status()).toBe(200)
+
+    const res = await request.post(`${BASE}/api/ai/generate-plan`, {
+      data: { goal: 'muscle_gain', daysPerWeek: '4', equipment: 'Dumbbells', fitnessLevel: 'beginner' },
+    })
+    const data = await res.json()
+    console.log('AI plan API status:', res.status(), '| Has plan:', !!data.plan)
+    expect(res.status()).toBe(200)
+    expect(data.plan).toBeTruthy()
+    expect(data.plan.weeklySchedule).toBeTruthy()
+  })
+
+  test('Leaderboard API returns data', async ({ request }) => {
+    const res = await request.get(`${BASE}/api/gamification/leaderboard?period=all`)
+    const data = await res.json()
+    console.log('Leaderboard API status:', res.status(), '| Leaders:', Array.isArray(data) ? data.length : 'not array')
+    expect(res.status()).toBe(200)
+  })
+
+  test('Trainer availability API works', async ({ request }) => {
+    const res = await request.get(`${BASE}/api/trainer/availability?trainerId=test`)
+    console.log('Availability API status:', res.status())
+    expect(res.status()).toBeLessThan(500)
+  })
+
+  test('Delete account API exists', async ({ request }) => {
+    const res = await request.delete(`${BASE}/api/user/delete`)
+    console.log('Delete account API status (unauthed):', res.status())
+    expect(res.status()).toBe(401) // Should reject unauthenticated
+  })
+
+  test('Subscription API works in simulation mode', async ({ request }) => {
+    const loginRes = await request.post(`${BASE}/api/auth/login`, {
+      data: { email: CREDS.user.email, password: CREDS.user.password },
+    })
+    const res = await request.post(`${BASE}/api/subscription`, {
+      data: { plan: 'pro' },
+    })
+    const data = await res.json()
+    console.log('Subscription API:', res.status(), data)
+    expect(res.status()).toBe(200)
+  })
+})
+```
+
+Run:
+```bash
+npm run dev &
+sleep 25
+npx playwright test e2e/final-complete.spec.ts --reporter=list 2>&1
+kill %1
+```
+
+==============================================================
+FIX EVERY FAILING TEST
+==============================================================
+
+After tests run read every result. For each failure:
+1. Read the error and the screenshot
+2. Fix the root cause in the code
+3. Re-run: npx playwright test --grep "test name" --reporter=list
+4. Confirm it passes
+
+DO NOT move to build until all critical tests pass:
+- Health endpoint ✓
+- Route protection ✓
+- Trainers API returns data ✓
+- Login redirects working ✓
+- AI plan generator ✓
+- Subscription ✓
+
+==============================================================
+FINAL BUILD AND PUSH
+==============================================================
+
+```bash
+# Verify build
+npm run build 2>&1 | tail -30
+
+if [ $? -eq 0 ]; then
+  echo "✅ BUILD PASSED"
+  
+  # Commit and push
+  git add -A
+  git commit -m "feat: final completion — AI workout generator, leaderboard, trainer availability, all gaps fixed
+
+NEW FEATURES:
+- AI Workout Generator: Gemini-powered personalized plan creation with smart fallback templates
+  POST /api/ai/generate-plan with goal/days/equipment/level → complete weekly schedule
+  Full UI in My Fitness 'AI Generator' tab with day-by-day plan preview and 1-click activate
+- Leaderboard: /leaderboard page with weekly/monthly/all-time rankings
+  GET /api/gamification/leaderboard — top 10 users by XP with rank badges
+  Current user highlighted, period filters, streak display
+- Trainer Availability Calendar: trainers set weekly hours
+  PUT/GET /api/trainer/availability — day toggles + time pickers
+  Shown on trainer public profile page for clients to see
+
+GAPS FIXED:
+- middleware.ts added at project root (was missing — route protection now works on Vercel)
+- Payments: subscription works end-to-end in simulation mode (no Stripe keys needed)
+- Delete Account: DELETE /api/user/delete implemented (wipes all user data)
+- Seeded 10 real trainers in DB (all fully verified and connectable)
+- Community posts: verified all users posts load correctly
+- Workout plan from trainer: 'Activate Plan' button in chat now works
+- Tracking plans: returns draft plans so trainer-assigned plans are visible
+- Settings: 5 tabs fully working for all roles
+
+TESTS:
+- 30 Playwright e2e tests covering every role and every page
+- Screenshots in e2e/screenshots/"
+  
+  git push origin tayyab --force
+  echo "✅ PUSHED TO GITHUB"
+else
+  echo "❌ BUILD FAILED — fix TypeScript errors listed above"
+fi
+```
+
+==============================================================
+PRINT THIS WHEN DONE
+==============================================================
+
+echo "
+╔══════════════════════════════════════════════════════════╗
+║ T.E.S.T. — FINAL COMPLETION REPORT ║
+╚══════════════════════════════════════════════════════════╝
+
+✅ middleware.ts fixed — route protection works on Vercel
+✅ Payments — subscription works in simulation mode
+✅ Delete Account — API implemented and wired to settings
+✅ 10 trainers seeded — marketplace looks live
+✅ AI Workout Generator — /api/ai/generate-plan + UI in My Fitness
+✅ Leaderboard — /leaderboard page + /api/gamification/leaderboard
+✅ Trainer Availability — weekly schedule UI + API
+✅ Community posts — all users posts load correctly
+✅ Workout plan from chat — activate button works
+✅ npm run build — passes
+✅ Pushed to GitHub branch: tayyab
+✅ 30 Playwright tests — all pass
+</user_query>

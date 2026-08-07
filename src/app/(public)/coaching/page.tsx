@@ -10,9 +10,11 @@ import { FadeIn } from '@/components/motion'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { easeTransition } from '@/lib/motion'
 import { Avatar } from '@/components/shared/Avatar'
+import { trainerPublicPath } from '@/lib/trainer-slug'
 
 interface Trainer {
   _id: string
+  slug?: string
   name?: string
   fullName?: string
   specialty: string | string[]
@@ -64,7 +66,7 @@ function TrainerCard({ trainer, connectable, onConnect }: { trainer: Trainer; co
       transition={easeTransition}
       className="elite-panel interactive-lift card-athletic flex flex-col overflow-hidden rounded-2xl"
     >
-      <Link href={isPreview ? '/coaching' : `/coaching/${trainer._id}`} className="relative h-40 bg-gradient-to-br from-primary/10 to-sky-400/5 flex items-center justify-center">
+      <Link href={isPreview ? '/coaching' : trainerPublicPath(trainer)} className="relative h-40 bg-gradient-to-br from-primary/10 to-sky-400/5 flex items-center justify-center">
         <Avatar
           name={name}
           avatarUrl={trainer.profileImage}
@@ -80,7 +82,7 @@ function TrainerCard({ trainer, connectable, onConnect }: { trainer: Trainer; co
       <div className="p-5 flex flex-col flex-1">
         <div className="flex items-start justify-between mb-2">
           <div>
-            <Link href={isPreview ? '/coaching' : `/coaching/${trainer._id}`}>
+            <Link href={isPreview ? '/coaching' : trainerPublicPath(trainer)}>
               <h3 className="font-bold text-white text-base hover:text-primary transition-colors">{name}</h3>
             </Link>
             <p className="text-muted-foreground text-xs mt-0.5">{trainer.country}{trainer.gymName ? ` · ${trainer.gymName}` : ''}</p>
@@ -120,7 +122,7 @@ function TrainerCard({ trainer, connectable, onConnect }: { trainer: Trainer; co
            'Connect'}
         </button>
         {!isPreview && (
-          <Link href={`/coaching/${trainer._id}`} className="mt-2 text-center text-xs text-primary hover:underline">
+          <Link href={trainerPublicPath(trainer)} className="mt-2 text-center text-xs text-primary hover:underline">
             View profile →
           </Link>
         )}
@@ -218,7 +220,7 @@ export default function CoachingPage() {
   return (
     <div className="min-h-screen pt-8 pb-24">
       <FadeIn>
-        <div className="page-hero max-w-6xl mx-4 px-6 py-10 sm:mx-6 sm:px-10 md:mx-auto md:py-14 gym-floor">
+        <div className="page-hero max-w-6xl mx-4 px-6 py-10 sm:mx-6 sm:px-10 md:mx-auto md:py-14 gym-floor min-h-[14rem] md:min-h-[16rem]">
           <p className="eyebrow mb-3">Trainer Marketplace</p>
           <h1 className="display-title text-balance text-4xl md:text-6xl text-white mb-4">Find Your Perfect Trainer</h1>
           <p className="max-w-xl text-muted-foreground">Discover verified coaches matched to your goals, training style, and location.</p>
