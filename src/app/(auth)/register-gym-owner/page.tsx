@@ -84,8 +84,8 @@ export default function RegisterGymOwnerPage() {
     <div className="flex min-h-screen items-center justify-center px-4 py-12 sm:px-8">
       <div className="w-full max-w-lg">
         <div className="text-center mb-8">
-          <Link href="/" className="font-heading text-2xl font-black tracking-[-.045em] text-white lg:hidden">T.E.S.T.</Link>
-          <h1 className="text-2xl font-bold text-white mt-4 mb-1">Register Your Gym</h1>
+          <Link href="/" className="font-heading text-2xl font-black tracking-[-.045em] text-foreground lg:hidden">T.E.S.T.</Link>
+          <h1 className="text-2xl font-bold text-foreground mt-4 mb-1">Register Your Gym</h1>
           <p className="text-muted-foreground text-sm">List your gym on T.E.S.T. and reach more members</p>
         </div>
 
@@ -102,7 +102,7 @@ export default function RegisterGymOwnerPage() {
               <div key={field}>
                 <label className="block text-sm font-medium text-muted-foreground mb-1.5">{label}</label>
                 <input type={type} value={form[field]} onChange={set(field)} placeholder={placeholder} required
-                  className="w-full bg-background border border-border rounded-xl px-4 py-3 text-white text-sm placeholder:text-muted-foreground outline-none focus:border-primary transition-colors" />
+                  className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground text-sm placeholder:text-muted-foreground outline-none focus:border-primary transition-colors" />
                 {errors[field] && <p className="text-red-400 text-xs mt-1">{errors[field]}</p>}
               </div>
             ))}
@@ -111,7 +111,7 @@ export default function RegisterGymOwnerPage() {
               <label className="block text-sm font-medium text-muted-foreground mb-1.5">Password</label>
               <div className="relative">
                 <input type={showPassword ? 'text' : 'password'} value={form.password} onChange={set('password')} placeholder="Min. 8 characters" required
-                  className="w-full bg-background border border-border rounded-xl px-4 py-3 pr-12 text-white text-sm placeholder:text-muted-foreground outline-none focus:border-primary transition-colors" />
+                  className="w-full bg-background border border-border rounded-xl px-4 py-3 pr-12 text-foreground text-sm placeholder:text-muted-foreground outline-none focus:border-primary transition-colors" />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-lg">{showPassword ? '🙈' : '👁️'}</button>
               </div>
               {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password}</p>}
@@ -120,14 +120,14 @@ export default function RegisterGymOwnerPage() {
             <div>
               <label className="block text-sm font-medium text-muted-foreground mb-1.5">Confirm Password</label>
               <input type="password" value={form.confirmPassword} onChange={set('confirmPassword')} placeholder="Repeat password" required
-                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-white text-sm placeholder:text-muted-foreground outline-none focus:border-primary transition-colors" />
+                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground text-sm placeholder:text-muted-foreground outline-none focus:border-primary transition-colors" />
               {errors.confirmPassword && <p className="text-red-400 text-xs mt-1">{errors.confirmPassword}</p>}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-muted-foreground mb-1.5">Country</label>
               <select value={form.country} onChange={set('country')}
-                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary transition-colors">
+                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground text-sm outline-none focus:border-primary transition-colors">
                 {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
@@ -135,21 +135,21 @@ export default function RegisterGymOwnerPage() {
             <div>
               <label className="block text-sm font-medium text-muted-foreground mb-1.5">Gym Name</label>
               <input type="text" value={form.gymName} onChange={set('gymName')} placeholder="FitZone Lahore" required
-                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-white text-sm placeholder:text-muted-foreground outline-none focus:border-primary transition-colors" />
+                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground text-sm placeholder:text-muted-foreground outline-none focus:border-primary transition-colors" />
               {errors.gymName && <p className="text-red-400 text-xs mt-1">{errors.gymName}</p>}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-muted-foreground mb-1.5">Gym Address</label>
               <textarea value={form.gymAddress} onChange={set('gymAddress')} rows={3} placeholder="Street, City, Country" required
-                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-white text-sm placeholder:text-muted-foreground outline-none focus:border-primary transition-colors resize-none" />
+                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground text-sm placeholder:text-muted-foreground outline-none focus:border-primary transition-colors resize-none" />
               {errors.gymAddress && <p className="text-red-400 text-xs mt-1">{errors.gymAddress}</p>}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-muted-foreground mb-1.5">Gym Description</label>
               <textarea value={form.gymDescription} onChange={set('gymDescription')} rows={3} placeholder="Facilities, training areas, and member experience"
-                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-white text-sm placeholder:text-muted-foreground outline-none focus:border-primary transition-colors resize-none" />
+                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground text-sm placeholder:text-muted-foreground outline-none focus:border-primary transition-colors resize-none" />
             </div>
 
             <button type="submit" disabled={loading}

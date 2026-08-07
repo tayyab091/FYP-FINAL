@@ -38,7 +38,7 @@ export default function MealDetailClient() {
     return (
       <div className="min-h-screen pt-8 pb-24 flex items-center justify-center px-4">
         <div className="text-center">
-          <h1 className="text-xl font-bold text-white mb-4">Recipe not found</h1>
+          <h1 className="text-xl font-bold text-foreground mb-4">Recipe not found</h1>
           <Link href="/nutrition" className="text-primary hover:underline inline-flex items-center gap-1">
             <ArrowLeft className="size-4" /> Back to nutrition
           </Link>
@@ -76,7 +76,7 @@ export default function MealDetailClient() {
 
             <div className="p-6 sm:p-8 space-y-6">
               <div>
-                <h1 className="display-title text-3xl md:text-4xl text-white">{meal.name}</h1>
+                <h1 className="display-title text-3xl md:text-4xl text-foreground">{meal.name}</h1>
                 <p className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
                   <Globe className="size-4" /> {meal.area}
                 </p>
@@ -94,11 +94,11 @@ export default function MealDetailClient() {
               )}
 
               <div>
-                <h2 className="font-bold text-white mb-3">Ingredients</h2>
+                <h2 className="font-bold text-foreground mb-3">Ingredients</h2>
                 <ul className="grid gap-2 sm:grid-cols-2">
                   {meal.ingredients.map((ing) => (
                     <li key={ing.name} className="rounded-xl border border-border px-3 py-2 text-sm text-muted-foreground">
-                      <span className="text-white">{ing.name}</span>
+                      <span className="text-foreground">{ing.name}</span>
                       {ing.measure ? <span className="text-muted-foreground"> — {ing.measure}</span> : null}
                     </li>
                   ))}
@@ -106,7 +106,7 @@ export default function MealDetailClient() {
               </div>
 
               <div>
-                <h2 className="font-bold text-white mb-3">Instructions</h2>
+                <h2 className="font-bold text-foreground mb-3">Instructions</h2>
                 <p className="text-muted-foreground leading-relaxed whitespace-pre-line">{meal.instructions}</p>
               </div>
 

@@ -1,4 +1,8 @@
 import { defineConfig, devices } from '@playwright/test'
+import { loadEnvConfig } from '@next/env'
+
+// Ensure Playwright's webServer uses the same Atlas URI as `next dev` (.env.local).
+loadEnvConfig(process.cwd())
 
 export default defineConfig({
   testDir: './e2e',
@@ -17,7 +21,7 @@ export default defineConfig({
   webServer: {
     command: 'npm run dev',
     url: 'http://localhost:3000',
-    reuseExistingServer: false,
+    reuseExistingServer: process.env.PLAYWRIGHT_REUSE_SERVER === '1',
     timeout: 120000,
     env: {
       ...process.env,

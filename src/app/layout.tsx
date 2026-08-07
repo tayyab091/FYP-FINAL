@@ -7,7 +7,7 @@ import { BottomNav } from '@/components/layout/BottomNav'
 import { SiteFooter } from '@/components/layout/SiteFooter'
 import { AIChatbot } from '@/components/shared/AIChatbot'
 import { FloatingChat } from '@/components/shared/FloatingChat'
-import { Toaster } from 'sonner'
+import { Toaster } from '@/components/ui/sonner'
 import {
   DEFAULT_DESCRIPTION,
   DEFAULT_KEYWORDS,
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${manrope.variable} ${spaceGrotesk.variable}`}>
         <Providers>
           <Navbar />
@@ -61,17 +61,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <BottomNav />
           <FloatingChat />
           <AIChatbot />
-          <Toaster
-            theme="dark"
-            position="top-right"
-            toastOptions={{
-              style: {
-                background: '#0e1210',
-                border: '1px solid rgba(255,255,255,.09)',
-                color: '#fff',
-              },
-            }}
-          />
+          <Toaster position="top-right" />
         </Providers>
       </body>
     </html>

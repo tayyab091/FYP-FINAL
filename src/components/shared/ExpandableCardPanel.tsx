@@ -76,7 +76,7 @@ export function ExpandableCardPanel({
           styles.glow,
         )}
       >
-        <div className="rounded-[11px] border border-white/[.05] bg-black/45 backdrop-blur-md">
+        <div className="rounded-[11px] border border-border bg-black/45 backdrop-blur-md">
           <div className="h-36 overflow-y-auto overscroll-contain p-3 pr-2 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.15)_transparent]">
             {loading ? (
               <PanelSkeleton variant={variant} />
