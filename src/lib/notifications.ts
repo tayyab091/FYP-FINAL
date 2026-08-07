@@ -1,6 +1,12 @@
 import Notification from '@/models/Notification'
+import User from '@/models/User'
 import mongoose from 'mongoose'
 import { publishNotification } from '@/lib/realtime'
+import {
+  normalizeNotificationPreferences,
+  resolvePreferenceKey,
+  type NotificationPreferenceKey,
+} from '@/lib/notification-preferences'
 
 type NotificationType = 'chat' | 'workout' | 'system' | 'trainer' | 'payment' | 'community'
 
@@ -10,6 +16,7 @@ interface CreateNotificationInput {
   message: string
   type?: NotificationType
   link?: string
+  preferenceKey?: NotificationPreferenceKey
 }
 
 function shapeNotification(doc: {
@@ -36,7 +43,26 @@ function shapeNotification(doc: {
   }
 }
 
+async function isNotificationEnabled(input: CreateNotificationInput): Promise<boolean> {
+  const user = await User.findById(input.userId).select('notificationPreferences').lean()
+  if (!user) return true
+
+  const prefs = normalizeNotificationPreferences(
+    user.notificationPreferences as Parameters<typeof normalizeNotificationPreferences>[0],
+  )
+  const key = resolvePreferenceKey({
+    type: input.type,
+    title: input.title,
+    message: input.message,
+    preferenceKey: input.preferenceKey,
+  })
+  return prefs[key] !== false
+}
+
 export async function createNotification(input: CreateNotificationInput) {
+  const enabled = await isNotificationEnabled(input)
+  if (!enabled) return null
+
   const notification = await Notification.create({
     userId: input.userId,
     title: input.title,
