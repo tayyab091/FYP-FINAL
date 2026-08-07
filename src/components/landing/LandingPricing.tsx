@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { MARKETING_PLANS } from '@/lib/plans'
@@ -8,18 +7,6 @@ import { LandingSection } from './LandingSection'
 import { LandingReveal } from './LandingReveal'
 
 export function LandingPricing() {
-  const eliteRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const el = eliteRef.current
-    if (!el) return
-    const name = el.querySelector('.landing-pricing__name')
-    const nameStyles = name ? getComputedStyle(name) : null
-    // #region agent log
-    fetch('http://127.0.0.1:7893/ingest/3b5841b0-46ed-4652-9b9f-279e38a5ba27',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1483ff'},body:JSON.stringify({sessionId:'1483ff',location:'LandingPricing.tsx:mount',message:'elite card theme styles',data:{cardBg:getComputedStyle(el).backgroundColor,nameColor:nameStyles?.color,themeClass:document.documentElement.className},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
-  }, [])
-
   return (
     <LandingSection id="pricing" ariaLabel="Pricing plans">
       <LandingReveal className="landing-pricing__header">
@@ -36,7 +23,6 @@ export function LandingPricing() {
         {MARKETING_PLANS.map((plan, i) => (
           <LandingReveal key={plan.name} delay={i * 0.08} className="landing-pricing__cell">
             <div
-              ref={plan.premium ? eliteRef : undefined}
               className={[
                 'landing-pricing__card',
                 plan.highlight ? 'landing-pricing__card--highlight' : '',
@@ -71,11 +57,7 @@ export function LandingPricing() {
                 href="/subscription"
                 className={[
                   'landing-pricing__cta',
-                  plan.premium
-                    ? 'landing-pricing__cta--elite btn-accent'
-                    : plan.highlight
-                      ? 'btn-accent'
-                      : 'btn-outline',
+                  plan.highlight || plan.premium ? 'btn-accent' : 'btn-outline',
                 ].join(' ')}
               >
                 Choose {plan.name}
