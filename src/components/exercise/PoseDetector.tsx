@@ -211,28 +211,28 @@ export function PoseDetector() {
             className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all ${
               selectedExercise === key
                 ? 'bg-primary text-primary-foreground border-primary shadow-[0_8px_24px_rgba(34,245,154,.16)]'
-                : 'bg-white/[.02] text-[#8f9a94] border-white/[.08] hover:border-white/[.16] hover:text-white'
+                : 'bg-white/[.02] text-muted-foreground border-border hover:border-border hover:text-foreground'
             }`}>
             {ex.name}
           </button>
         ))}
       </div>
 
-      <p className="text-center text-xs text-[#6b756f]" title={EXERCISES[selectedExercise].citation}>
+      <p className="text-center text-xs text-muted-foreground" title={EXERCISES[selectedExercise].citation}>
         Threshold source: {EXERCISES[selectedExercise].citation}
       </p>
 
-      <div className="relative rounded-3xl overflow-hidden bg-[#0b0e0c] aspect-video max-w-2xl mx-auto border border-white/[.1] shadow-[0_30px_90px_rgba(0,0,0,.38)]">
+      <div className="relative rounded-3xl overflow-hidden bg-card aspect-video max-w-2xl mx-auto border border-border shadow-[0_30px_90px_rgba(0,0,0,.38)]">
         <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
         <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
 
         {!isActive && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#080b09]/88 backdrop-blur-sm">
+          <div className="absolute inset-0 flex items-center justify-center bg-background/90 backdrop-blur-sm">
             <div className="text-center">
-              <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl border border-white/[.1] bg-white/[.04]">
+              <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl border border-border bg-muted/60">
                 <Camera className="size-8 text-primary" />
               </div>
-              <p className="text-white font-semibold mb-4">Click start to enable camera</p>
+              <p className="text-foreground font-semibold mb-4">Click start to enable camera</p>
               {cameraError && <p className="text-[#ef4444] text-sm mb-4 max-w-xs">{cameraError}</p>}
             </div>
           </div>
@@ -266,7 +266,7 @@ export function PoseDetector() {
                 key={angle}
                 initial={{ scale: 1.2, opacity: 0.5 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className="font-heading text-2xl font-black text-white"
+                className="font-heading text-2xl font-black text-foreground"
               >
                 {isPlank ? `${holdSeconds}s` : `${angle}°`}
               </motion.div>

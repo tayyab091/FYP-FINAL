@@ -62,6 +62,7 @@ function sortMeals(meals: MealItem[]) {
 export default function MealPlansPage() {
   const { user, isLoading: authLoading } = useAuth()
   const [plans, setPlans] = useState<MealPlan[]>([])
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({})
@@ -87,10 +88,13 @@ export default function MealPlansPage() {
     if (user && canAccessMealPlansForUser(user)) loadPlans()
   }, [user, loadPlans])
 
-  const activePlan = useMemo(
-    () => plans.find((p) => p.status === 'active') || plans[0] || null,
-    [plans],
-  )
+  const activePlan = useMemo(() => {
+    if (selectedPlanId) {
+      const selected = plans.find((p) => p._id === selectedPlanId)
+      if (selected) return selected
+    }
+    return plans.find((p) => p.status === 'active') || plans[0] || null
+  }, [plans, selectedPlanId])
 
   useEffect(() => {
     if (!activePlan?.days?.length) return
@@ -110,6 +114,7 @@ export default function MealPlansPage() {
       if (!res.ok) throw new Error(data.message || 'Failed to generate')
       toast.success('Meal plan generated')
       setShowGenerate(false)
+      if (data?._id) setSelectedPlanId(data._id)
       await loadPlans()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Generation failed')
@@ -157,11 +162,11 @@ export default function MealPlansPage() {
             <Skeleton className="h-24 bg-muted" />
           </div>
         ) : !activePlan ? (
-          <Card className="elite-panel border-white/[.08]">
+          <Card className="elite-panel border-border">
             <CardContent className="flex flex-col items-center gap-4 py-14 text-center">
               <Utensils className="size-10 text-muted-foreground" />
               <div>
-                <p className="text-base font-semibold text-white">
+                <p className="text-base font-semibold text-foreground">
                   No meal plan yet. Ask your trainer to create one.
                 </p>
                 <p className="mt-2 text-sm text-muted-foreground">
@@ -180,10 +185,10 @@ export default function MealPlansPage() {
           </Card>
         ) : (
           <div className="space-y-6">
-            <Card className="elite-panel border-white/[.08]">
+            <Card className="elite-panel border-border">
               <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
                 <div>
-                  <CardTitle className="text-xl text-white">{activePlan.title}</CardTitle>
+                  <CardTitle className="text-xl text-foreground">{activePlan.title}</CardTitle>
                   <p className="mt-1 text-sm capitalize text-muted-foreground">
                     {activePlan.goal.replace(/_/g, ' ')} · {activePlan.dailyCalories} kcal / day
                     {activePlan.trainerId ? ' · Assigned by trainer' : ' · Self-generated'}
@@ -205,7 +210,7 @@ export default function MealPlansPage() {
                 return (
                   <div
                     key={day.day}
-                    className="overflow-hidden rounded-2xl border border-white/[.08] bg-black/20"
+                    className="overflow-hidden rounded-2xl border border-border bg-muted/50"
                   >
                     <button
                       type="button"
@@ -214,12 +219,12 @@ export default function MealPlansPage() {
                     >
                       <div className="min-w-0 flex-1">
                         <div className="mb-2 flex items-center justify-between gap-2">
-                          <h3 className="font-bold text-white">{day.day}</h3>
+                          <h3 className="font-bold text-foreground">{day.day}</h3>
                           <span className="text-xs text-muted-foreground">
                             {total} / {target} kcal
                           </span>
                         </div>
-                        <div className="h-2 overflow-hidden rounded-full bg-[#1a1a1a]">
+                        <div className="h-2 overflow-hidden rounded-full bg-muted">
                           <div
                             className="h-full rounded-full transition-all"
                             style={{
@@ -237,16 +242,16 @@ export default function MealPlansPage() {
                     </button>
 
                     {open && (
-                      <div className="space-y-2 border-t border-white/[.06] px-4 py-4">
+                      <div className="space-y-2 border-t border-border px-4 py-4">
                         {sortMeals(day.meals).map((meal, idx) => (
                           <div
                             key={`${day.day}-${meal.mealType}-${idx}`}
-                            className="rounded-xl border border-white/[.06] bg-black/25 px-3 py-3"
+                            className="rounded-xl border border-border bg-muted/60 px-3 py-3"
                           >
                             <p className="text-[10px] font-bold uppercase tracking-wide text-primary">
                               {meal.mealType}
                             </p>
-                            <p className="mt-0.5 text-sm font-medium text-white">{meal.name}</p>
+                            <p className="mt-0.5 text-sm font-medium text-foreground">{meal.name}</p>
                             <p className="mt-1 text-xs text-muted-foreground">
                               {meal.calories} kcal · P {meal.protein}g · C {meal.carbs}g · F {meal.fat}g
                             </p>
@@ -271,7 +276,7 @@ export default function MealPlansPage() {
         )}
 
         {showGenerate && (
-          <Card className="elite-panel mt-6 border-white/[.08]">
+          <Card className="elite-panel mt-6 border-border">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Utensils className="size-4 text-primary" />
@@ -301,7 +306,7 @@ export default function MealPlansPage() {
                     onChange={(e) => setForm((f) => ({ ...f, preferenceNotes: e.target.value }))}
                     rows={3}
                     placeholder="e.g. high protein, no shellfish, vegetarian dinners…"
-                    className="mt-1.5 w-full rounded-xl border border-white/[.09] bg-black/20 px-3.5 py-2 text-sm text-foreground outline-none focus-visible:border-primary/45 focus-visible:ring-3 focus-visible:ring-ring/15"
+                    className="mt-1.5 w-full rounded-xl border border-border bg-muted/50 px-3.5 py-2 text-sm text-foreground outline-none focus-visible:border-primary/45 focus-visible:ring-3 focus-visible:ring-ring/15"
                   />
                 </div>
                 <Button type="submit" disabled={generating} className="w-full">

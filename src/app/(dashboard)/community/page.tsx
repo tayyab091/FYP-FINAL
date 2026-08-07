@@ -345,14 +345,14 @@ export default function CommunityPage() {
                 <Skeleton className="h-36 rounded-xl bg-muted" />
               </>
             ) : posts.length === 0 ? (
-              <Card className="elite-panel border-white/[.08]">
+              <Card className="elite-panel border-border">
                 <CardContent className="py-12 text-center text-sm text-muted-foreground">
                   🏃 Be the first to post in the community!
                 </CardContent>
               </Card>
             ) : (
               posts.map((post) => (
-                <Card key={post._id} className="elite-panel border-white/[.08]">
+                <Card key={post._id} className="elite-panel border-border">
                   <CardContent className="pt-5">
                     <div className="mb-3 flex items-start gap-3">
                       <UserAvatar
@@ -362,7 +362,7 @@ export default function CommunityPage() {
                       />
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm font-semibold text-white">{post.authorName}</p>
+                          <p className="text-sm font-semibold text-foreground">{post.authorName}</p>
                           <Badge
                             variant="outline"
                             className="h-5 border-primary/25 bg-primary/10 px-2 text-[10px] text-primary"
@@ -384,7 +384,7 @@ export default function CommunityPage() {
                       </div>
                     </div>
 
-                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-[#c8d0cb]">
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
                       {post.content}
                     </p>
 
@@ -396,7 +396,7 @@ export default function CommunityPage() {
                         className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${
                           post.likedByMe
                             ? 'bg-primary/15 text-primary'
-                            : 'bg-white/[.04] text-muted-foreground hover:text-white'
+                            : 'bg-muted/60 text-muted-foreground hover:text-foreground'
                         }`}
                       >
                         <Heart className={`size-3.5 ${post.likedByMe ? 'fill-primary' : ''}`} />
@@ -405,7 +405,7 @@ export default function CommunityPage() {
                       <button
                         type="button"
                         onClick={() => toggleComments(post._id)}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-white/[.04] px-2.5 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:text-white"
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-muted/60 px-2.5 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
                       >
                         <MessageCircle className="size-3.5" />
                         {post.commentCount}
@@ -414,14 +414,14 @@ export default function CommunityPage() {
                     </div>
 
                     {expanded === post._id && (
-                      <div className="mt-4 space-y-3 border-t border-white/[.06] pt-4">
+                      <div className="mt-4 space-y-3 border-t border-border pt-4">
                         {loadingComments === post._id ? (
                           <Skeleton className="h-12 bg-muted" />
                         ) : (comments[post._id] || []).length === 0 ? (
                           <p className="text-xs text-muted-foreground">No comments yet.</p>
                         ) : (
                           (comments[post._id] || []).map((c) => (
-                            <div key={c._id} className="flex gap-2 rounded-lg bg-black/20 px-3 py-2">
+                            <div key={c._id} className="flex gap-2 rounded-lg bg-muted/50 px-3 py-2">
                               <UserAvatar
                                 name={c.authorName}
                                 image={c.authorImage}
@@ -434,7 +434,7 @@ export default function CommunityPage() {
                                     {new Date(c.createdAt).toLocaleString()}
                                   </time>
                                 </div>
-                                <p className="mt-0.5 text-sm text-[#c8d0cb]">{c.content}</p>
+                                <p className="mt-0.5 text-sm text-muted-foreground">{c.content}</p>
                               </div>
                             </div>
                           ))
@@ -449,7 +449,7 @@ export default function CommunityPage() {
                               }))
                             }
                             placeholder="Add a comment…"
-                            className="h-10 flex-1 rounded-xl border border-white/[.09] bg-black/20 px-3 text-sm outline-none focus-visible:border-primary/45"
+                            className="h-10 flex-1 rounded-xl border border-border bg-muted/50 px-3 text-sm outline-none focus-visible:border-primary/45"
                           />
                           <Button
                             type="button"
@@ -470,7 +470,7 @@ export default function CommunityPage() {
 
           {/* Right — create + stats + leaderboard */}
           <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
-            <Card className="elite-panel border-white/[.08]">
+            <Card className="elite-panel border-border">
               <CardHeader>
                 <CardTitle className="text-base">Share with the community</CardTitle>
               </CardHeader>
@@ -482,7 +482,7 @@ export default function CommunityPage() {
                     rows={4}
                     maxLength={2000}
                     placeholder="Share a workout win, ask for advice, or motivate others..."
-                    className="w-full rounded-xl border border-white/[.09] bg-black/20 px-3.5 py-2 text-sm text-foreground outline-none focus-visible:border-primary/45 focus-visible:ring-3 focus-visible:ring-ring/15"
+                    className="w-full rounded-xl border border-border bg-muted/50 px-3.5 py-2 text-sm text-foreground outline-none focus-visible:border-primary/45 focus-visible:ring-3 focus-visible:ring-ring/15"
                   />
                   <FormSelect
                     value={category}
@@ -506,7 +506,7 @@ export default function CommunityPage() {
               </CardContent>
             </Card>
 
-            <Card className="elite-panel border-white/[.08]">
+            <Card className="elite-panel border-border">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Activity className="size-4 text-primary" />
@@ -522,19 +522,19 @@ export default function CommunityPage() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between rounded-xl border border-white/[.06] bg-black/20 px-3 py-2.5">
+                    <div className="flex items-center justify-between rounded-xl border border-border bg-muted/50 px-3 py-2.5">
                       <span className="text-xs text-muted-foreground">Total Posts</span>
-                      <span className="text-sm font-bold text-white">
+                      <span className="text-sm font-bold text-foreground">
                         {stats?.totalPosts ?? 0}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl border border-white/[.06] bg-black/20 px-3 py-2.5">
+                    <div className="flex items-center justify-between rounded-xl border border-border bg-muted/50 px-3 py-2.5">
                       <span className="text-xs text-muted-foreground">Total Members</span>
-                      <span className="text-sm font-bold text-white">
+                      <span className="text-sm font-bold text-foreground">
                         {stats?.totalMembers ?? 0}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl border border-white/[.06] bg-black/20 px-3 py-2.5">
+                    <div className="flex items-center justify-between rounded-xl border border-border bg-muted/50 px-3 py-2.5">
                       <span className="text-xs text-muted-foreground">Most Active Today</span>
                       <span className="max-w-[50%] truncate text-right text-sm font-bold text-primary">
                         {stats?.mostActiveToday || '—'}
@@ -545,7 +545,7 @@ export default function CommunityPage() {
               </CardContent>
             </Card>
 
-            <Card className="elite-panel border-white/[.08]">
+            <Card className="elite-panel border-border">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Trophy className="size-4 text-primary" />
@@ -571,7 +571,7 @@ export default function CommunityPage() {
                         className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 ${
                           entry.isCurrentUser
                             ? 'border-emerald-500/40 bg-emerald-500/15'
-                            : 'border-white/[.06] bg-black/20'
+                            : 'border-border bg-muted/50'
                         }`}
                       >
                         <span className="w-6 text-center text-sm font-bold text-muted-foreground">
@@ -583,7 +583,7 @@ export default function CommunityPage() {
                           size={36}
                         />
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold text-white">
+                          <p className="truncate text-sm font-semibold text-foreground">
                             {entry.fullName}
                             {entry.isCurrentUser ? ' (you)' : ''}
                           </p>

@@ -71,19 +71,19 @@ export function AIGeneratorTab() {
   }
 
   const inputClass =
-    'w-full bg-[#0e1a14] border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-[#00ff87] transition-colors'
+    'w-full bg-card border border-border rounded-xl px-4 py-3 text-foreground text-sm outline-none focus:border-primary transition-colors'
 
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
         <p className="section-eyebrow">Powered by Gemini AI</p>
-        <h2 className="text-2xl font-black text-white">Generate My Workout Plan</h2>
-        <p className="text-[#a0a0a0] text-sm mt-1">Answer a few questions and AI builds your personalized plan</p>
+        <h2 className="text-2xl font-black text-foreground">Generate My Workout Plan</h2>
+        <p className="text-muted-foreground text-sm mt-1">Answer a few questions and AI builds your personalized plan</p>
       </div>
 
       <div className="tile space-y-4">
         <div>
-          <label className="block text-xs text-[#a0a0a0] mb-1.5 font-medium">What is your primary goal?</label>
+          <label className="block text-xs text-muted-foreground mb-1.5 font-medium">What is your primary goal?</label>
           <select
             value={form.goal}
             onChange={(e) => setForm((f) => ({ ...f, goal: e.target.value }))}
@@ -97,7 +97,7 @@ export function AIGeneratorTab() {
         </div>
 
         <div>
-          <label className="block text-xs text-[#a0a0a0] mb-1.5 font-medium">How many days per week can you train?</label>
+          <label className="block text-xs text-muted-foreground mb-1.5 font-medium">How many days per week can you train?</label>
           <div className="flex gap-3">
             {['3', '4', '5', '6'].map((d) => (
               <button
@@ -106,8 +106,8 @@ export function AIGeneratorTab() {
                 onClick={() => setForm((f) => ({ ...f, daysPerWeek: d }))}
                 className={`flex-1 py-3 rounded-xl text-sm font-bold border transition-all ${
                   form.daysPerWeek === d
-                    ? 'bg-[#00ff87] text-black border-[#00ff87]'
-                    : 'border-white/10 text-[#a0a0a0] hover:border-white/20'
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'border-border text-muted-foreground hover:border-primary/25'
                 }`}
               >
                 {d} days
@@ -117,7 +117,7 @@ export function AIGeneratorTab() {
         </div>
 
         <div>
-          <label className="block text-xs text-[#a0a0a0] mb-1.5 font-medium">What equipment do you have access to?</label>
+          <label className="block text-xs text-muted-foreground mb-1.5 font-medium">What equipment do you have access to?</label>
           <div className="flex flex-wrap gap-2">
             {['Bodyweight Only', 'Dumbbells', 'Barbell', 'Pull-up Bar', 'Resistance Bands', 'Full Gym'].map((eq) => {
               const selected = form.equipment.includes(eq)
@@ -141,8 +141,8 @@ export function AIGeneratorTab() {
                   }}
                   className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                     selected
-                      ? 'bg-[#00ff87]/20 text-[#00ff87] border-[#00ff87]/40'
-                      : 'border-white/10 text-[#a0a0a0] hover:border-white/20'
+                      ? 'bg-primary/20 text-primary border-primary/40'
+                      : 'border-border text-muted-foreground hover:border-primary/25'
                   }`}
                 >
                   {eq}
@@ -153,7 +153,7 @@ export function AIGeneratorTab() {
         </div>
 
         <div>
-          <label className="block text-xs text-[#a0a0a0] mb-1.5 font-medium">Your fitness level</label>
+          <label className="block text-xs text-muted-foreground mb-1.5 font-medium">Your fitness level</label>
           <div className="flex gap-3 flex-wrap">
             {[
               { v: 'beginner', l: 'Beginner', desc: 'Less than 6 months' },
@@ -166,8 +166,8 @@ export function AIGeneratorTab() {
                 onClick={() => setForm((f) => ({ ...f, fitnessLevel: level.v }))}
                 className={`flex-1 min-w-[7rem] py-3 px-2 rounded-xl text-sm font-bold border transition-all text-center ${
                   form.fitnessLevel === level.v
-                    ? 'bg-[#00ff87] text-black border-[#00ff87]'
-                    : 'border-white/10 text-[#a0a0a0] hover:border-white/20'
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'border-border text-muted-foreground hover:border-primary/25'
                 }`}
               >
                 <div>{level.l}</div>
@@ -181,7 +181,7 @@ export function AIGeneratorTab() {
           type="button"
           onClick={generate}
           disabled={loading}
-          className="w-full py-4 rounded-2xl font-bold text-black text-base transition-all disabled:opacity-50"
+          className="w-full py-4 rounded-2xl font-bold text-primary-foreground text-base transition-all disabled:opacity-50"
           style={{ background: loading ? '#555' : 'linear-gradient(135deg, #00ff87, #00d4ff)' }}
         >
           {loading ? (
@@ -196,12 +196,12 @@ export function AIGeneratorTab() {
       </div>
 
       {generatedPlan && (
-        <div className="tile space-y-4 border-[#00ff87]/20">
+        <div className="tile space-y-4 border-primary/20">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
-              <p className="text-[#00ff87] text-xs font-semibold uppercase tracking-wider">AI Generated</p>
-              <h3 className="text-xl font-black text-white">{generatedPlan.title}</h3>
-              <p className="text-[#a0a0a0] text-sm">
+              <p className="text-primary text-xs font-semibold uppercase tracking-wider">AI Generated</p>
+              <h3 className="text-xl font-black text-foreground">{generatedPlan.title}</h3>
+              <p className="text-muted-foreground text-sm">
                 {generatedPlan.durationWeeks} weeks · {generatedPlan.difficulty} · {form.daysPerWeek} days/week
               </p>
             </div>
@@ -219,10 +219,10 @@ export function AIGeneratorTab() {
             {generatedPlan.weeklySchedule?.map((day) => (
               <div
                 key={day.day}
-                className={`rounded-xl border p-4 ${day.isRestDay ? 'border-white/5 bg-white/[0.02]' : 'border-white/10 bg-white/[0.03]'}`}
+                className={`rounded-xl border p-4 ${day.isRestDay ? 'border-border bg-white/[0.02]' : 'border-border bg-white/[0.03]'}`}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <p className="font-bold text-white text-sm">{day.day}</p>
+                  <p className="font-bold text-foreground text-sm">{day.day}</p>
                   {day.isRestDay ? (
                     <span className="badge-accent text-xs bg-blue-500/20 text-blue-400">Rest Day 😴</span>
                   ) : (
@@ -233,11 +233,11 @@ export function AIGeneratorTab() {
                   <div className="space-y-1.5">
                     {day.exercises.map((ex, i) => (
                       <div key={i} className="flex items-center gap-3 text-sm flex-wrap">
-                        <span className="w-5 h-5 rounded-full bg-[#00ff87]/20 text-[#00ff87] text-xs flex items-center justify-center flex-shrink-0 font-bold">
+                        <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-xs flex items-center justify-center flex-shrink-0 font-bold">
                           {i + 1}
                         </span>
-                        <span className="text-white font-medium">{ex.name}</span>
-                        <span className="text-[#a0a0a0] text-xs">
+                        <span className="text-foreground font-medium">{ex.name}</span>
+                        <span className="text-muted-foreground text-xs">
                           {ex.sets} × {ex.reps}
                         </span>
                       </div>

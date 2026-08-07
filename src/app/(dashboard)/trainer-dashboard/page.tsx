@@ -361,10 +361,10 @@ export default function TrainerDashboardPage() {
             <p className="mt-2 text-muted-foreground">Manage clients, programs, and every coaching conversation.</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link href="/trainer-dashboard/exercises" className="rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-white hover:border-primary/40">
+            <Link href="/trainer-dashboard/exercises" className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-foreground hover:border-primary/40">
               Exercises
             </Link>
-            <Link href="/trainer-dashboard/nutrition" className="rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-white hover:border-primary/40">
+            <Link href="/trainer-dashboard/nutrition" className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-foreground hover:border-primary/40">
               Nutrition
             </Link>
             <Link href="/chat" className="btn-accent px-4 py-2 text-sm font-bold">
@@ -432,7 +432,7 @@ export default function TrainerDashboardPage() {
                       href={action.href}
                       className="tile interactive-lift min-h-[8.5rem] justify-between"
                     >
-                      <p className="break-words font-bold leading-snug text-white">{action.label}</p>
+                      <p className="break-words font-bold leading-snug text-foreground">{action.label}</p>
                       <p className="text-xs leading-snug text-muted-foreground">{action.desc}</p>
                     </Link>
                   ))}
@@ -449,13 +449,13 @@ export default function TrainerDashboardPage() {
                     </div>
                     <div className="mt-4 space-y-2">
                       {requests.slice(0, 3).map((req) => (
-                        <div key={req._id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/5 bg-black/20 p-3">
+                        <div key={req._id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-muted/50 p-3">
                           <div>
-                            <p className="font-medium text-white">{req.userId?.fullName}</p>
+                            <p className="font-medium text-foreground">{req.userId?.fullName}</p>
                             <p className="text-xs text-muted-foreground">{req.userId?.email}</p>
                           </div>
                           <div className="flex gap-2">
-                            <Button size="sm" onClick={() => handleAccept(req._id)} className="bg-primary text-black hover:brightness-95">Accept</Button>
+                            <Button size="sm" onClick={() => handleAccept(req._id)} className="bg-primary text-primary-foreground hover:brightness-95">Accept</Button>
                             <Button size="sm" variant="outline" onClick={() => handleDecline(req._id)}>Decline</Button>
                           </div>
                         </div>
@@ -474,7 +474,7 @@ export default function TrainerDashboardPage() {
                         {clients.slice(0, 5).map((client) => (
                           <div key={client._id} className="flex items-center justify-between rounded-xl border border-border bg-card/40 p-3">
                             <div>
-                              <p className="font-medium text-white">{client.userId?.fullName}</p>
+                              <p className="font-medium text-foreground">{client.userId?.fullName}</p>
                               <p className="text-xs text-muted-foreground">{client.userId?.email}</p>
                             </div>
                             <Button size="sm" variant="outline" onClick={() => { setSelectedClient(client); setPlanModalOpen(true) }}>
@@ -502,7 +502,7 @@ export default function TrainerDashboardPage() {
                               <div className="text-sm text-muted-foreground">{conversation.lastMessage || 'No messages yet'}</div>
                             </div>
                             {conversation.unreadCount > 0 && (
-                              <Badge className="bg-primary text-black">{conversation.unreadCount}</Badge>
+                              <Badge className="bg-primary text-primary-foreground">{conversation.unreadCount}</Badge>
                             )}
                           </Link>
                         ))}
@@ -552,7 +552,7 @@ export default function TrainerDashboardPage() {
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button onClick={() => handleAccept(req._id)} className="bg-primary text-black hover:brightness-95">
+                        <Button onClick={() => handleAccept(req._id)} className="bg-primary text-primary-foreground hover:brightness-95">
                           Accept
                         </Button>
                         <Button onClick={() => handleDecline(req._id)} variant="destructive">
@@ -607,7 +607,7 @@ export default function TrainerDashboardPage() {
                           View Progress
                         </Button>
                         <Button onClick={() => { setSelectedClient(client); setPlanModalOpen(true) }}
-                          className="bg-primary text-black hover:brightness-95">
+                          className="bg-primary text-primary-foreground hover:brightness-95">
                           Create Plan
                         </Button>
                         {client.conversationId && (
@@ -633,7 +633,7 @@ export default function TrainerDashboardPage() {
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <h2 className="text-lg font-bold text-white">Assigned meal plans</h2>
+                    <h2 className="text-lg font-bold text-foreground">Assigned meal plans</h2>
                     <p className="text-sm text-muted-foreground">Create and assign nutrition plans to active clients.</p>
                   </div>
                   <Button
@@ -644,7 +644,7 @@ export default function TrainerDashboardPage() {
                       }))
                       setMealPlanModalOpen(true)
                     }}
-                    className="bg-primary text-black hover:brightness-95"
+                    className="bg-primary text-primary-foreground hover:brightness-95"
                     disabled={clients.length === 0}
                   >
                     <Utensils className="size-4" />
@@ -670,7 +670,7 @@ export default function TrainerDashboardPage() {
                         <Card key={plan._id}>
                           <CardContent className="flex flex-wrap items-center justify-between gap-4 pt-6">
                             <div>
-                              <div className="font-bold text-white">{plan.title}</div>
+                              <div className="font-bold text-foreground">{plan.title}</div>
                               <div className="mt-1 text-sm text-muted-foreground">
                                 {clientName} · {plan.goal?.replace(/_/g, ' ')} · {plan.dailyCalories} kcal
                                 {plan.durationDays ? ` · ${plan.durationDays} days` : ''}
@@ -721,7 +721,7 @@ export default function TrainerDashboardPage() {
                       <div className="text-muted-foreground text-sm truncate">{c.lastMessage || 'No messages yet'}</div>
                     </div>
                     {c.unreadCount > 0 && (
-                      <Badge className="bg-primary text-black">{c.unreadCount}</Badge>
+                      <Badge className="bg-primary text-primary-foreground">{c.unreadCount}</Badge>
                     )}
                   </Link>
                 ))}
@@ -732,7 +732,7 @@ export default function TrainerDashboardPage() {
       </div>
 
       <Dialog open={planModalOpen} onOpenChange={setPlanModalOpen}>
-        <DialogContent className="bg-card/60 border-border text-white sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-card/60 border-border text-foreground sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create Workout Plan</DialogTitle>
             <p className="text-muted-foreground text-sm">For {selectedClient?.userId?.fullName}</p>
@@ -851,7 +851,7 @@ export default function TrainerDashboardPage() {
             </label>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setPlanModalOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={creating} className="bg-primary text-black hover:brightness-95">
+              <Button type="submit" disabled={creating} className="bg-primary text-primary-foreground hover:brightness-95">
                 {creating ? 'Creating...' : 'Create Plan'}
               </Button>
             </DialogFooter>
@@ -860,7 +860,7 @@ export default function TrainerDashboardPage() {
       </Dialog>
 
       <Dialog open={mealPlanModalOpen} onOpenChange={setMealPlanModalOpen}>
-        <DialogContent className="bg-card/60 border-border text-white sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-card/60 border-border text-foreground sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create Meal Plan</DialogTitle>
             <p className="text-sm text-muted-foreground">Assign a daily nutrition template to a client.</p>
@@ -968,7 +968,7 @@ export default function TrainerDashboardPage() {
               <Button type="button" variant="outline" onClick={() => setMealPlanModalOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={creatingMealPlan} className="bg-primary text-black hover:brightness-95">
+              <Button type="submit" disabled={creatingMealPlan} className="bg-primary text-primary-foreground hover:brightness-95">
                 {creatingMealPlan ? 'Creating…' : 'Create & Assign'}
               </Button>
             </DialogFooter>
@@ -977,7 +977,7 @@ export default function TrainerDashboardPage() {
       </Dialog>
 
       <Dialog open={Boolean(progressClient)} onOpenChange={(open) => { if (!open) { setProgressClient(null); setClientProgress(null) } }}>
-        <DialogContent className="bg-card/60 border-border text-white sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-card/60 border-border text-foreground sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{progressClient?.userId?.fullName}&apos;s Progress</DialogTitle>
           </DialogHeader>

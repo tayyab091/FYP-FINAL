@@ -50,8 +50,8 @@ export default function LeaderboardPage() {
     <div className="max-w-3xl mx-auto px-4 py-8">
         <div className="mb-8">
           <p className="section-eyebrow">Community</p>
-          <h1 className="text-3xl font-black text-white">Leaderboard 🏆</h1>
-          <p className="text-[#a0a0a0] mt-1">Top performers ranked by XP earned</p>
+          <h1 className="text-3xl font-black text-foreground">Leaderboard 🏆</h1>
+          <p className="text-muted-foreground mt-1">Top performers ranked by XP earned</p>
         </div>
 
         <div className="flex gap-2 mb-6">
@@ -62,8 +62,8 @@ export default function LeaderboardPage() {
               onClick={() => setPeriod(p)}
               className={`px-5 py-2 rounded-full text-sm font-semibold border transition-all capitalize ${
                 period === p
-                  ? 'bg-[#00ff87] text-black border-[#00ff87]'
-                  : 'border-white/10 text-[#a0a0a0] hover:border-white/20'
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'border-border text-muted-foreground hover:border-primary/25'
               }`}
             >
               {p === 'all' ? 'All Time' : `This ${p.charAt(0).toUpperCase() + p.slice(1)}`}
@@ -80,8 +80,8 @@ export default function LeaderboardPage() {
         ) : leaders.length === 0 ? (
           <div className="tile items-center justify-center py-20 text-center">
             <span className="text-5xl mb-4 block">🏆</span>
-            <p className="text-white font-bold text-lg">No rankings yet</p>
-            <p className="text-[#a0a0a0] text-sm mt-1">
+            <p className="text-foreground font-bold text-lg">No rankings yet</p>
+            <p className="text-muted-foreground text-sm mt-1">
               Complete workouts and log meals to earn XP and appear here
             </p>
           </div>
@@ -104,7 +104,7 @@ export default function LeaderboardPage() {
                     rank <= 3
                       ? `bg-gradient-to-r ${RANK_STYLES[rank - 1]}`
                       : isCurrentUser
-                        ? 'border-[#00ff87]/30 bg-[#00ff87]/5'
+                        ? 'border-primary/30 bg-primary/5'
                         : 'tile min-h-0'
                   }`}
                 >
@@ -112,7 +112,7 @@ export default function LeaderboardPage() {
                     {rank <= 3 ? (
                       <span className="text-2xl">{RANK_EMOJIS[rank - 1]}</span>
                     ) : (
-                      <span className="text-lg font-black text-[#a0a0a0]">#{rank}</span>
+                      <span className="text-lg font-black text-muted-foreground">#{rank}</span>
                     )}
                   </div>
 
@@ -121,13 +121,13 @@ export default function LeaderboardPage() {
                     avatarUrl={leader.avatarUrl || leader.profileImage}
                     size="sm"
                     rounded="xl"
-                    className={isCurrentUser ? 'ring-2 ring-[#00ff87]/40' : undefined}
+                    className={isCurrentUser ? 'ring-2 ring-primary/40' : undefined}
                   />
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p
-                        className={`font-bold text-sm truncate ${isCurrentUser ? 'text-[#00ff87]' : 'text-white'}`}
+                        className={`font-bold text-sm truncate ${isCurrentUser ? 'text-primary' : 'text-foreground'}`}
                       >
                         {leader.fullName || 'Anonymous'}
                         {isCurrentUser && ' (You)'}
@@ -137,7 +137,7 @@ export default function LeaderboardPage() {
                       )}
                     </div>
                     <div className="flex items-center gap-3 mt-0.5">
-                      <span className="text-xs text-[#a0a0a0]">Level {leader.level || 1}</span>
+                      <span className="text-xs text-muted-foreground">Level {leader.level || 1}</span>
                       {(leader.streak || 0) > 0 && (
                         <span className="text-xs text-orange-400">🔥 {leader.streak} day streak</span>
                       )}
@@ -153,12 +153,12 @@ export default function LeaderboardPage() {
                             ? 'text-gray-300'
                             : rank === 3
                               ? 'text-orange-400'
-                              : 'text-[#00ff87]'
+                              : 'text-primary'
                       }`}
                     >
                       {(leader.xp || 0).toLocaleString()}
                     </p>
-                    <p className="text-xs text-[#a0a0a0]">XP</p>
+                    <p className="text-xs text-muted-foreground">XP</p>
                   </div>
                 </div>
               )
@@ -171,8 +171,8 @@ export default function LeaderboardPage() {
           !leaders.some(
             (l) => l.userId === user?.id || l.userId === (user as { _id?: string })?._id,
           ) && (
-            <div className="mt-6 p-4 rounded-2xl border border-white/10 bg-white/[0.02] flex items-center justify-between">
-              <p className="text-[#a0a0a0] text-sm">You are not in the top 10 yet</p>
+            <div className="mt-6 p-4 rounded-2xl border border-border bg-white/[0.02] flex items-center justify-between">
+              <p className="text-muted-foreground text-sm">You are not in the top 10 yet</p>
               <Link href="/my-fitness" className="badge-accent text-xs cursor-pointer hover:opacity-80">
                 Earn XP →
               </Link>

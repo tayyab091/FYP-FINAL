@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           message:
-            'Image uploads require CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET',
+            'Image uploads require CLOUDINARY_URL or CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET',
         },
         { status: 503 },
       )
