@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-07T14:47:44.021Z",
+  "generatedAt": "2026-08-07T15:01:16.335Z",
   "auditLog": [
     {
       "category": "Infrastructure",
@@ -34,11 +34,11 @@
       "route": "/coaching",
       "test": "Page load: /coaching",
       "status": "PASS",
-      "detail": "Loaded OK — 27 buttons, 1 inputs, 44 links, 0 forms",
+      "detail": "Loaded OK — 17 buttons, 1 inputs, 14 links, 0 forms",
       "metrics": {
-        "buttons": 27,
+        "buttons": 17,
         "inputs": 1,
-        "links": 44,
+        "links": 14,
         "forms": 0,
         "switches": 0
       }
@@ -317,11 +317,11 @@
       "route": "/meal-plans",
       "test": "Page load: /meal-plans",
       "status": "PASS",
-      "detail": "Loaded OK — 14 buttons, 0 inputs, 13 links, 0 forms",
+      "detail": "Loaded OK — 6 buttons, 0 inputs, 12 links, 0 forms",
       "metrics": {
-        "buttons": 14,
+        "buttons": 6,
         "inputs": 0,
-        "links": 13,
+        "links": 12,
         "forms": 0,
         "switches": 0
       }
@@ -332,9 +332,9 @@
       "route": "/community",
       "test": "Page load: /community",
       "status": "PASS",
-      "detail": "Loaded OK — 24 buttons, 2 inputs, 13 links, 1 forms",
+      "detail": "Loaded OK — 8 buttons, 2 inputs, 13 links, 1 forms",
       "metrics": {
-        "buttons": 24,
+        "buttons": 8,
         "inputs": 2,
         "links": 13,
         "forms": 1,
@@ -500,9 +500,9 @@
       "route": "/community",
       "test": "Page load: /community",
       "status": "PASS",
-      "detail": "Loaded OK — 24 buttons, 2 inputs, 14 links, 1 forms",
+      "detail": "Loaded OK — 8 buttons, 2 inputs, 14 links, 1 forms",
       "metrics": {
-        "buttons": 24,
+        "buttons": 8,
         "inputs": 2,
         "links": 14,
         "forms": 1,
@@ -634,11 +634,11 @@
       "route": "/trainer-dashboard",
       "test": "Page load: /trainer-dashboard",
       "status": "PASS",
-      "detail": "Loaded OK — 14 buttons, 0 inputs, 18 links, 0 forms",
+      "detail": "Loaded OK — 12 buttons, 0 inputs, 12 links, 0 forms",
       "metrics": {
-        "buttons": 14,
+        "buttons": 12,
         "inputs": 0,
-        "links": 18,
+        "links": 12,
         "forms": 0,
         "switches": 0
       }
@@ -679,11 +679,11 @@
       "route": "/meal-plans",
       "test": "Page load: /meal-plans",
       "status": "PASS",
-      "detail": "Loaded OK — 7 buttons, 0 inputs, 10 links, 0 forms",
+      "detail": "Loaded OK — 6 buttons, 0 inputs, 9 links, 0 forms",
       "metrics": {
-        "buttons": 7,
+        "buttons": 6,
         "inputs": 0,
-        "links": 10,
+        "links": 9,
         "forms": 0,
         "switches": 0
       }
@@ -694,9 +694,9 @@
       "route": "/live-sessions",
       "test": "Page load: /live-sessions",
       "status": "PASS",
-      "detail": "Loaded OK — 8 buttons, 0 inputs, 9 links, 0 forms",
+      "detail": "Loaded OK — 7 buttons, 0 inputs, 9 links, 0 forms",
       "metrics": {
-        "buttons": 8,
+        "buttons": 7,
         "inputs": 0,
         "links": 9,
         "forms": 0,
