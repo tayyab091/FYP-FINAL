@@ -10,6 +10,12 @@ import { PageLoader } from '@/components/shared/PageLoader'
 import { BackButton } from '@/components/shared/BackButton'
 import { Avatar } from '@/components/shared/Avatar'
 import { ThemeToggle } from '@/components/shared/ThemeToggle'
+import {
+  ADMIN_NOTIFICATION_TOGGLES,
+  DEFAULT_NOTIFICATION_PREFERENCES,
+  USER_NOTIFICATION_TOGGLES,
+  type NotificationPreferences,
+} from '@/lib/notification-preferences'
 
 const AVATAR_MAX_BYTES = 5 * 1024 * 1024
 const AVATAR_ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
@@ -68,6 +74,10 @@ export default function SettingsPage() {
   const [avatarUploading, setAvatarUploading] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState('')
   const [deleting, setDeleting] = useState(false)
+  const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences>(
+    DEFAULT_NOTIFICATION_PREFERENCES,
+  )
+  const [notificationPrefsLoaded, setNotificationPrefsLoaded] = useState(false)
 
   const tabs =
     user?.role === 'trainer'
@@ -117,6 +127,59 @@ export default function SettingsPage() {
         })
     }
   }, [user])
+
+  useEffect(() => {
+    if (!user) return
+    fetch('/api/user/notification-preferences')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.preferences) {
+          setNotificationPrefs({ ...DEFAULT_NOTIFICATION_PREFERENCES, ...data.preferences })
+        }
+      })
+      .finally(() => setNotificationPrefsLoaded(true))
+  }, [user])
+
+  const saveNotificationPreferences = async () => {
+    setSaving(true)
+    try {
+      const res = await fetch('/api/user/notification-preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(notificationPrefs),
+      })
+      if (res.ok) toast.success('Notification preferences saved')
+      else toast.error('Failed to save notification preferences')
+    } catch {
+      toast.error('Network error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const toggleNotificationPref = (key: keyof NotificationPreferences) => {
+    setNotificationPrefs((prev) => ({ ...prev, [key]: !prev[key] }))
+  }
+
+  const NotificationToggle = ({
+    enabled,
+    onToggle,
+  }: {
+    enabled: boolean
+    onToggle: () => void
+  }) => (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={enabled}
+      onClick={onToggle}
+      className={`relative h-6 w-11 flex-shrink-0 rounded-full transition-colors ${enabled ? 'bg-primary' : 'bg-muted'}`}
+    >
+      <div
+        className={`absolute top-1 h-4 w-4 rounded-full bg-background transition-transform ${enabled ? 'right-1' : 'left-1'}`}
+      />
+    </button>
+  )
 
   const handleDeleteAccount = async () => {
     if (deleteConfirm !== 'DELETE') return
@@ -471,27 +534,26 @@ export default function SettingsPage() {
                 <p className="mt-1 text-sm text-muted-foreground">Choose what you want to be notified about</p>
               </div>
               <div className="space-y-4">
-                {[
-                  { label: 'New message from trainer', desc: 'When your trainer sends you a message' },
-                  { label: 'Workout plan assigned', desc: 'When a trainer creates a plan for you' },
-                  { label: 'Meal plan assigned', desc: 'When a trainer assigns you a meal plan' },
-                  { label: 'Weekly progress report', desc: 'Summary of your week every Sunday' },
-                  { label: 'Achievement unlocked', desc: 'When you earn a new badge or level up' },
-                  { label: 'Connection request', desc: 'When a trainer accepts your request' },
-                ].map((pref) => (
-                  <div key={pref.label} className="flex items-center justify-between border-b border-border py-3 last:border-0">
+                {USER_NOTIFICATION_TOGGLES.map((pref) => (
+                  <div key={pref.key} className="flex items-center justify-between border-b border-border py-3 last:border-0">
                     <div>
                       <p className="text-sm font-medium text-foreground">{pref.label}</p>
                       <p className="text-xs text-muted-foreground">{pref.desc}</p>
                     </div>
-                    <button type="button" className="relative h-6 w-11 flex-shrink-0 rounded-full bg-primary transition-colors">
-                      <div className="absolute right-1 top-1 h-4 w-4 rounded-full bg-black" />
-                    </button>
+                    <NotificationToggle
+                      enabled={notificationPrefs[pref.key]}
+                      onToggle={() => toggleNotificationPref(pref.key)}
+                    />
                   </div>
                 ))}
               </div>
-              <button type="button" className="btn-accent w-full py-3 text-sm font-bold">
-                Save Preferences
+              <button
+                type="button"
+                onClick={saveNotificationPreferences}
+                disabled={saving || !notificationPrefsLoaded}
+                className="btn-accent w-full py-3 text-sm font-bold disabled:opacity-50"
+              >
+                {saving ? 'Saving...' : 'Save Preferences'}
               </button>
             </div>
           )}
@@ -583,22 +645,26 @@ export default function SettingsPage() {
                   <h3 className="font-bold text-foreground">Notification Control</h3>
                   <p className="mt-1 text-sm text-muted-foreground">Broadcast-style preferences for admin alerts</p>
                 </div>
-                {[
-                  { label: 'New trainer applications', desc: 'Alert when trainers request verification' },
-                  { label: 'Gym verification queue', desc: 'Alert when gyms submit documents' },
-                  { label: 'User suspension events', desc: 'Track moderation activity' },
-                  { label: 'Subscription upgrades', desc: 'Monitor plan changes' },
-                ].map((pref) => (
-                  <div key={pref.label} className="flex items-center justify-between border-b border-border py-3 last:border-0">
+                {ADMIN_NOTIFICATION_TOGGLES.map((pref) => (
+                  <div key={pref.key} className="flex items-center justify-between border-b border-border py-3 last:border-0">
                     <div>
                       <p className="text-sm font-medium text-foreground">{pref.label}</p>
                       <p className="text-xs text-muted-foreground">{pref.desc}</p>
                     </div>
-                    <button type="button" className="relative h-6 w-11 flex-shrink-0 rounded-full bg-primary transition-colors">
-                      <div className="absolute right-1 top-1 h-4 w-4 rounded-full bg-black" />
-                    </button>
+                    <NotificationToggle
+                      enabled={notificationPrefs[pref.key]}
+                      onToggle={() => toggleNotificationPref(pref.key)}
+                    />
                   </div>
                 ))}
+                <button
+                  type="button"
+                  onClick={saveNotificationPreferences}
+                  disabled={saving || !notificationPrefsLoaded}
+                  className="btn-accent w-full py-3 text-sm font-bold disabled:opacity-50"
+                >
+                  {saving ? 'Saving...' : 'Save Admin Notification Preferences'}
+                </button>
               </div>
               <div className="tile space-y-3 border-amber-500/20 bg-amber-500/5">
                 <p className="text-sm font-bold text-amber-300">Safe admin tools</p>

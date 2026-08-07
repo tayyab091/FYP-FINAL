@@ -47,6 +47,21 @@ const UserSchema = new Schema({
   currentWeight: { type: Number },
   /** Expo push tokens for mobile app notifications */
   expoPushTokens: { type: [String], default: [] },
+  notificationPreferences: {
+    chatMessages: { type: Boolean, default: true },
+    workoutPlans: { type: Boolean, default: true },
+    mealPlans: { type: Boolean, default: true },
+    weeklyProgress: { type: Boolean, default: true },
+    achievements: { type: Boolean, default: true },
+    connectionRequests: { type: Boolean, default: true },
+    communityActivity: { type: Boolean, default: true },
+    liveSessions: { type: Boolean, default: true },
+    subscriptionUpdates: { type: Boolean, default: true },
+    adminTrainerApplications: { type: Boolean, default: true },
+    adminGymVerification: { type: Boolean, default: true },
+    adminUserSuspension: { type: Boolean, default: true },
+    adminSubscriptionUpgrades: { type: Boolean, default: true },
+  },
 }, { timestamps: true })
 
 export default mongoose.models.User || mongoose.model('User', UserSchema)
