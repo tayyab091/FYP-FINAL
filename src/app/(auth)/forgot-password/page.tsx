@@ -48,13 +48,13 @@ export default function ForgotPasswordPage() {
         className="w-full max-w-md"
       >
         <div className="mb-8 text-center">
-          <Link href="/" className="font-heading text-2xl font-black tracking-[-.045em] text-white lg:hidden">
+          <Link href="/" className="font-heading text-2xl font-black tracking-[-.045em] text-foreground lg:hidden">
             T.E.S.T.
           </Link>
           <div className="mx-auto mt-4 mb-3 flex size-12 items-center justify-center rounded-2xl border border-primary/20 bg-primary/[.08] text-primary">
             <Mail className="size-6" />
           </div>
-          <h1 className="mb-1 text-2xl font-bold text-white">Forgot password</h1>
+          <h1 className="mb-1 text-2xl font-bold text-foreground">Forgot password</h1>
           <p className="text-sm text-muted-foreground">
             We&apos;ll email you a link to reset it
           </p>
@@ -76,7 +76,7 @@ export default function ForgotPasswordPage() {
               {devLink ? (
                 <div className="rounded-xl border border-primary/20 bg-primary/[.06] p-3 text-left">
                   <p className="mb-1 text-xs font-medium text-primary">Dev reset link (SMTP unset)</p>
-                  <a href={devLink} className="break-all text-sm text-white underline hover:text-primary">
+                  <a href={devLink} className="break-all text-sm text-foreground underline hover:text-primary">
                     {devLink}
                   </a>
                 </div>

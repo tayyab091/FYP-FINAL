@@ -150,8 +150,8 @@ export default function AnalyticsPage() {
       <BackButton />
       <div className="mb-8">
         <p className="section-eyebrow">Your Performance</p>
-        <h1 className="text-3xl font-black text-white">Analytics</h1>
-        <p className="mt-1 text-[#a0a0a0]">Track every metric of your fitness journey</p>
+        <h1 className="text-3xl font-black text-foreground">Analytics</h1>
+        <p className="mt-1 text-muted-foreground">Track every metric of your fitness journey</p>
       </div>
 
       <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -166,7 +166,7 @@ export default function AnalyticsPage() {
             <p className="text-2xl font-black" style={{ color: stat.color }}>
               {stat.value}
             </p>
-            <p className="mt-1 text-xs text-[#a0a0a0]">{stat.label}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{stat.label}</p>
           </div>
         ))}
       </div>
@@ -174,7 +174,7 @@ export default function AnalyticsPage() {
       <div className="mb-6 grid gap-6 md:grid-cols-2">
         <div className="tile min-h-[280px]">
           <p className="section-eyebrow">Body Weight</p>
-          <h3 className="mb-4 font-bold text-white">Weight Progress</h3>
+          <h3 className="mb-4 font-bold text-foreground">Weight Progress</h3>
           {weightData.length > 1 ? (
             <ResponsiveContainer width="100%" height={180}>
               <LineChart data={weightData}>
@@ -193,7 +193,7 @@ export default function AnalyticsPage() {
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex flex-1 items-center justify-center text-sm text-[#a0a0a0]">
+            <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
               Log your weight in My Fitness to see your progress chart
             </div>
           )}
@@ -201,7 +201,7 @@ export default function AnalyticsPage() {
 
         <div className="tile min-h-[280px]">
           <p className="section-eyebrow">Training Volume</p>
-          <h3 className="mb-4 font-bold text-white">This Week&apos;s Workouts</h3>
+          <h3 className="mb-4 font-bold text-foreground">This Week&apos;s Workouts</h3>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={workoutData}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
@@ -224,7 +224,7 @@ export default function AnalyticsPage() {
       <div className="grid gap-6 md:grid-cols-2">
         <div className="tile min-h-[240px]">
           <p className="section-eyebrow">Nutrition</p>
-          <h3 className="mb-4 font-bold text-white">Average Macro Split</h3>
+          <h3 className="mb-4 font-bold text-foreground">Average Macro Split</h3>
           {macroData.some((m) => m.value > 0) ? (
             <div className="flex items-center gap-6">
               <ResponsiveContainer width={160} height={160}>
@@ -240,14 +240,14 @@ export default function AnalyticsPage() {
                 {macroData.map((m, i) => (
                   <div key={m.name} className="flex items-center gap-3">
                     <div className="h-3 w-3 flex-shrink-0 rounded-full" style={{ background: MACRO_COLORS[i] }} />
-                    <span className="text-sm text-[#a0a0a0]">{m.name}</span>
-                    <span className="ml-auto text-sm font-bold text-white">{m.value}g</span>
+                    <span className="text-sm text-muted-foreground">{m.name}</span>
+                    <span className="ml-auto text-sm font-bold text-foreground">{m.value}g</span>
                   </div>
                 ))}
               </div>
             </div>
           ) : (
-            <div className="flex flex-1 items-center justify-center text-sm text-[#a0a0a0]">
+            <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
               Log meals to see your macro breakdown
             </div>
           )}
@@ -255,7 +255,7 @@ export default function AnalyticsPage() {
 
         <div className="tile min-h-[240px]">
           <p className="section-eyebrow">Achievements</p>
-          <h3 className="mb-4 font-bold text-white">Personal Bests</h3>
+          <h3 className="mb-4 font-bold text-foreground">Personal Bests</h3>
           <div className="space-y-3">
             {[
               { label: 'Longest Streak', value: `${summary?.longestStreak ?? streak} days`, icon: '🔥' },
@@ -263,12 +263,12 @@ export default function AnalyticsPage() {
               { label: 'Workouts This Month', value: summary?.monthlyWorkouts ?? totalWorkouts, icon: '📅' },
               { label: 'Meals Logged', value: summary?.totalMealsLogged || 0, icon: '🥗' },
             ].map((pb) => (
-              <div key={pb.label} className="flex items-center justify-between border-b border-white/5 py-2 last:border-0">
+              <div key={pb.label} className="flex items-center justify-between border-b border-border py-2 last:border-0">
                 <div className="flex items-center gap-3">
                   <span>{pb.icon}</span>
-                  <span className="text-sm text-[#a0a0a0]">{pb.label}</span>
+                  <span className="text-sm text-muted-foreground">{pb.label}</span>
                 </div>
-                <span className="text-sm font-bold text-white">{pb.value}</span>
+                <span className="text-sm font-bold text-foreground">{pb.value}</span>
               </div>
             ))}
           </div>

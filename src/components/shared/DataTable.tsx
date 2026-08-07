@@ -8,7 +8,7 @@ interface DataTableProps {
 
 export function DataTable({ children, className }: DataTableProps) {
   return (
-    <div className="overflow-x-auto rounded-2xl border border-white/[.075] bg-gradient-to-br from-white/[.03] to-transparent">
+    <div className="overflow-x-auto rounded-2xl border border-border bg-gradient-to-br from-muted/40 to-transparent">
       <table className={cn('w-full text-sm', className)}>{children}</table>
     </div>
   )
@@ -17,7 +17,7 @@ export function DataTable({ children, className }: DataTableProps) {
 export function DataTableHead({ children }: { children: ReactNode }) {
   return (
     <thead>
-      <tr className="border-b border-white/[.08] bg-white/[.02] text-left text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">
+      <tr className="border-b border-border bg-white/[.02] text-left text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">
         {children}
       </tr>
     </thead>
@@ -30,7 +30,7 @@ export function DataTableBody({ children }: { children: ReactNode }) {
 
 export function DataTableRow({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <tr className={cn('border-b border-white/[.05] transition-colors hover:bg-white/[.02]', className)}>
+    <tr className={cn('border-b border-border transition-colors hover:bg-white/[.02]', className)}>
       {children}
     </tr>
   )

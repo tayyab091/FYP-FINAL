@@ -253,8 +253,8 @@ export default function ChatConversationPage() {
 
   return (
     <div className="flex min-h-[calc(100vh-4.5rem)] flex-col pb-4">
-      <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-white/[.06] bg-[#090c0a]/88 px-4 py-3 backdrop-blur-2xl">
-        <Link href="/chat" aria-label="Back to conversations" className="flex size-9 items-center justify-center rounded-xl border border-white/[.08] text-[#8f9993] hover:text-white">
+      <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-card/88 px-4 py-3 backdrop-blur-2xl">
+        <Link href="/chat" aria-label="Back to conversations" className="flex size-9 items-center justify-center rounded-xl border border-border text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-4" />
         </Link>
         <div className="relative size-10 overflow-hidden rounded-xl border border-primary/15 bg-primary/[.08] flex items-center justify-center">
@@ -290,13 +290,13 @@ export default function ChatConversationPage() {
                 <div className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-sm ${
                   isMine
                     ? 'bg-gradient-to-br from-[#55ffb1] to-primary text-primary-foreground rounded-br-md shadow-[0_10px_28px_rgba(34,245,154,.12)]'
-                    : 'bg-white/[.045] border border-white/[.075] text-white rounded-bl-md'
+                    : 'bg-muted border border-border text-foreground rounded-bl-md'
                 } ${isOptimistic ? 'opacity-70' : ''}`}>
                   {!isMine && (
                     <div className="text-primary text-xs font-medium mb-1">{msg.senderName}</div>
                   )}
                   {msg.type === 'workout_plan' ? (
-                    <div className={`rounded-xl border p-3 ${isMine ? 'border-black/20 bg-black/10' : 'border-primary/20 bg-primary/5'}`}>
+                    <div className={`rounded-xl border p-3 ${isMine ? 'border-black/20 bg-muted/40' : 'border-primary/20 bg-primary/5'}`}>
                       <div className="mb-1 text-xs font-bold uppercase tracking-wide">🏋️ Workout Plan</div>
                       <p className="break-words font-medium">{msg.attachedPlan?.title || msg.content}</p>
                       {msg.attachedPlan && (
@@ -313,7 +313,7 @@ export default function ChatConversationPage() {
                         }
                         className={`mt-3 inline-flex rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
                           isMine
-                            ? 'bg-black/20 text-black hover:bg-black/30'
+                            ? 'bg-muted/50 text-black hover:bg-muted/70'
                             : 'bg-primary/20 text-primary hover:bg-primary/30'
                         }`}
                       >
@@ -332,7 +332,7 @@ export default function ChatConversationPage() {
                               router.push('/my-fitness')
                             }
                           }}
-                          className="mt-2 block w-full rounded-lg bg-[#00ff87] px-3 py-2 text-center text-xs font-bold text-black hover:bg-[#00cc6a]"
+                          className="mt-2 block w-full rounded-lg bg-primary px-3 py-2 text-center text-xs font-bold text-primary-foreground hover:bg-primary/90"
                         >
                           View & Activate Plan →
                         </button>
@@ -364,7 +364,7 @@ export default function ChatConversationPage() {
       </div>
 
       <form onSubmit={sendMessage}
-        className="sticky bottom-0 mx-auto flex w-full max-w-2xl gap-2 border-t border-white/[.06] bg-[#090c0a]/90 px-4 py-3 backdrop-blur-2xl">
+        className="sticky bottom-0 mx-auto flex w-full max-w-2xl gap-2 border-t border-border bg-card/90 px-4 py-3 backdrop-blur-2xl">
         <input
           ref={fileInputRef}
           type="file"

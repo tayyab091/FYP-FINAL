@@ -96,10 +96,10 @@ export default function DashboardPage() {
       <div className="mx-auto max-w-6xl space-y-6">
         <div>
           <p className="section-eyebrow">Your Home</p>
-          <h1 className="text-3xl font-black text-white md:text-4xl">
+          <h1 className="text-3xl font-black text-foreground md:text-4xl">
             {greeting}, {firstName}! 💪
           </h1>
-          <p className="mt-1 text-[#a0a0a0]">Here&apos;s your fitness snapshot for today</p>
+          <p className="mt-1 text-muted-foreground">Here&apos;s your fitness snapshot for today</p>
         </div>
 
         <GamificationBar data={gamification} />
@@ -112,7 +112,7 @@ export default function DashboardPage() {
             { label: 'Level', value: gamification?.level || 1, color: '#00d4ff' },
           ].map((stat) => (
             <div key={stat.label} className="tile">
-              <p className="text-xs uppercase tracking-wider text-[#a0a0a0]">{stat.label}</p>
+              <p className="text-xs uppercase tracking-wider text-muted-foreground">{stat.label}</p>
               <p className="mt-2 text-2xl font-black truncate" style={{ color: stat.color }}>
                 {loading ? '—' : stat.value}
               </p>
@@ -123,30 +123,30 @@ export default function DashboardPage() {
         <div className="grid gap-6 md:grid-cols-2">
           <div className="tile min-h-[240px]">
             <p className="section-eyebrow">Training</p>
-            <h2 className="mb-4 text-xl font-bold text-white">Today&apos;s Workout</h2>
+            <h2 className="mb-4 text-xl font-bold text-foreground">Today&apos;s Workout</h2>
             {loading ? (
-              <p className="text-sm text-[#a0a0a0]">Loading...</p>
+              <p className="text-sm text-muted-foreground">Loading...</p>
             ) : !plan ? (
               <div className="flex flex-1 flex-col items-start justify-center gap-3">
-                <p className="text-sm text-[#a0a0a0]">No workout plan yet</p>
+                <p className="text-sm text-muted-foreground">No workout plan yet</p>
                 <Link href="/coaching" className="btn-accent px-5 py-2 text-sm">
                   Find a Trainer
                 </Link>
               </div>
             ) : todaySchedule?.isRestDay ? (
-              <p className="text-sm text-[#a0a0a0]">Rest day — recover and recharge</p>
+              <p className="text-sm text-muted-foreground">Rest day — recover and recharge</p>
             ) : (
               <ul className="space-y-2">
                 {(todaySchedule?.exercises || []).slice(0, 6).map((ex, i) => (
                   <li key={i} className="flex justify-between text-sm">
-                    <span className="text-white">{ex.name}</span>
-                    <span className="text-[#a0a0a0]">
+                    <span className="text-foreground">{ex.name}</span>
+                    <span className="text-muted-foreground">
                       {ex.sets}×{ex.reps}
                     </span>
                   </li>
                 ))}
                 {!todaySchedule?.exercises?.length && (
-                  <p className="text-sm text-[#a0a0a0]">No session scheduled for {today}</p>
+                  <p className="text-sm text-muted-foreground">No session scheduled for {today}</p>
                 )}
                 <Link href="/my-fitness?tab=workout" className="mt-3 inline-block text-sm font-medium text-primary hover:underline">
                   Open full plan →
@@ -157,7 +157,7 @@ export default function DashboardPage() {
 
           <div className="tile min-h-[240px]">
             <p className="section-eyebrow">Fuel</p>
-            <h2 className="mb-4 text-xl font-bold text-white">Today&apos;s Nutrition</h2>
+            <h2 className="mb-4 text-xl font-bold text-foreground">Today&apos;s Nutrition</h2>
             <div className="grid grid-cols-2 gap-3">
               {[
                 { label: 'Calories', value: `${calories.calories}` },
@@ -165,9 +165,9 @@ export default function DashboardPage() {
                 { label: 'Carbs', value: `${Math.round(calories.carbs)}g` },
                 { label: 'Fat', value: `${Math.round(calories.fat)}g` },
               ].map((m) => (
-                <div key={m.label} className="rounded-xl border border-white/5 bg-white/[.02] p-3">
+                <div key={m.label} className="rounded-xl border border-border bg-white/[.02] p-3">
                   <p className="text-lg font-bold text-primary">{m.value}</p>
-                  <p className="text-xs text-[#a0a0a0]">{m.label}</p>
+                  <p className="text-xs text-muted-foreground">{m.label}</p>
                 </div>
               ))}
             </div>
@@ -179,16 +179,16 @@ export default function DashboardPage() {
 
         <div className="tile">
           <p className="section-eyebrow">History</p>
-          <h2 className="mb-4 text-xl font-bold text-white">Recent Activity</h2>
+          <h2 className="mb-4 text-xl font-bold text-foreground">Recent Activity</h2>
           {recentLogs.length === 0 ? (
-            <p className="text-sm text-[#a0a0a0]">No workouts logged yet. Complete a session in My Fitness.</p>
+            <p className="text-sm text-muted-foreground">No workouts logged yet. Complete a session in My Fitness.</p>
           ) : (
             <ul className="space-y-3">
               {recentLogs.map((log) => (
-                <li key={log._id} className="flex items-center justify-between border-b border-white/5 pb-3 last:border-0">
+                <li key={log._id} className="flex items-center justify-between border-b border-border pb-3 last:border-0">
                   <div>
-                    <p className="font-medium text-white">{log.plan?.title || 'Workout Session'}</p>
-                    <p className="text-xs text-[#a0a0a0]">
+                    <p className="font-medium text-foreground">{log.plan?.title || 'Workout Session'}</p>
+                    <p className="text-xs text-muted-foreground">
                       {log.exercises?.map((e) => e.name).slice(0, 3).join(', ') || 'Exercises logged'}
                     </p>
                   </div>
@@ -205,7 +205,7 @@ export default function DashboardPage() {
             return (
               <Link key={a.href} href={a.href} className="tile interactive-lift min-h-0 items-center py-5 text-center">
                 <Icon className="mb-2 size-5 text-primary" />
-                <span className="text-sm font-medium text-white">{a.label}</span>
+                <span className="text-sm font-medium text-foreground">{a.label}</span>
               </Link>
             )
           })}
@@ -215,7 +215,7 @@ export default function DashboardPage() {
           <Link href="/my-fitness" className="btn-accent inline-flex items-center gap-2 px-5 py-2.5 text-sm">
             <LayoutDashboard className="size-4" /> My Fitness
           </Link>
-          <Link href="/analytics" className="inline-flex items-center gap-2 rounded-full border border-white/10 px-5 py-2.5 text-sm text-white hover:border-primary/40">
+          <Link href="/analytics" className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm text-foreground hover:border-primary/40">
             <BarChart3 className="size-4 text-primary" /> Analytics
           </Link>
         </div>
