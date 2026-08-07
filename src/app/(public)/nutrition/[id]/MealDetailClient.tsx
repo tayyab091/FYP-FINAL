@@ -68,7 +68,7 @@ export default function MealDetailClient() {
                 </div>
               }
               badge={
-                <span className="absolute left-4 top-4 rounded-full border border-primary/20 bg-black/60 px-3 py-1 text-xs font-bold text-primary backdrop-blur">
+                <span className="absolute left-4 top-4 rounded-full border border-border bg-background/85 px-3 py-1 text-xs font-bold text-foreground backdrop-blur">
                   {meal.category}
                 </span>
               }

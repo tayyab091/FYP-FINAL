@@ -67,19 +67,19 @@ const BODY_PART_MUSCLES: Record<string, string[]> = {
 }
 
 const DIFFICULTY_COLORS: Record<string, string> = {
-  Beginner: 'bg-green-500/20 text-green-400 border-green-500/30',
-  Intermediate: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-  Advanced: 'bg-red-500/20 text-red-400 border-red-500/30',
+  Beginner: 'bg-green-500/15 text-green-700 border-green-600/30 dark:bg-green-500/20 dark:text-green-400 dark:border-green-500/30',
+  Intermediate: 'bg-yellow-500/15 text-yellow-700 border-yellow-600/30 dark:bg-yellow-500/20 dark:text-yellow-400 dark:border-yellow-500/30',
+  Advanced: 'bg-red-500/15 text-red-700 border-red-600/30 dark:bg-red-500/20 dark:text-red-400 dark:border-red-500/30',
 }
 
 const MUSCLE_COLORS: Record<string, string> = {
-  Chest: 'bg-blue-500/20 text-blue-400',
-  Back: 'bg-purple-500/20 text-purple-400',
-  Legs: 'bg-orange-500/20 text-orange-400',
-  Shoulders: 'bg-cyan-500/20 text-cyan-400',
-  Arms: 'bg-pink-500/20 text-pink-400',
-  Core: 'bg-primary/20 text-primary',
-  Cardio: 'bg-red-500/20 text-red-400',
+  Chest: 'bg-blue-500/15 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400',
+  Back: 'bg-purple-500/15 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400',
+  Legs: 'bg-orange-500/15 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400',
+  Shoulders: 'bg-cyan-500/15 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-400',
+  Arms: 'bg-pink-500/15 text-pink-700 dark:bg-pink-500/20 dark:text-pink-400',
+  Core: 'bg-primary/15 text-primary',
+  Cardio: 'bg-red-500/15 text-red-700 dark:bg-red-500/20 dark:text-red-400',
 }
 
 function titleCase(value: string) {

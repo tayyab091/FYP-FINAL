@@ -46,7 +46,7 @@ export function DishMoreInfoPanel({ dish }: DishMoreInfoPanelProps) {
         <div className="min-w-0 flex-1">
           <p className="truncate text-[11px] font-semibold text-foreground">{dish.name}</p>
           <div className="mt-1 flex flex-wrap gap-1">
-            <span className="workout-badge rounded-full border border-primary/25 bg-primary/10 px-1.5 py-px text-primary">
+            <span className="workout-badge rounded-full border border-border bg-muted/60 px-1.5 py-px text-[9px] font-medium text-foreground">
               {dish.category}
             </span>
             <span className="inline-flex items-center gap-0.5 rounded-full border border-border bg-muted/60 px-1.5 py-px text-[9px] text-muted-foreground">
@@ -58,7 +58,7 @@ export function DishMoreInfoPanel({ dish }: DishMoreInfoPanelProps) {
       </div>
 
       <div className="flex flex-wrap gap-1.5 text-[9px]">
-        <span className="inline-flex items-center gap-1 rounded-md border border-sky-400/20 bg-sky-400/10 px-1.5 py-0.5 text-sky-300">
+        <span className="inline-flex items-center gap-1 rounded-md border border-sky-600/20 bg-sky-500/10 px-1.5 py-0.5 text-sky-800 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-300">
           <Leaf className="size-2.5" />
           {ingredientCount} ingredients
         </span>
@@ -74,16 +74,16 @@ export function DishMoreInfoPanel({ dish }: DishMoreInfoPanelProps) {
           {previewIngredients.map((ing) => (
             <span
               key={ing.name}
-              className="truncate rounded-md border border-primary/10 bg-primary/[.04] px-1.5 py-0.5 text-[9px] text-muted-foreground"
+              className="truncate rounded-md border border-border bg-muted/30 px-1.5 py-0.5 text-[9px] text-muted-foreground"
               title={`${ing.measure} ${ing.name}`.trim()}
             >
-              <span className="text-primary/80">{ing.measure}</span>{' '}
-              <span className="text-foreground/80">{ing.name}</span>
+              <span className="font-medium text-foreground/80">{ing.measure}</span>{' '}
+              <span>{ing.name}</span>
             </span>
           ))}
         </div>
         {extraIngredients > 0 && (
-          <p className="mt-1 text-[9px] text-primary/80">+ {extraIngredients} more</p>
+          <p className="mt-1 text-[9px] text-muted-foreground">+ {extraIngredients} more</p>
         )}
       </div>
 
