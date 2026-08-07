@@ -2523,11 +2523,20 @@ html.landing-page--looping body {
   margin-inline: calc(var(--landing-space-2) * -1);
   padding-inline: var(--landing-space-2);
   overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted-foreground) 35%, transparent) transparent;
+  cursor: grab;
+  scroll-behavior: smooth;
+}
+.landing-trainers__scroll-wrap:active {
+  cursor: grabbing;
 }
 .landing-trainers__scroll-wrap::-webkit-scrollbar {
-  display: none;
+  height: 6px;
+}
+.landing-trainers__scroll-wrap::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--muted-foreground) 35%, transparent);
 }
 
 .landing-trainers__scroll {
@@ -2671,6 +2680,7 @@ html.landing-page--looping body {
   grid-template-columns: 1fr;
   gap: var(--landing-space-3);
   align-items: stretch;
+  overflow: visible;
 }
 @media (min-width: 768px) {
   .landing-pricing__grid {
@@ -2682,6 +2692,8 @@ html.landing-page--looping body {
 .landing-pricing__cell {
   display: flex;
   height: 100%;
+  overflow: visible;
+  min-width: 0;
 }
 
 .landing-pricing__card {
@@ -2719,6 +2731,7 @@ html.landing-page--looping body {
   position: relative;
   transform: scale(1.03);
   border: 2px solid transparent;
+  color: var(--foreground);
   background:
     radial-gradient(ellipse 90% 55% at 50% 0%, color-mix(in srgb, #fbbf24 14%, transparent), transparent 55%),
     linear-gradient(160deg, color-mix(in srgb, var(--card) 96%, white), var(--card)) padding-box,
@@ -2727,6 +2740,13 @@ html.landing-page--looping body {
     0 0 0 1px color-mix(in srgb, #a78bfa 25%, transparent),
     0 24px 64px color-mix(in srgb, #a78bfa 18%, transparent),
     0 0 48px color-mix(in srgb, #fbbf24 12%, transparent);
+}
+.landing-pricing__card--elite .landing-pricing__name,
+.landing-pricing__card--elite .landing-pricing__price {
+  color: var(--foreground);
+}
+.landing-pricing__card--elite .landing-pricing__feature {
+  color: var(--muted-foreground);
 }
 .landing-pricing__card--elite:hover {
   transform: scale(1.05) translateY(-4px);
@@ -2740,6 +2760,20 @@ html.landing-page--looping body {
     radial-gradient(ellipse 90% 55% at 50% 0%, rgba(251,191,36,.12), transparent 55%),
     linear-gradient(160deg, rgba(255,255,255,.06), rgba(255,255,255,.02)) padding-box,
     linear-gradient(135deg, #fbbf24, #a78bfa, #c084fc, #fbbf24) border-box;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, #a78bfa 30%, transparent),
+    0 24px 64px color-mix(in srgb, #a78bfa 20%, transparent),
+    0 0 48px color-mix(in srgb, #fbbf24 14%, transparent);
+}
+.dark .landing-pricing__card--elite .landing-pricing__name,
+.dark .landing-pricing__card--elite .landing-pricing__price {
+  color: var(--foreground);
+}
+.dark .landing-pricing__card--elite .landing-pricing__feature {
+  color: var(--muted-foreground);
+}
+.dark .landing-pricing__card--elite .landing-pricing__check {
+  color: var(--primary);
 }
 
 .landing-pricing__badge {
