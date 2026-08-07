@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import Link from 'next/link'
 import { Avatar } from '@/components/shared/Avatar'
+import { useHorizontalWheelScroll } from '@/hooks/useHorizontalWheelScroll'
 
 import { motion, useInView, useReducedMotion } from 'framer-motion'
 
@@ -54,8 +55,17 @@ export function LandingTrainers() {
   const reduceMotion = useReducedMotion() ?? false
 
   const sectionRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useHorizontalWheelScroll<HTMLDivElement>()
 
   const shouldLoad = useInView(sectionRef, { once: true, margin: '240px 0px' })
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el || trainers.length === 0) return
+    // #region agent log
+    fetch('http://127.0.0.1:7893/ingest/3b5841b0-46ed-4652-9b9f-279e38a5ba27',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1483ff'},body:JSON.stringify({sessionId:'1483ff',location:'LandingTrainers.tsx:mount',message:'trainer scroll metrics',data:{scrollWidth:el.scrollWidth,clientWidth:el.clientWidth,overflowX:getComputedStyle(el).overflowX,canScroll:el.scrollWidth>el.clientWidth},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
+  }, [trainers.length, scrollRef])
 
 
 
@@ -209,7 +219,7 @@ export function LandingTrainers() {
 
       ) : (
 
-        <div className="landing-trainers__scroll-wrap">
+        <div className="landing-trainers__scroll-wrap" ref={scrollRef}>
 
           <div className="landing-trainers__scroll">
 
