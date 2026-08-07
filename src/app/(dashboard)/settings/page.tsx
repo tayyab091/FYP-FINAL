@@ -121,7 +121,7 @@ export default function SettingsPage() {
     if (deleteConfirm !== 'DELETE') return
     setDeleting(true)
     try {
-      const res = await fetch('/api/user/delete', { method: 'DELETE' })
+      const res = await fetch('/api/user/delete', { method: 'DELETE', credentials: 'include' })
       if (res.ok) {
         toast.success('Account deleted')
         await logout()

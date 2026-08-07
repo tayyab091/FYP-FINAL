@@ -29,24 +29,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
 
-  const refreshUser = useCallback(async () => {
+  const fetchMe = useCallback(async () => {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 8000)
     try {
-      const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 8000)
-      const res = await fetch('/api/auth/me', { signal: controller.signal })
-      clearTimeout(timeout)
-      if (res.ok) {
-        const data = await res.json()
-        setUser(data.user ? { ...data.user, id: data.user.id || data.user._id } : null)
-      } else {
-        setUser(null)
-      }
-    } catch {
-      setUser(null)
+      return await fetch('/api/auth/me', { signal: controller.signal })
     } finally {
-      setIsLoading(false)
+      clearTimeout(timeout)
     }
   }, [])
+
+  const refreshUser = useCallback(async () => {
+    // A 401 is a definitive "not authenticated" answer, so it's applied immediately.
+    // Any other failure (network error, timeout, 5xx) is treated as transient: it's
+    // retried once, and if it still fails the existing session is left untouched
+    // instead of being wiped, so a flaky auth check can't force a valid session
+    // into a false "signed out" state (which previously bounced users off protected
+    // pages onto a "Sign in" screen whose Link the proxy would immediately redirect
+    // straight back to the page they were already authenticated on).
+    let res: Response | null = null
+    try {
+      res = await fetchMe()
+    } catch {
+      res = null
+    }
+
+    if (res?.status === 401) {
+      setUser(null)
+      setIsLoading(false)
+      return
+    }
+
+    if (!res || !res.ok) {
+      try {
+        res = await fetchMe()
+      } catch {
+        res = null
+      }
+    }
+
+    if (res?.status === 401) {
+      setUser(null)
+    } else if (res?.ok) {
+      const data = await res.json()
+      setUser(data.user ? { ...data.user, id: data.user.id || data.user._id } : null)
+    }
+    setIsLoading(false)
+  }, [fetchMe])
 
   useEffect(() => {
     refreshUser()

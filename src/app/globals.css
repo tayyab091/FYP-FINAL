@@ -361,7 +361,26 @@ h1, h2, h3, h4, h5, h6 {
   min-height: 0;
 }
 .dashboard-stat-card {
-  min-height: 8.5rem;
+  min-height: 9.5rem;
+}
+
+/* Reserve scroll space for FloatingChat + AIChatbot FAB stack (see layout.tsx). */
+.dashboard-fab-reserve {
+  padding-bottom: 19rem;
+}
+@media (min-width: 768px) {
+  .dashboard-fab-reserve {
+    padding-bottom: 14rem;
+  }
+}
+/* Member routes that also render the mobile BottomNav (~4rem). */
+.dashboard-fab-reserve-with-nav {
+  padding-bottom: 19rem;
+}
+@media (min-width: 768px) {
+  .dashboard-fab-reserve-with-nav {
+    padding-bottom: 12rem;
+  }
 }
 
 .skeleton {

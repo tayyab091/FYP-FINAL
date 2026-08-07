@@ -8,6 +8,10 @@
     "start": "next start",
     "lint": "eslint",
     "live-verify": "node scripts/live-verify.mjs",
+    "backfill-trainer-slugs": "node scripts/backfill-trainer-slugs.mjs",
+    "test-form-checker-offline": "tsx scripts/test-form-checker-offline.ts",
+    "test-form-checker-analyze": "tsx scripts/test-form-checker-offline.ts --analyze-only",
+    "test-form-checker-frames": "tsx scripts/test-form-checker-offline.ts --frames-only",
     "dev:custom": "tsx server.ts"
   },
   "dependencies": {

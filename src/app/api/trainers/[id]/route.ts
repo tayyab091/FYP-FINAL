@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { connectDB } from '@/lib/mongodb'
-import Trainer from '@/models/Trainer'
+import { findTrainerByIdOrSlug } from '@/lib/resolve-trainer'
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    await connectDB()
-    const trainer = await Trainer.findById(id).lean()
+    const trainer = await findTrainerByIdOrSlug(id)
     if (!trainer) return NextResponse.json({ message: 'Trainer not found' }, { status: 404 })
     return NextResponse.json(trainer)
   } catch {

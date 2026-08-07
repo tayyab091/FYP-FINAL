@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import Trainer from '@/models/Trainer'
-import AuditLog from '@/models/AuditLog'
+import { writeAuditLog } from '@/lib/audit-log'
 import { getUser } from '@/lib/auth'
 import { adminActionSchema, parseJsonBody, parseObjectIdParam } from '@/lib/validation'
 
@@ -19,7 +19,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const parsed = await parseJsonBody(req, adminActionSchema)
     if ('error' in parsed) return parsed.error
-    const { action } = parsed.data
+    const { action, reason } = parsed.data
 
     await connectDB()
     const trainer = await Trainer.findById(idResult.id)
@@ -30,12 +30,13 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     trainer.isFullyVerified = trainer.adminVerificationStatus === 'approved' && gymApproved
     await trainer.save()
 
-    await AuditLog.create({
-      adminId: tokenUser.userId,
+    await writeAuditLog({
+      actorId: tokenUser.userId,
       action: action === 'verify' ? 'TRAINER_VERIFIED' : 'TRAINER_REJECTED',
       targetId: trainer._id,
       targetModel: 'Trainer',
-      details: { trainerName: trainer.name },
+      reason,
+      details: { trainerName: trainer.name, email: trainer.email },
     })
 
     return NextResponse.json({ message: `Trainer ${action === 'verify' ? 'verified' : 'rejected'}`, trainer })

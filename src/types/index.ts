@@ -15,6 +15,7 @@ export interface User {
 
 export interface Trainer {
   _id: string
+  slug?: string
   userId: string
   name: string
   email: string

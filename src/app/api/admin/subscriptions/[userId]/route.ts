@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import User from '@/models/User'
-import AuditLog from '@/models/AuditLog'
+import { writeAuditLog } from '@/lib/audit-log'
 import { getUser } from '@/lib/auth'
 import type { PlanId } from '@/lib/plans'
 import { normalizePlan } from '@/lib/subscription'
@@ -47,6 +47,7 @@ export async function PUT(
     }
 
     const months = parseMonths(body?.months)
+    const reason = typeof body?.reason === 'string' ? body.reason.trim().slice(0, 500) : undefined
 
     await connectDB()
     const target = await User.findById(userId).select('fullName email role subscription')
@@ -96,11 +97,12 @@ export async function PUT(
 
     if (!updated) return NextResponse.json({ message: 'User not found' }, { status: 404 })
 
-    await AuditLog.create({
-      adminId: tokenUser.userId,
+    await writeAuditLog({
+      actorId: tokenUser.userId,
       action: auditAction,
       targetId: updated._id,
       targetModel: 'User',
+      reason,
       details: {
         email: target.email,
         fullName: target.fullName,

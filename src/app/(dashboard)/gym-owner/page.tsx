@@ -40,6 +40,26 @@ function isGymTab(value: string | null): value is GymTab {
   return GYM_TABS.includes(value as GymTab)
 }
 
+interface GymAnalytics {
+  totals: {
+    trainers: number
+    verifiedTrainers: number
+    activeClients: number
+    liveSessions: number
+    featuredTrainers: number
+  }
+  trainers: {
+    trainerId: string
+    name: string
+    email: string
+    activeClients: number
+    totalClients: number
+    sessionCount: number
+    rating?: number
+    verification: { gym: string; admin: string; isFullyVerified?: boolean }
+  }[]
+}
+
 export default function GymOwnerPage() {
   const { user, isLoading: authLoading } = useAuth()
   const router = useRouter()
@@ -51,6 +71,7 @@ export default function GymOwnerPage() {
   const [trainerEmail, setTrainerEmail] = useState('')
   const [adding, setAdding] = useState(false)
   const [savingGym, setSavingGym] = useState(false)
+  const [analytics, setAnalytics] = useState<GymAnalytics | null>(null)
   const [gym, setGym] = useState<GymDetails>({
     name: '',
     address: '',
@@ -96,10 +117,17 @@ export default function GymOwnerPage() {
       })
   }
 
+  const loadAnalytics = () => {
+    fetch('/api/gym-owner/analytics')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => setAnalytics(data))
+  }
+
   useEffect(() => {
     if (user?.role === 'gym_owner') {
       loadTrainers()
       loadGym()
+      loadAnalytics()
     }
   }, [user])
 
@@ -109,9 +137,10 @@ export default function GymOwnerPage() {
     ? (trainers.reduce((s, t) => s + (t.rating || 0), 0) / trainers.length).toFixed(1)
     : '—'
 
-  const chartData = trainers.map(t => ({
-    name: t.name.split(' ')[0],
-    clients: t.totalClients || 0,
+  const chartData = (analytics?.trainers ?? trainers).map((t) => ({
+    name: ('name' in t ? t.name : '').split(' ')[0],
+    clients: 'activeClients' in t ? t.activeClients : (t.totalClients || 0),
+    sessions: 'sessionCount' in t ? t.sessionCount : 0,
     rating: t.rating || 0,
   }))
 
@@ -130,6 +159,7 @@ export default function GymOwnerPage() {
       toast.success('Trainer added to gym!')
       setTrainerEmail('')
       loadTrainers()
+      loadAnalytics()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to add trainer')
     } finally {
@@ -168,6 +198,7 @@ export default function GymOwnerPage() {
       if (!res.ok) throw new Error(data.message)
       toast.success(data.message)
       loadTrainers()
+      loadAnalytics()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Trainer action failed')
     }
@@ -183,7 +214,7 @@ export default function GymOwnerPage() {
   )
 
   return (
-    <div className="min-h-screen pt-6 pb-12 px-4 sm:px-6">
+    <div className="dashboard-fab-reserve min-h-screen px-4 pt-6 sm:px-6">
       <div className="max-w-7xl mx-auto">
         <div className="page-hero mb-6 flex flex-wrap items-start justify-between gap-4 px-6 py-8 sm:px-8">
           <div>
@@ -357,9 +388,24 @@ export default function GymOwnerPage() {
             ) : (
               <div className="space-y-8">
                 <StaggerChildren className="dashboard-grid cols-3">
-                  <StatCard label="Total Clients" value={trainers.reduce((s, t) => s + (t.totalClients || 0), 0)} icon={Users} variant="primary" />
-                  <StatCard label="Active Trainers" value={trainers.filter(t => t.isActive).length} icon={Building2} variant="sky" />
-                  <StatCard label="Featured Trainers" value={trainers.filter(t => t.isFeatured).length} icon={Star} variant="amber" />
+                  <StatCard
+                    label="Active Clients"
+                    value={analytics?.totals.activeClients ?? trainers.reduce((s, t) => s + (t.totalClients || 0), 0)}
+                    icon={Users}
+                    variant="primary"
+                  />
+                  <StatCard
+                    label="Live Sessions"
+                    value={analytics?.totals.liveSessions ?? 0}
+                    icon={Building2}
+                    variant="sky"
+                  />
+                  <StatCard
+                    label="Verified Trainers"
+                    value={analytics?.totals.verifiedTrainers ?? verifiedCount}
+                    icon={Star}
+                    variant="amber"
+                  />
                 </StaggerChildren>
                 <Card>
                   <CardHeader><CardTitle>Trainer Performance</CardTitle></CardHeader>
@@ -371,7 +417,7 @@ export default function GymOwnerPage() {
                         <YAxis stroke={chartTheme.axis} fontSize={12} />
                         <Tooltip contentStyle={{ background: chartTheme.tooltip.background, border: `1px solid ${chartTheme.tooltip.border}`, borderRadius: chartTheme.tooltip.borderRadius }} />
                         <Bar dataKey="clients" fill={chartTheme.primary} radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="rating" fill={chartTheme.secondary} radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="sessions" fill={chartTheme.secondary} radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </CardContent>
