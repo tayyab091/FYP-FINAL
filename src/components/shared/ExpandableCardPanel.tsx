@@ -1,7 +1,7 @@
 'use client'
 
 import { motion, useReducedMotion } from 'framer-motion'
-import { useEffect, useRef, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { easeTransition } from '@/lib/motion'
 
@@ -60,16 +60,6 @@ export function ExpandableCardPanel({
 }: ExpandableCardPanelProps) {
   const reduceMotion = useReducedMotion()
   const styles = VARIANT_STYLES[variant]
-  const innerRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const el = innerRef.current
-    if (!el) return
-    const styles = getComputedStyle(el)
-    // #region agent log
-    fetch('http://127.0.0.1:7893/ingest/3b5841b0-46ed-4652-9b9f-279e38a5ba27',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1483ff'},body:JSON.stringify({sessionId:'1483ff',location:'ExpandableCardPanel.tsx:mount',message:'panel theme styles',data:{variant,backgroundColor:styles.backgroundColor,color:styles.color,themeClass:document.documentElement.className},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
-  }, [variant])
 
   return (
     <motion.div
@@ -86,10 +76,7 @@ export function ExpandableCardPanel({
           styles.glow,
         )}
       >
-        <div
-          ref={innerRef}
-          className="rounded-[11px] border border-border bg-card/95 backdrop-blur-md dark:bg-black/45"
-        >
+        <div className="rounded-[11px] border border-border bg-card/95 backdrop-blur-md dark:bg-black/45">
           <div className="h-36 overflow-y-auto overscroll-contain p-3 pr-2 [scrollbar-width:thin] [scrollbar-color:color-mix(in_srgb,var(--muted-foreground)_35%,transparent)_transparent]">
             {loading ? (
               <PanelSkeleton variant={variant} />
