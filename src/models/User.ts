@@ -12,6 +12,8 @@ const UserSchema = new Schema({
   },
   country: { type: String, default: 'Pakistan' },
   profileImage: { type: String, default: '' },
+  avatarUrl: { type: String, default: '' },
+  avatarPublicId: { type: String, default: '' },
   bio: { type: String, default: '' },
   subscription: {
     plan: { type: String, enum: ['basic', 'pro', 'elite'], default: 'basic' },
