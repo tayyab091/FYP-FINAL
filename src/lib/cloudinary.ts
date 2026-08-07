@@ -61,9 +61,7 @@ export async function uploadChatImage(file: File): Promise<{ url: string; public
     throw new Error('Image must be 4MB or smaller')
   }
   if (!isCloudinaryConfigured()) {
-    throw new Error(
-      'Cloudinary storage is not configured (CLOUDINARY_URL or CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET)',
-    )
+    throw new Error('Cloudinary storage is not configured (set CLOUDINARY_URL in .env.local)')
   }
 
   configureCloudinary()
@@ -115,9 +113,7 @@ export async function uploadAvatarImage(
     throw new Error('Image must be 5MB or smaller')
   }
   if (!isCloudinaryConfigured()) {
-    throw new Error(
-      'Cloudinary storage is not configured (CLOUDINARY_URL or CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET)',
-    )
+    throw new Error('Cloudinary storage is not configured (set CLOUDINARY_URL in .env.local)')
   }
 
   configureCloudinary()

@@ -163,8 +163,8 @@ function ConnectButton({
         status === 'sent' ? 'bg-primary/20 text-primary border border-primary/30 cursor-default' :
         status === 'pending' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 cursor-default' :
         status === 'connected' ? 'bg-muted text-muted-foreground border border-border cursor-default' :
-        status === 'loading' ? 'bg-primary text-black opacity-70 cursor-wait' :
-        'bg-primary text-black hover:brightness-95 hover:-translate-y-0.5 active:translate-y-0'
+        status === 'loading' ? 'bg-primary text-primary-foreground opacity-70 cursor-wait' :
+        'bg-primary text-primary-foreground hover:brightness-95 hover:-translate-y-0.5 active:translate-y-0'
       } ${className}`}
     >
       {label}
@@ -341,7 +341,7 @@ export default function TrainerDetailPage() {
     return (
       <div className="min-h-screen pt-8 pb-24 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-xl font-bold text-white mb-4">Trainer not found</h1>
+          <h1 className="text-xl font-bold text-foreground mb-4">Trainer not found</h1>
           <Link href="/coaching" className="text-primary hover:underline">← Back to coaching</Link>
         </div>
       </div>
@@ -388,7 +388,7 @@ export default function TrainerDetailPage() {
                     )}
                     <div className="pb-2 min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h1 className="display-title text-3xl text-white">{trainer.name}</h1>
+                        <h1 className="display-title text-3xl text-foreground">{trainer.name}</h1>
                         {trainer.isFullyVerified && (
                           <Badge className="bg-primary/20 text-primary border-primary/30">Verified</Badge>
                         )}
@@ -400,7 +400,7 @@ export default function TrainerDetailPage() {
                       <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
                         <span className="flex items-center gap-1.5 text-yellow-400">
                           <span aria-hidden>{'★'.repeat(Math.min(5, Math.max(0, starFill)))}{'☆'.repeat(Math.max(0, 5 - starFill))}</span>
-                          <span className="text-white font-semibold">{ratingDisplay}</span>
+                          <span className="text-foreground font-semibold">{ratingDisplay}</span>
                         </span>
                         <span className="text-muted-foreground flex items-center gap-1">
                           <Users className="size-3.5" />
@@ -413,11 +413,11 @@ export default function TrainerDetailPage() {
 
                 <div className="p-6 sm:p-8 space-y-6">
                   <div>
-                    <h2 className="font-bold text-white mb-2">About</h2>
+                    <h2 className="font-bold text-foreground mb-2">About</h2>
                     <p className="text-muted-foreground leading-relaxed">
                       {trainer.bio || 'Passionate coach focused on sustainable progress, smart programming, and building confidence in every session.'}
                     </p>
-                    <p className="mt-3 text-sm text-white/80 flex items-center gap-2">
+                    <p className="mt-3 text-sm text-foreground/80 flex items-center gap-2">
                       <Clock className="size-3.5 text-primary" />
                       <span>
                         <span className="text-muted-foreground">Experience: </span>
@@ -428,7 +428,7 @@ export default function TrainerDetailPage() {
 
                   {availabilitySlots.some((s) => s.isAvailable) && (
                     <div>
-                      <h2 className="font-bold text-white mb-3 flex items-center gap-2">
+                      <h2 className="font-bold text-foreground mb-3 flex items-center gap-2">
                         <Clock className="size-4 text-primary" /> Availability
                       </h2>
                       <ul className="grid gap-2 sm:grid-cols-2">
@@ -439,7 +439,7 @@ export default function TrainerDetailPage() {
                               key={s.dayOfWeek}
                               className="rounded-xl border border-border px-3 py-2 text-sm text-muted-foreground"
                             >
-                              <span className="text-white font-medium">{DAY_NAMES[s.dayOfWeek]}</span>
+                              <span className="text-foreground font-medium">{DAY_NAMES[s.dayOfWeek]}</span>
                               {' · '}
                               {s.startTime} – {s.endTime}
                             </li>
@@ -450,7 +450,7 @@ export default function TrainerDetailPage() {
 
                   {trainer.certifications && trainer.certifications.length > 0 && (
                     <div>
-                      <h2 className="font-bold text-white mb-3 flex items-center gap-2">
+                      <h2 className="font-bold text-foreground mb-3 flex items-center gap-2">
                         <Award className="size-4 text-primary" /> Certifications
                       </h2>
                       <ul className="grid gap-2 sm:grid-cols-2">
@@ -463,7 +463,7 @@ export default function TrainerDetailPage() {
 
                   {trainer.languages && trainer.languages.length > 0 && (
                     <div>
-                      <h2 className="font-bold text-white mb-2 flex items-center gap-2">
+                      <h2 className="font-bold text-foreground mb-2 flex items-center gap-2">
                         <Languages className="size-4 text-primary" /> Languages
                       </h2>
                       <div className="flex flex-wrap gap-2">
@@ -480,7 +480,7 @@ export default function TrainerDetailPage() {
             {specialties.length > 0 && (
               <FadeIn delay={0.05}>
                 <div className="elite-panel rounded-2xl p-6 sm:p-8">
-                  <h2 className="font-bold text-white mb-4">Specialties</h2>
+                  <h2 className="font-bold text-foreground mb-4">Specialties</h2>
                   <StaggerChildren className="grid gap-3 sm:grid-cols-2">
                     {specialties.map(s => {
                       const Icon = specialtyIcon(s)
@@ -492,7 +492,7 @@ export default function TrainerDetailPage() {
                           <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
                             <Icon className="size-5" />
                           </div>
-                          <p className="text-sm font-semibold text-white">{s}</p>
+                          <p className="text-sm font-semibold text-foreground">{s}</p>
                         </div>
                       )
                     })}
@@ -503,25 +503,25 @@ export default function TrainerDetailPage() {
 
             <FadeIn delay={0.08}>
               <div className="elite-panel rounded-2xl p-6 sm:p-8">
-                <h2 className="font-bold text-white mb-4">Stats</h2>
+                <h2 className="font-bold text-foreground mb-4">Stats</h2>
                 <StaggerChildren className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   <div className="rounded-xl border border-border p-4 text-center">
                     <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
                       <Star className="size-3 text-yellow-400" /> Rating
                     </p>
-                    <p className="text-xl font-bold text-white mt-1">{ratingDisplay}</p>
+                    <p className="text-xl font-bold text-foreground mt-1">{ratingDisplay}</p>
                   </div>
                   <div className="rounded-xl border border-border p-4 text-center">
                     <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
                       <Users className="size-3" /> Total Clients
                     </p>
-                    <p className="text-xl font-bold text-white mt-1">{trainer.totalClients ?? 0}</p>
+                    <p className="text-xl font-bold text-foreground mt-1">{trainer.totalClients ?? 0}</p>
                   </div>
                   <div className="rounded-xl border border-border p-4 text-center">
                     <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
                       <Clock className="size-3" /> Years Experience
                     </p>
-                    <p className="text-xl font-bold text-white mt-1">
+                    <p className="text-xl font-bold text-foreground mt-1">
                       {experienceYears ? `${experienceYears}+` : '—'}
                     </p>
                   </div>
@@ -529,7 +529,7 @@ export default function TrainerDetailPage() {
                     <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
                       <MessageCircle className="size-3" /> Response Time
                     </p>
-                    <p className="text-sm font-bold text-white mt-1.5 leading-snug">{responseTime}</p>
+                    <p className="text-sm font-bold text-foreground mt-1.5 leading-snug">{responseTime}</p>
                   </div>
                 </StaggerChildren>
               </div>
@@ -538,7 +538,7 @@ export default function TrainerDetailPage() {
             <FadeIn delay={0.1}>
               <div className="elite-panel rounded-2xl p-6 sm:p-8">
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-                  <h2 className="font-bold text-white flex items-center gap-2">
+                  <h2 className="font-bold text-foreground flex items-center gap-2">
                     <Star className="size-4 text-yellow-400" /> Client reviews
                   </h2>
                   <p className="text-xs text-muted-foreground">
@@ -550,7 +550,7 @@ export default function TrainerDetailPage() {
 
                 {canLeaveReview && (
                   <form onSubmit={handleSubmitReview} className="mb-4 rounded-xl border border-border p-4 space-y-3">
-                    <p className="text-sm font-medium text-white">Leave a Review</p>
+                    <p className="text-sm font-medium text-foreground">Leave a Review</p>
                     <InteractiveStarRating value={reviewRating} onChange={setReviewRating} disabled={submittingReview} />
                     <textarea
                       value={reviewComment}
@@ -560,7 +560,7 @@ export default function TrainerDetailPage() {
                       minLength={20}
                       disabled={submittingReview}
                       placeholder="What was coaching like? Share at least 20 characters about results, communication, or programming..."
-                      className="w-full bg-background border border-border rounded-xl px-4 py-3 text-white text-sm placeholder:text-muted-foreground outline-none focus:border-primary transition-colors resize-none disabled:opacity-60"
+                      className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground text-sm placeholder:text-muted-foreground outline-none focus:border-primary transition-colors resize-none disabled:opacity-60"
                     />
                     <div className="flex items-center justify-between gap-3">
                       <p className={`text-xs ${reviewComment.trim().length < 20 ? 'text-muted-foreground' : 'text-primary'}`}>
@@ -569,7 +569,7 @@ export default function TrainerDetailPage() {
                       <Button
                         type="submit"
                         disabled={submittingReview || reviewComment.trim().length < 20}
-                        className="bg-primary text-black hover:brightness-95 font-semibold"
+                        className="bg-primary text-primary-foreground hover:brightness-95 font-semibold"
                       >
                         {submittingReview ? 'Submitting...' : 'Submit review'}
                       </Button>
@@ -604,7 +604,7 @@ export default function TrainerDetailPage() {
                     reviews.map(review => (
                       <div key={review._id} className="rounded-xl border border-border p-4">
                         <div className="flex items-center justify-between gap-2">
-                          <p className="font-medium text-white text-sm">{review.authorName}</p>
+                          <p className="font-medium text-foreground text-sm">{review.authorName}</p>
                           <div className="flex items-center gap-2">
                             <StarRating rating={review.rating} />
                             <span className="text-[10px] text-muted-foreground">{formatReviewDate(review.createdAt)}</span>
@@ -624,10 +624,10 @@ export default function TrainerDetailPage() {
             <FadeIn delay={0.1}>
               <div className="sticky top-24 elite-panel rounded-2xl p-6 space-y-4">
                 <div>
-                  <p className="font-bold text-white text-lg leading-tight">{trainer.name}</p>
+                  <p className="font-bold text-foreground text-lg leading-tight">{trainer.name}</p>
                   <div className="mt-2 flex items-center gap-2">
                     <span className="text-yellow-400 text-sm">{'★'.repeat(Math.min(5, Math.max(0, starFill)))}</span>
-                    <span className="text-white text-sm font-semibold">{ratingDisplay}</span>
+                    <span className="text-foreground text-sm font-semibold">{ratingDisplay}</span>
                   </div>
                 </div>
                 <div>
@@ -652,10 +652,10 @@ export default function TrainerDetailPage() {
       </div>
 
       {/* Mobile fixed bottom bar */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/[.09] bg-[#0b0e0c]/95 backdrop-blur-xl px-4 py-3 lg:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur-xl px-4 py-3 lg:hidden">
         <div className="mx-auto flex max-w-5xl items-center gap-3">
           <div className="min-w-0 flex-1">
-            <p className="truncate font-semibold text-white text-sm">{trainer.name}</p>
+            <p className="truncate font-semibold text-foreground text-sm">{trainer.name}</p>
             <div className="flex items-center gap-2 text-xs">
               <span className="text-yellow-400">★ {ratingDisplay}</span>
               <span className="text-primary font-bold">

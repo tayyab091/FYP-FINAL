@@ -13,7 +13,7 @@ const variantStyles: Record<BadgeVariant, string> = {
   sets: 'border-sky-400/30 bg-sky-400/10 text-sky-300',
   reps: 'border-primary/30 bg-primary/10 text-primary',
   pr: 'border-yellow-400/30 bg-yellow-400/10 text-yellow-300',
-  rest: 'border-white/15 bg-white/[.04] text-muted-foreground',
+  rest: 'border-border bg-muted/60 text-muted-foreground',
   default: 'border-primary/25 bg-primary/[.08] text-primary',
 }
 

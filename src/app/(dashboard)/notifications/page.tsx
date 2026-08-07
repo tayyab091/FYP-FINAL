@@ -160,7 +160,7 @@ export default function NotificationsPage() {
         ) : notifications.length === 0 ? (
           <div className="elite-panel rounded-2xl py-16 text-center">
             <Bell className="mx-auto mb-4 h-10 w-10 text-muted-foreground" />
-            <p className="text-lg font-semibold text-white">You&apos;re all caught up!</p>
+            <p className="text-lg font-semibold text-foreground">You&apos;re all caught up!</p>
             <p className="mt-2 text-sm text-muted-foreground">
               Connection requests, messages, and plan updates will show up here.
             </p>
@@ -195,7 +195,7 @@ export default function NotificationsPage() {
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="flex items-center gap-2">
-                            <span className="font-semibold text-white">{notification.title}</span>
+                            <span className="font-semibold text-foreground">{notification.title}</span>
                             {!notification.isRead && (
                               <span className="h-2 w-2 flex-shrink-0 rounded-full bg-primary" />
                             )}
@@ -203,7 +203,7 @@ export default function NotificationsPage() {
                           <span className="mt-1 block text-sm text-muted-foreground">
                             {notification.message}
                           </span>
-                          <span className="mt-2 block text-xs text-[#666]">
+                          <span className="mt-2 block text-xs text-muted-foreground">
                             {formatTime(notification.createdAt)}
                           </span>
                         </span>

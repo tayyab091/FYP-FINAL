@@ -25,7 +25,7 @@ export function EmptyState({
         {icon ?? <Dumbbell className="size-7" strokeWidth={2.2} />}
       </div>
       <p className="workout-label mb-2 text-primary/70">{tagline}</p>
-      <h3 className="font-heading text-lg font-bold text-white">{title}</h3>
+      <h3 className="font-heading text-lg font-bold text-foreground">{title}</h3>
       {description && <p className="mt-2 max-w-sm text-sm text-muted-foreground">{description}</p>}
       {action && <div className="mt-6">{action}</div>}
     </div>

@@ -80,11 +80,11 @@ export default function SignupPage() {
         className="w-full max-w-md"
       >
         <div className="mb-8 text-center">
-          <Link href="/" className="font-heading text-2xl font-black tracking-[-.045em] text-white lg:hidden">T.E.S.T.</Link>
+          <Link href="/" className="font-heading text-2xl font-black tracking-[-.045em] text-foreground lg:hidden">T.E.S.T.</Link>
           <div className="mx-auto mt-4 mb-3 flex size-12 items-center justify-center rounded-2xl border border-primary/20 bg-primary/[.08] text-primary">
             <Zap className="size-6" />
           </div>
-          <h1 className="mb-1 text-2xl font-bold text-white">Create your account</h1>
+          <h1 className="mb-1 text-2xl font-bold text-foreground">Create your account</h1>
           <p className="text-sm text-muted-foreground">Start your fitness journey today</p>
           <p className="workout-label mt-2 text-primary/60">Day one · Let&apos;s go</p>
         </div>
@@ -175,16 +175,16 @@ export default function SignupPage() {
 
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-white/10" />
+              <div className="w-full border-t border-border" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-[#0c0f0d] px-3 text-muted-foreground">or</span>
+              <span className="bg-background px-3 text-muted-foreground">or</span>
             </div>
           </div>
 
           <a
             href="/api/auth/oauth/google"
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[.03] py-3 text-sm font-semibold text-white transition-colors hover:border-primary/30 hover:bg-primary/[.06]"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-muted/40 py-3 text-sm font-semibold text-foreground transition-colors hover:border-primary/30 hover:bg-primary/[.06]"
           >
             <svg className="size-4" viewBox="0 0 24 24" aria-hidden>
               <path fill="#EA4335" d="M12 10.2v3.6h5.1c-.2 1.2-.9 2.2-1.9 2.9l3.1 2.4c1.8-1.7 2.8-4.1 2.8-7 0-.7-.1-1.3-.2-1.9H12z" />

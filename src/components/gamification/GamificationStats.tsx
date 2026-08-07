@@ -91,10 +91,10 @@ export function GamificationStats({ data, loading, compact }: GamificationStatsP
             className={`rounded-2xl border p-4 ${
               achievement.unlocked
                 ? 'border-primary/30 bg-primary/[.06]'
-                : 'border-white/[.06] bg-white/[.02] opacity-60'
+                : 'border-border bg-white/[.02] opacity-60'
             }`}
           >
-            <p className="font-bold text-sm text-white">{achievement.label}</p>
+            <p className="font-bold text-sm text-foreground">{achievement.label}</p>
             <p className="text-xs text-muted-foreground mt-1">{achievement.desc}</p>
             {achievement.unlocked && (
               <p className="text-[10px] text-primary mt-2 font-bold uppercase tracking-wide">Unlocked</p>

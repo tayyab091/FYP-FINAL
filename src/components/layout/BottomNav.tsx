@@ -65,7 +65,7 @@ function BottomNavInner() {
   ]
 
   return (
-    <nav className="fixed bottom-3 left-3 right-3 z-50 rounded-2xl border border-white/[.09] bg-[#0b0e0c]/92 shadow-[0_18px_55px_rgba(0,0,0,.45)] backdrop-blur-2xl md:hidden">
+    <nav className="fixed bottom-3 left-3 right-3 z-50 rounded-2xl border border-border bg-card/95 shadow-[0_18px_55px_rgba(0,0,0,.45)] backdrop-blur-2xl md:hidden">
       <div className="flex items-center justify-around p-1.5">
         {links.map((l) => {
           const Icon = l.icon
@@ -74,7 +74,7 @@ function BottomNavInner() {
               key={l.href}
               href={l.href}
               className={`flex min-w-12 flex-col items-center gap-1 rounded-xl px-2 py-2 transition-all ${
-                l.active ? 'bg-primary/[.1] text-primary' : 'text-[#5f6963] hover:text-[#a0aaa4]'
+                l.active ? 'bg-primary/[.1] text-primary' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               <Icon className="size-4.5" strokeWidth={l.active ? 2.5 : 2} />
