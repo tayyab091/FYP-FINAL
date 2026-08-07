@@ -5,6 +5,7 @@ import { getUser } from '@/lib/auth'
 import { parseJsonBody, profileUpdateSchema } from '@/lib/validation'
 import Trainer from '@/models/Trainer'
 import { allocateTrainerSlug } from '@/lib/trainer-slug-server'
+import { resolveAvatarUrl } from '@/lib/avatar'
 
 export async function PUT(req: NextRequest) {
   try {
@@ -43,7 +44,14 @@ export async function PUT(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ user, message: 'Profile updated' })
+    const avatarUrl = resolveAvatarUrl(user) || ''
+    const serialized = user?.toObject()
+    if (serialized) {
+      serialized.avatarUrl = avatarUrl
+      serialized.profileImage = avatarUrl || serialized.profileImage
+    }
+
+    return NextResponse.json({ user: serialized, message: 'Profile updated' })
   } catch {
     return NextResponse.json({ message: 'Server error' }, { status: 500 })
   }

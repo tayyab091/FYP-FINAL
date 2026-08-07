@@ -12,6 +12,8 @@ const UserSchema = new Schema({
   },
   country: { type: String, default: 'Pakistan' },
   profileImage: { type: String, default: '' },
+  avatarUrl: { type: String, default: '' },
+  avatarPublicId: { type: String, default: '' },
   bio: { type: String, default: '' },
   subscription: {
     plan: { type: String, enum: ['basic', 'pro', 'elite'], default: 'basic' },
@@ -43,6 +45,8 @@ const UserSchema = new Schema({
   },
   targetWeight: { type: Number },
   currentWeight: { type: Number },
+  /** Expo push tokens for mobile app notifications */
+  expoPushTokens: { type: [String], default: [] },
 }, { timestamps: true })
 
 export default mongoose.models.User || mongoose.model('User', UserSchema)

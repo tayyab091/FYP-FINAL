@@ -10,6 +10,7 @@ interface AuthUser {
   role: 'user' | 'trainer' | 'gym_owner' | 'admin' | 'super_admin'
   country?: string
   profileImage?: string
+  avatarUrl?: string
   subscription?: { plan: string; status: string }
 }
 

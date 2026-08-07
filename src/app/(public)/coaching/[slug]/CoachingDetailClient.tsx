@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -9,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { PageLoader } from '@/components/shared/PageLoader'
+import { Avatar } from '@/components/shared/Avatar'
 import { FadeIn, StaggerChildren } from '@/components/motion'
 import {
   Activity,
@@ -55,6 +55,7 @@ interface ReviewItem {
   comment: string
   createdAt: string
   authorName: string
+  authorImage?: string
 }
 
 interface ReviewsData {
@@ -389,14 +390,13 @@ export function CoachingDetailClient({ slug }: { slug: string }) {
               <div className="elite-panel rounded-2xl overflow-hidden">
                 <div className="relative h-52 bg-gradient-to-br from-primary/15 via-transparent to-sky-400/10 px-6 pt-8">
                   <div className="flex items-end gap-5">
-                    {trainer.profileImage ? (
-                      <Image src={trainer.profileImage} alt={trainer.name} width={112} height={112}
-                        className="h-28 w-28 rounded-2xl object-cover ring-4 ring-background shadow-xl" />
-                    ) : (
-                      <div className="h-28 w-28 rounded-2xl bg-gradient-to-br from-primary to-sky-400 flex items-center justify-center text-black font-black text-3xl ring-4 ring-background">
-                        {initials}
-                      </div>
-                    )}
+                    <Avatar
+                      name={trainer.name}
+                      avatarUrl={trainer.profileImage}
+                      size="xl"
+                      rounded="2xl"
+                      className="ring-4 ring-background shadow-xl"
+                    />
                     <div className="pb-2 min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h1 className="display-title text-3xl text-white">{trainer.name}</h1>
@@ -614,14 +614,23 @@ export function CoachingDetailClient({ slug }: { slug: string }) {
                   ) : (
                     reviews.map(review => (
                       <div key={review._id} className="rounded-xl border border-border p-4">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="font-medium text-white text-sm">{review.authorName}</p>
-                          <div className="flex items-center gap-2">
-                            <StarRating rating={review.rating} />
-                            <span className="text-[10px] text-muted-foreground">{formatReviewDate(review.createdAt)}</span>
+                        <div className="flex items-start gap-3">
+                          <Avatar
+                            name={review.authorName}
+                            avatarUrl={review.authorImage}
+                            size="sm"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="font-medium text-white text-sm">{review.authorName}</p>
+                              <div className="flex items-center gap-2">
+                                <StarRating rating={review.rating} />
+                                <span className="text-[10px] text-muted-foreground">{formatReviewDate(review.createdAt)}</span>
+                              </div>
+                            </div>
+                            <p className="mt-2 text-sm text-muted-foreground">{review.comment}</p>
                           </div>
                         </div>
-                        <p className="mt-2 text-sm text-muted-foreground">{review.comment}</p>
                       </div>
                     ))
                   )}

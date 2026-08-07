@@ -19,24 +19,25 @@ import { PageLoader } from '@/components/shared/PageLoader'
 import { AvailabilityTab } from './AvailabilityTab'
 import { StatCard } from '@/components/shared/StatCard'
 import { StaggerChildren } from '@/components/motion'
+import { Avatar } from '@/components/shared/Avatar'
 
 interface PendingRequest {
   _id: string
-  userId: { _id: string; fullName: string; email: string; profileImage?: string; country?: string }
+  userId: { _id: string; fullName: string; email: string; profileImage?: string; avatarUrl?: string; country?: string }
   status: string
   createdAt: string
 }
 
 interface Client {
   _id: string
-  userId: { _id: string; fullName: string; email: string; profileImage?: string }
+  userId: { _id: string; fullName: string; email: string; profileImage?: string; avatarUrl?: string }
   status: string
   conversationId?: string
 }
 
 interface Conversation {
   _id: string
-  otherUser: { _id: string; fullName: string; profileImage?: string }
+  otherUser: { _id: string; fullName: string; profileImage?: string; avatarUrl?: string }
   lastMessage?: string
   lastMessageTime?: string
   unreadCount: number
@@ -540,9 +541,11 @@ export default function TrainerDashboardPage() {
                   <Card key={req._id}>
                     <CardContent className="pt-6 flex items-center justify-between flex-wrap gap-4">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-primary font-bold">
-                          {req.userId?.fullName?.[0] || '?'}
-                        </div>
+                        <Avatar
+                          name={req.userId?.fullName}
+                          avatarUrl={req.userId?.avatarUrl || req.userId?.profileImage}
+                          size="md"
+                        />
                         <div>
                           <div className="font-bold">{req.userId?.fullName}</div>
                           <div className="text-muted-foreground text-sm">{req.userId?.email}</div>
@@ -587,10 +590,17 @@ export default function TrainerDashboardPage() {
                 {clients.map(client => (
                   <Card key={client._id}>
                     <CardContent className="pt-6 flex items-center justify-between flex-wrap gap-4">
-                      <div>
-                        <div className="font-bold">{client.userId?.fullName}</div>
-                        <div className="text-muted-foreground text-sm">{client.userId?.email}</div>
-                        <Badge className="mt-2 bg-primary/10 text-primary">{client.status}</Badge>
+                      <div className="flex items-center gap-4">
+                        <Avatar
+                          name={client.userId?.fullName}
+                          avatarUrl={client.userId?.avatarUrl || client.userId?.profileImage}
+                          size="md"
+                        />
+                        <div>
+                          <div className="font-bold">{client.userId?.fullName}</div>
+                          <div className="text-muted-foreground text-sm">{client.userId?.email}</div>
+                          <Badge className="mt-2 bg-primary/10 text-primary">{client.status}</Badge>
+                        </div>
                       </div>
                       <div className="flex gap-2 flex-wrap">
                         <Button onClick={() => viewClientProgress(client)} variant="outline">
@@ -701,9 +711,11 @@ export default function TrainerDashboardPage() {
                 {conversations.map(c => (
                   <Link key={c._id} href={`/chat/${c._id}`}
                     className="flex items-center gap-4 p-4 bg-card/60 border border-border rounded-xl hover:border-primary/30 transition-colors">
-                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-primary font-bold">
-                      {c.otherUser?.fullName?.[0] || '?'}
-                    </div>
+                    <Avatar
+                      name={c.otherUser?.fullName}
+                      avatarUrl={c.otherUser?.avatarUrl || c.otherUser?.profileImage}
+                      size="sm"
+                    />
                     <div className="flex-1 min-w-0">
                       <div className="font-medium">{c.otherUser?.fullName}</div>
                       <div className="text-muted-foreground text-sm truncate">{c.lastMessage || 'No messages yet'}</div>

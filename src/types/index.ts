@@ -5,6 +5,7 @@ export interface User {
   role: 'user' | 'trainer' | 'gym_owner' | 'admin' | 'super_admin'
   country?: string
   profileImage?: string
+  avatarUrl?: string
   subscription: {
     plan: 'basic' | 'pro' | 'elite'
     status: 'active' | 'inactive'
@@ -23,6 +24,7 @@ export interface Trainer {
   rating: number
   bio: string
   profileImage?: string
+  avatarUrl?: string
   gymName?: string
   isFullyVerified: boolean
   isActive: boolean
@@ -77,6 +79,7 @@ export interface Conversation {
     _id: string
     fullName: string
     profileImage?: string
+    avatarUrl?: string
     role: string
   }
   lastMessage?: string

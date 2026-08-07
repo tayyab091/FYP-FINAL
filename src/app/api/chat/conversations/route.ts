@@ -3,12 +3,14 @@ import { connectDB } from '@/lib/mongodb'
 import Conversation from '@/models/Conversation'
 import Relationship from '@/models/Relationship'
 import { getUser } from '@/lib/auth'
+import { USER_AVATAR_POPULATE_SELECT, resolveAvatarUrl } from '@/lib/avatar'
 
 interface PopulatedParticipant {
   _id: { toString(): string }
   fullName: string
   email: string
   profileImage?: string
+  avatarUrl?: string
   role: string
 }
 
@@ -38,7 +40,7 @@ export async function GET(req: NextRequest) {
     const conversations = await Conversation.find({
       participants: tokenUser.userId,
     })
-      .populate('participants', 'fullName email profileImage role')
+      .populate('participants', USER_AVATAR_POPULATE_SELECT)
       .sort({ updatedAt: -1 })
       .lean()
 
@@ -70,7 +72,8 @@ export async function GET(req: NextRequest) {
                 _id: other._id.toString(),
                 fullName: other.fullName,
                 email: other.email,
-                profileImage: other.profileImage,
+                profileImage: resolveAvatarUrl(other) || other.profileImage,
+                avatarUrl: resolveAvatarUrl(other) || '',
                 role: other.role,
               }
             : { _id: '', fullName: 'Unknown', email: '', role: 'user' },
