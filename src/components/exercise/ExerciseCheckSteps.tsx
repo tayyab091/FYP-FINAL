@@ -19,7 +19,7 @@ export function ExerciseCheckSteps() {
             <div className="mx-auto mb-3 flex size-11 items-center justify-center rounded-xl border border-primary/15 bg-primary/[.08] text-primary">
               <Icon className="size-5" strokeWidth={2.2} />
             </div>
-            <h3 className="mb-2 font-bold text-white">{s.title}</h3>
+            <h3 className="mb-2 font-bold text-foreground">{s.title}</h3>
             <p className="text-sm text-muted-foreground">{s.desc}</p>
           </div>
         )

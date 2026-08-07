@@ -3,9 +3,9 @@ import { connectDB } from '@/lib/mongodb'
 import User from '@/models/User'
 import { getUser } from '@/lib/auth'
 import { parseJsonBody, profileUpdateSchema } from '@/lib/validation'
+import { resolveAvatarUrl } from '@/lib/avatar'
 import Trainer from '@/models/Trainer'
 import { allocateTrainerSlug } from '@/lib/trainer-slug-server'
-import { resolveAvatarUrl } from '@/lib/avatar'
 
 export async function PUT(req: NextRequest) {
   try {

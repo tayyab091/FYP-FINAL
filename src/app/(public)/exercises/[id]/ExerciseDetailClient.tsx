@@ -53,7 +53,7 @@ export default function ExerciseDetailClient() {
     return (
       <div className="min-h-screen pt-8 pb-24 flex items-center justify-center px-4">
         <div className="text-center">
-          <h1 className="text-xl font-bold text-white mb-4">Exercise not found</h1>
+          <h1 className="text-xl font-bold text-foreground mb-4">Exercise not found</h1>
           <Link href="/exercises" className="text-primary hover:underline inline-flex items-center gap-1">
             <ArrowLeft className="size-4" /> Back to exercises
           </Link>
@@ -94,7 +94,7 @@ export default function ExerciseDetailClient() {
 
             <div className="p-6 sm:p-8 space-y-6">
               <div>
-                <h1 className="display-title text-3xl md:text-4xl text-white">{exercise.name}</h1>
+                <h1 className="display-title text-3xl md:text-4xl text-foreground">{exercise.name}</h1>
                 <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-primary font-medium">
                     {exercise.muscle}
@@ -137,7 +137,7 @@ export default function ExerciseDetailClient() {
               )}
 
               <div>
-                <h2 className="font-bold text-white mb-3">Instructions</h2>
+                <h2 className="font-bold text-foreground mb-3">Instructions</h2>
                 <p className="text-muted-foreground leading-relaxed">{exercise.instructions}</p>
               </div>
 

@@ -8,8 +8,8 @@ import Trainer from '@/models/Trainer'
 import User from '@/models/User'
 import Relationship from '@/models/Relationship'
 import { parseJsonBody, reviewSchema } from '@/lib/validation'
-import { findTrainerByIdOrSlug, resolveTrainerObjectId } from '@/lib/resolve-trainer'
 import { USER_AVATAR_POPULATE_SELECT, resolveAvatarUrl } from '@/lib/avatar'
+import { findTrainerByIdOrSlug, resolveTrainerObjectId } from '@/lib/resolve-trainer'
 
 async function getReviewStats(trainerId: string) {
   const stats = await Review.aggregate([

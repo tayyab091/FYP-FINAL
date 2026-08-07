@@ -97,8 +97,8 @@ export default function RegisterTrainerPage() {
     <div className="flex min-h-screen items-center justify-center px-4 py-12 sm:px-8">
       <div className="w-full max-w-lg">
         <div className="text-center mb-8">
-          <Link href="/" className="font-heading text-2xl font-black tracking-[-.045em] text-white lg:hidden">T.E.S.T.</Link>
-          <h1 className="text-2xl font-bold text-white mt-4 mb-1">Become a Trainer</h1>
+          <Link href="/" className="font-heading text-2xl font-black tracking-[-.045em] text-foreground lg:hidden">T.E.S.T.</Link>
+          <h1 className="text-2xl font-bold text-foreground mt-4 mb-1">Become a Trainer</h1>
           <p className="text-muted-foreground text-sm">Join Pakistan&apos;s leading fitness coaching platform</p>
         </div>
 
@@ -115,7 +115,7 @@ export default function RegisterTrainerPage() {
               <div key={field}>
                 <label className="block text-sm font-medium text-muted-foreground mb-1.5">{label}</label>
                 <input type={type} value={form[field]} onChange={set(field)} placeholder={placeholder} required
-                  className="w-full bg-background border border-border rounded-xl px-4 py-3 text-white text-sm placeholder:text-muted-foreground outline-none focus:border-primary transition-colors" />
+                  className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground text-sm placeholder:text-muted-foreground outline-none focus:border-primary transition-colors" />
                 {errors[field] && <p className="text-red-400 text-xs mt-1">{errors[field]}</p>}
               </div>
             ))}
@@ -124,7 +124,7 @@ export default function RegisterTrainerPage() {
               <label className="block text-sm font-medium text-muted-foreground mb-1.5">Password</label>
               <div className="relative">
                 <input type={showPassword ? 'text' : 'password'} value={form.password} onChange={set('password')} placeholder="Min. 8 characters" required
-                  className="w-full bg-background border border-border rounded-xl px-4 py-3 pr-12 text-white text-sm placeholder:text-muted-foreground outline-none focus:border-primary transition-colors" />
+                  className="w-full bg-background border border-border rounded-xl px-4 py-3 pr-12 text-foreground text-sm placeholder:text-muted-foreground outline-none focus:border-primary transition-colors" />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-lg">{showPassword ? '🙈' : '👁️'}</button>
               </div>
               {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password}</p>}
@@ -133,14 +133,14 @@ export default function RegisterTrainerPage() {
             <div>
               <label className="block text-sm font-medium text-muted-foreground mb-1.5">Confirm Password</label>
               <input type="password" value={form.confirmPassword} onChange={set('confirmPassword')} placeholder="Repeat password" required
-                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-white text-sm placeholder:text-muted-foreground outline-none focus:border-primary transition-colors" />
+                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground text-sm placeholder:text-muted-foreground outline-none focus:border-primary transition-colors" />
               {errors.confirmPassword && <p className="text-red-400 text-xs mt-1">{errors.confirmPassword}</p>}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-muted-foreground mb-1.5">Country</label>
               <select value={form.country} onChange={set('country')}
-                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary transition-colors">
+                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground text-sm outline-none focus:border-primary transition-colors">
                 {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
@@ -152,8 +152,8 @@ export default function RegisterTrainerPage() {
                   <button key={s} type="button" onClick={() => toggleSpecialty(s)}
                     className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
                       form.specialty.includes(s)
-                        ? 'bg-primary text-black border-primary'
-                        : 'bg-transparent text-muted-foreground border-border hover:border-white/20'
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-transparent text-muted-foreground border-border hover:border-primary/25'
                     }`}>
                     {s}
                   </button>
@@ -165,14 +165,14 @@ export default function RegisterTrainerPage() {
             <div>
               <label className="block text-sm font-medium text-muted-foreground mb-1.5">Bio</label>
               <textarea value={form.bio} onChange={set('bio')} rows={4} placeholder="Tell clients about your training philosophy and experience..."
-                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-white text-sm placeholder:text-muted-foreground outline-none focus:border-primary transition-colors resize-none" />
+                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground text-sm placeholder:text-muted-foreground outline-none focus:border-primary transition-colors resize-none" />
               {errors.bio && <p className="text-red-400 text-xs mt-1">{errors.bio}</p>}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-muted-foreground mb-1.5">Experience</label>
               <select value={form.experience} onChange={set('experience')}
-                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary transition-colors">
+                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground text-sm outline-none focus:border-primary transition-colors">
                 <option value="">Select experience level</option>
                 {EXPERIENCE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
               </select>

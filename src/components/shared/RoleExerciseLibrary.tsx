@@ -122,7 +122,7 @@ export function RoleExerciseLibrary({
         <div className="elite-panel mb-6 space-y-4 p-4">
           <div className="flex items-center gap-2 text-sm">
             <Filter className="size-4 text-primary" />
-            <span className="font-medium text-white">Catalog filters</span>
+            <span className="font-medium text-foreground">Catalog filters</span>
             <span className="ml-auto text-xs text-muted-foreground">
               Showing {total.toLocaleString()} of {catalogTotal.toLocaleString()}
             </span>
@@ -131,13 +131,13 @@ export function RoleExerciseLibrary({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search exercises by name..."
-            className="w-full rounded-xl border border-white/[.09] bg-black/25 px-4 py-3 text-sm text-white outline-none placeholder:text-muted-foreground focus:border-primary/40"
+            className="w-full rounded-xl border border-border bg-muted/60 px-4 py-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary/40"
           />
           <div className="flex flex-wrap gap-3">
             <select
               value={bodyPart}
               onChange={(e) => setBodyPart(e.target.value)}
-              className="min-w-[160px] flex-1 rounded-xl border border-white/[.09] bg-black/25 px-3 py-2.5 text-sm text-white outline-none"
+              className="min-w-[160px] flex-1 rounded-xl border border-border bg-muted/60 px-3 py-2.5 text-sm text-foreground outline-none"
             >
               <option value="All">All body parts</option>
               {(meta?.bodyParts || []).map((bp) => (
@@ -149,7 +149,7 @@ export function RoleExerciseLibrary({
             <select
               value={equipment}
               onChange={(e) => setEquipment(e.target.value)}
-              className="min-w-[160px] flex-1 rounded-xl border border-white/[.09] bg-black/25 px-3 py-2.5 text-sm text-white outline-none"
+              className="min-w-[160px] flex-1 rounded-xl border border-border bg-muted/60 px-3 py-2.5 text-sm text-foreground outline-none"
             >
               <option value="All">All equipment</option>
               {(meta?.equipment || []).map((eq) => (
@@ -195,7 +195,7 @@ export function RoleExerciseLibrary({
                     )}
                   </div>
                   <div className="flex flex-1 flex-col p-4">
-                    <h3 className="font-bold text-white">{exercise.name}</h3>
+                    <h3 className="font-bold text-foreground">{exercise.name}</h3>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       <Badge className="bg-primary/10 text-xs text-primary">{exercise.muscle}</Badge>
                       <Badge variant="outline" className="border-border text-xs">

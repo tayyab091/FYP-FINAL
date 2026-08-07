@@ -505,25 +505,25 @@ export default function MyFitnessInner({
           ) : (
             <>
               <div className="tile min-h-[8.5rem]">
-                <p className="text-xs uppercase tracking-wider text-[#a0a0a0]">Today&apos;s Calories</p>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">Today&apos;s Calories</p>
                 <p className="mt-2 text-3xl font-black text-primary">{meals?.totals.calories || 0}</p>
-                <p className="mt-auto pt-2 text-xs text-[#a0a0a0]">kcal logged today</p>
+                <p className="mt-auto pt-2 text-xs text-muted-foreground">kcal logged today</p>
               </div>
               <div className="tile min-h-[8.5rem]">
-                <p className="text-xs uppercase tracking-wider text-[#a0a0a0]">Active Plan</p>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">Active Plan</p>
                 <p className="mt-2 truncate text-2xl font-black text-primary">{plan?.title || 'None'}</p>
                 {plan ? (
-                  <p className="mt-auto pt-2 text-xs capitalize text-[#a0a0a0]">
+                  <p className="mt-auto pt-2 text-xs capitalize text-muted-foreground">
                     {plan.difficulty} · {plan.durationWeeks}w · {plan.status}
                   </p>
                 ) : (
-                  <p className="mt-auto pt-2 text-xs text-[#a0a0a0]">Assign a plan via coaching</p>
+                  <p className="mt-auto pt-2 text-xs text-muted-foreground">Assign a plan via coaching</p>
                 )}
               </div>
               <div className="tile min-h-[8.5rem]">
-                <p className="text-xs uppercase tracking-wider text-[#a0a0a0]">Streak</p>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">Streak</p>
                 <p className="mt-2 text-3xl font-black text-primary">{workoutHistory?.streak ?? 0}</p>
-                <p className="mt-auto pt-2 text-xs text-[#a0a0a0]">{workoutHistory?.totalCompleted ?? 0} total sessions</p>
+                <p className="mt-auto pt-2 text-xs text-muted-foreground">{workoutHistory?.totalCompleted ?? 0} total sessions</p>
               </div>
             </>
           )}
@@ -545,8 +545,8 @@ export default function MyFitnessInner({
                 <div className="tile min-h-0">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <h2 className="text-xl font-bold text-white">{plan.title}</h2>
-                      <p className="text-sm capitalize text-[#a0a0a0]">
+                      <h2 className="text-xl font-bold text-foreground">{plan.title}</h2>
+                      <p className="text-sm capitalize text-muted-foreground">
                         {plan.goal?.replace('_', ' ')} · {plan.difficulty}
                       </p>
                     </div>
@@ -558,7 +558,7 @@ export default function MyFitnessInner({
                   <div className="tile">
                     <p className="section-eyebrow">Today — {today}</p>
                     {todaySchedule.isRestDay ? (
-                      <p className="text-[#a0a0a0]">Rest day — recover and recharge</p>
+                      <p className="text-muted-foreground">Rest day — recover and recharge</p>
                     ) : (
                       <div className="space-y-5">
                         {!workoutStarted && completedTodayLog && (
@@ -579,7 +579,7 @@ export default function MyFitnessInner({
                                 return (
                                   <div
                                     key={`${part}-${globalIndex}`}
-                                    className="flex items-center justify-between gap-4 rounded-xl border border-white/5 bg-white/[.02] p-3"
+                                    className="flex items-center justify-between gap-4 rounded-xl border border-border bg-white/[.02] p-3"
                                   >
                                     <label className="flex items-center gap-3">
                                       <input
@@ -594,14 +594,14 @@ export default function MyFitnessInner({
                                       <span
                                         className={
                                           isChecked
-                                            ? 'font-medium text-[#a0a0a0] line-through'
-                                            : 'font-medium text-white'
+                                            ? 'font-medium text-muted-foreground line-through'
+                                            : 'font-medium text-foreground'
                                         }
                                       >
                                         {ex.name}
                                       </span>
                                     </label>
-                                    <span className="text-sm text-[#a0a0a0]">
+                                    <span className="text-sm text-muted-foreground">
                                       {ex.sets} × {ex.reps}
                                     </span>
                                   </div>
@@ -615,7 +615,7 @@ export default function MyFitnessInner({
                             <Button
                               onClick={handleStartWorkout}
                               disabled={startingWorkout}
-                              className="bg-primary text-black hover:brightness-95"
+                              className="bg-primary text-primary-foreground hover:brightness-95"
                             >
                               {startingWorkout ? 'Starting...' : 'Start Workout'}
                             </Button>
@@ -624,7 +624,7 @@ export default function MyFitnessInner({
                               <Button
                                 onClick={handleCompleteWorkout}
                                 disabled={completingWorkout}
-                                className="bg-primary text-black hover:brightness-95"
+                                className="bg-primary text-primary-foreground hover:brightness-95"
                               >
                                 {completingWorkout ? 'Completing...' : 'Complete Workout'}
                               </Button>
@@ -647,9 +647,9 @@ export default function MyFitnessInner({
                     const grouped = day.isRestDay ? {} : groupExercisesByBodyPart(day.exercises || [])
                     return (
                       <div key={day.day} className="tile min-h-[10rem]">
-                        <h3 className="mb-3 font-bold text-white">{day.day}</h3>
+                        <h3 className="mb-3 font-bold text-foreground">{day.day}</h3>
                         {day.isRestDay ? (
-                          <p className="mt-auto text-sm text-[#a0a0a0]">Rest Day</p>
+                          <p className="mt-auto text-sm text-muted-foreground">Rest Day</p>
                         ) : (
                           <div className="space-y-3">
                             {Object.entries(grouped).map(([part, exercises]) => (
@@ -657,7 +657,7 @@ export default function MyFitnessInner({
                                 <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-primary">{part}</p>
                                 <ul className="space-y-1">
                                   {exercises.map((ex, i) => (
-                                    <li key={i} className="text-sm text-[#a0a0a0]">
+                                    <li key={i} className="text-sm text-muted-foreground">
                                       {ex.name} — {ex.sets} × {ex.reps}
                                     </li>
                                   ))}
@@ -673,7 +673,7 @@ export default function MyFitnessInner({
               </div>
             ) : (
               <div className="tile items-center py-16 text-center">
-                <p className="mb-4 text-[#a0a0a0]">No workout plan assigned yet</p>
+                <p className="mb-4 text-muted-foreground">No workout plan assigned yet</p>
                 <Link href="/coaching" className="btn-accent px-6 py-2">
                   Find a Trainer
                 </Link>
@@ -689,7 +689,7 @@ export default function MyFitnessInner({
                 <button
                   type="button"
                   onClick={() => setShowLogMeal(true)}
-                  className="w-full rounded-2xl py-3 font-bold text-black"
+                  className="w-full rounded-2xl py-3 font-bold text-primary-foreground"
                   style={{ background: 'linear-gradient(135deg, #00ff87, #00d4ff)' }}
                 >
                   + Log a Meal
@@ -704,7 +704,7 @@ export default function MyFitnessInner({
                   ].map((m) => (
                     <div key={m.label} className="tile min-h-0 text-center">
                       <p className="text-2xl font-black text-primary">{m.value}</p>
-                      <p className="mt-1 text-xs text-[#a0a0a0]">{m.label}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{m.label}</p>
                     </div>
                   ))}
                 </div>
@@ -714,15 +714,15 @@ export default function MyFitnessInner({
                     {meals.meals.map((m) => (
                       <div key={m._id} className="tile min-h-0 flex-row items-center justify-between py-4">
                         <div>
-                          <span className="font-medium capitalize text-white">{m.mealType}</span>
-                          <p className="text-sm text-[#a0a0a0]">{m.foods?.map((f) => f.name).join(', ')}</p>
+                          <span className="font-medium capitalize text-foreground">{m.mealType}</span>
+                          <p className="text-sm text-muted-foreground">{m.foods?.map((f) => f.name).join(', ')}</p>
                         </div>
                         <span className="font-bold text-primary">{m.totalCalories} kcal</span>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="py-8 text-center text-[#a0a0a0]">No meals logged today</p>
+                  <p className="py-8 text-center text-muted-foreground">No meals logged today</p>
                 )}
                 <Link href="/meal-plans" className="text-sm text-primary hover:underline">
                   Open meal plans →
@@ -742,7 +742,7 @@ export default function MyFitnessInner({
                 <div className="grid gap-6 lg:grid-cols-2">
                   <div className="tile min-h-[280px]">
                     <p className="section-eyebrow">Trend</p>
-                    <h3 className="mb-4 font-bold text-white">Weight Progress</h3>
+                    <h3 className="mb-4 font-bold text-foreground">Weight Progress</h3>
                     {chartData.length > 0 ? (
                       <ResponsiveContainer width="100%" height={220}>
                         <LineChart data={chartData}>
@@ -760,13 +760,13 @@ export default function MyFitnessInner({
                         </LineChart>
                       </ResponsiveContainer>
                     ) : (
-                      <p className="text-sm text-[#a0a0a0]">No progress data yet. Log your first entry.</p>
+                      <p className="text-sm text-muted-foreground">No progress data yet. Log your first entry.</p>
                     )}
                   </div>
 
                   <div className="tile">
                     <p className="section-eyebrow">Log</p>
-                    <h3 className="mb-4 font-bold text-white">Log Progress</h3>
+                    <h3 className="mb-4 font-bold text-foreground">Log Progress</h3>
                     <form onSubmit={handleAddProgress} className="space-y-4">
                       <div>
                         <Label htmlFor="progress-date">Date</Label>
@@ -812,7 +812,7 @@ export default function MyFitnessInner({
                           placeholder="How are you feeling?"
                         />
                       </div>
-                      <Button type="submit" disabled={saving} className="w-full bg-primary text-black hover:brightness-95">
+                      <Button type="submit" disabled={saving} className="w-full bg-primary text-primary-foreground hover:brightness-95">
                         {saving ? 'Saving...' : 'Save Progress'}
                       </Button>
                     </form>
@@ -821,14 +821,14 @@ export default function MyFitnessInner({
 
                 <div className="tile">
                   <p className="section-eyebrow">History</p>
-                  <h3 className="mb-4 font-bold text-white">Last 5 Entries</h3>
+                  <h3 className="mb-4 font-bold text-foreground">Last 5 Entries</h3>
                   {recentProgress.length === 0 ? (
-                    <p className="text-sm text-[#a0a0a0]">No entries yet.</p>
+                    <p className="text-sm text-muted-foreground">No entries yet.</p>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full min-w-[28rem] text-left text-sm">
                         <thead>
-                          <tr className="border-b border-white/10 text-[#a0a0a0]">
+                          <tr className="border-b border-border text-muted-foreground">
                             <th className="pb-2 pr-3 font-medium">Date</th>
                             <th className="pb-2 pr-3 font-medium">Weight</th>
                             <th className="pb-2 pr-3 font-medium">Body Fat</th>
@@ -838,19 +838,19 @@ export default function MyFitnessInner({
                         </thead>
                         <tbody>
                           {recentProgress.map((entry) => (
-                            <tr key={entry._id} className="border-b border-white/5">
-                              <td className="py-3 pr-3 text-white">
+                            <tr key={entry._id} className="border-b border-border">
+                              <td className="py-3 pr-3 text-foreground">
                                 {new Date(entry.date).toLocaleDateString('en-US', {
                                   month: 'short',
                                   day: 'numeric',
                                   year: 'numeric',
                                 })}
                               </td>
-                              <td className="py-3 pr-3 text-white">{entry.weight != null ? `${entry.weight} kg` : '—'}</td>
-                              <td className="py-3 pr-3 text-[#a0a0a0]">
+                              <td className="py-3 pr-3 text-foreground">{entry.weight != null ? `${entry.weight} kg` : '—'}</td>
+                              <td className="py-3 pr-3 text-muted-foreground">
                                 {entry.bodyFat != null ? `${entry.bodyFat}%` : '—'}
                               </td>
-                              <td className="max-w-[12rem] truncate py-3 pr-3 text-[#a0a0a0]">
+                              <td className="max-w-[12rem] truncate py-3 pr-3 text-muted-foreground">
                                 {entry.notes || '—'}
                               </td>
                               <td className="py-3 text-right">
@@ -883,10 +883,10 @@ export default function MyFitnessInner({
 
       {showLogMeal && (
         <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60 p-4 sm:items-center">
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-white/10 bg-[#0e1210] p-6 shadow-2xl">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-border bg-card p-6 shadow-2xl">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white">Log a Meal</h2>
-              <button type="button" onClick={() => setShowLogMeal(false)} className="text-[#a0a0a0] hover:text-white">
+              <h2 className="text-xl font-bold text-foreground">Log a Meal</h2>
+              <button type="button" onClick={() => setShowLogMeal(false)} className="text-muted-foreground hover:text-foreground">
                 ✕
               </button>
             </div>
@@ -896,7 +896,7 @@ export default function MyFitnessInner({
                 onChange={(event) => setFoodSearch(event.target.value)}
                 placeholder="Search chicken, daal, roti..."
               />
-              <Button type="submit" disabled={searchingFood} className="bg-primary text-black hover:brightness-95">
+              <Button type="submit" disabled={searchingFood} className="bg-primary text-primary-foreground hover:brightness-95">
                 {searchingFood ? '...' : 'Search'}
               </Button>
             </form>
@@ -907,10 +907,10 @@ export default function MyFitnessInner({
                     key={`${food.name}-${food.per}`}
                     type="button"
                     onClick={() => setSelectedFood(food)}
-                    className="rounded-xl border border-white/10 bg-white/[.03] p-3 text-left hover:border-primary/50"
+                    className="rounded-xl border border-border bg-muted/40 p-3 text-left hover:border-primary/50"
                   >
-                    <div className="font-medium text-white">{food.name}</div>
-                    <div className="text-xs text-[#a0a0a0]">
+                    <div className="font-medium text-foreground">{food.name}</div>
+                    <div className="text-xs text-muted-foreground">
                       {food.calories} kcal · {food.protein}g protein · {food.per}
                     </div>
                   </button>
@@ -919,7 +919,7 @@ export default function MyFitnessInner({
             )}
             {selectedFood && (
               <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
-                <p className="font-medium text-white">{selectedFood.name}</p>
+                <p className="font-medium text-foreground">{selectedFood.name}</p>
                 <div>
                   <Label htmlFor="meal-type">Meal</Label>
                   <select
@@ -950,7 +950,7 @@ export default function MyFitnessInner({
                   type="button"
                   onClick={logFood}
                   disabled={loggingMeal}
-                  className="w-full bg-primary text-black hover:brightness-95"
+                  className="w-full bg-primary text-primary-foreground hover:brightness-95"
                 >
                   {loggingMeal ? 'Logging...' : `Log ${selectedFood.name}`}
                 </Button>
