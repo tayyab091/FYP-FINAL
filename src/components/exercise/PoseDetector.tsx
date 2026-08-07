@@ -5,67 +5,35 @@ import { Camera, Square, CheckCircle2, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { RepCounter } from '@/components/motion/RepCounter'
 import { FitnessBadge } from '@/components/motion/FitnessBadge'
-
-function calculateAngle(a: { x: number; y: number }, b: { x: number; y: number }, c: { x: number; y: number }): number {
-  const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x)
-  let angle = Math.abs(radians * 180 / Math.PI)
-  if (angle > 180) angle = 360 - angle
-  return angle
-}
-
-const EXERCISES = {
-  squat: {
-    name: 'Squat',
-    joints: [23, 25, 27],
-    goodAngle: 100,
-    repAngle: 160,
-    goodFeedback: 'Great squat depth!',
-    badFeedback: 'Go lower — bend knees more',
-  },
-  pushup: {
-    name: 'Push-Up',
-    joints: [11, 13, 15],
-    goodAngle: 90,
-    repAngle: 160,
-    goodFeedback: 'Full range of motion!',
-    badFeedback: 'Lower your chest more',
-  },
-  lunge: {
-    name: 'Lunge',
-    joints: [23, 25, 27],
-    goodAngle: 100,
-    repAngle: 160,
-    goodFeedback: 'Perfect lunge depth!',
-    badFeedback: 'Lower your back knee',
-  },
-  plank: {
-    name: 'Plank',
-    joints: [11, 23, 27],
-    goodAngle: 160,
-    repAngle: 0,
-    goodFeedback: 'Perfect plank form!',
-    badFeedback: 'Raise your hips — keep body straight',
-  },
-}
+import {
+  EXERCISES,
+  MIN_JOINT_VISIBILITY,
+  createFormCheckerSession,
+  processPoseFrame,
+  type ExerciseKey,
+  type FormCheckerSessionState,
+  type LandmarkPoint,
+} from '@/lib/form-checker-pose'
 
 export function PoseDetector() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [selectedExercise, setSelectedExercise] = useState<keyof typeof EXERCISES>('squat')
+  const [selectedExercise, setSelectedExercise] = useState<ExerciseKey>('squat')
   const [repCount, setRepCount] = useState(0)
   const [feedback, setFeedback] = useState('Get in position to start')
   const [angle, setAngle] = useState(0)
   const [isGoodForm, setIsGoodForm] = useState(false)
   const [isActive, setIsActive] = useState(false)
   const [cameraError, setCameraError] = useState('')
-  const repStateRef = useRef<'up' | 'down'>('up')
+  const [holdSeconds, setHoldSeconds] = useState(0)
+  const sessionStateRef = useRef<FormCheckerSessionState>(createFormCheckerSession())
   const sessionRepsRef = useRef(0)
   const poseRef = useRef<InstanceType<typeof import('@mediapipe/pose').Pose> | null>(null)
   const cameraRef = useRef<{ stop: () => void; start: () => Promise<void> } | null>(null)
 
   interface PoseResults {
     image: CanvasImageSource
-    poseLandmarks?: Array<{ x: number; y: number; visibility?: number }>
+    poseLandmarks?: LandmarkPoint[]
   }
 
   const onResults = useCallback((results: PoseResults) => {
@@ -80,40 +48,38 @@ export function PoseDetector() {
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     ctx.drawImage(results.image, 0, 0)
 
-    if (!results.poseLandmarks) {
-      setFeedback('No pose detected — make sure your full body is visible')
+    const processed = processPoseFrame(
+      results.poseLandmarks,
+      selectedExercise,
+      canvas.width,
+      canvas.height,
+      performance.now(),
+      sessionStateRef.current,
+    )
+
+    if (!processed.detected) {
+      setFeedback(processed.feedback)
       return
     }
 
+    const { angles } = processed
+    const currentAngle = angles.currentAngle!
+    const left = angles.left
+    const right = angles.right
     const lm = results.poseLandmarks
-    const ex = EXERCISES[selectedExercise]
-    const [ai, bi, ci] = ex.joints
+    if (!lm) return
 
-    const a = { x: lm[ai].x * canvas.width, y: lm[ai].y * canvas.height }
-    const b = { x: lm[bi].x * canvas.width, y: lm[bi].y * canvas.height }
-    const c = { x: lm[ci].x * canvas.width, y: lm[ci].y * canvas.height }
-
-    const currentAngle = calculateAngle(a, b, c)
     setAngle(Math.round(currentAngle))
+    setIsGoodForm(processed.good)
+    setFeedback(processed.feedback)
 
-    const good = selectedExercise === 'plank'
-      ? currentAngle >= ex.goodAngle
-      : currentAngle <= ex.goodAngle
+    if (selectedExercise === 'plank') {
+      setHoldSeconds(processed.holdSeconds)
+    }
 
-    setIsGoodForm(good)
-    setFeedback(good ? ex.goodFeedback : ex.badFeedback)
-
-    if (selectedExercise !== 'plank') {
-      if (currentAngle <= ex.goodAngle && repStateRef.current === 'up') {
-        repStateRef.current = 'down'
-      } else if (currentAngle >= ex.repAngle && repStateRef.current === 'down') {
-        repStateRef.current = 'up'
-        setRepCount(c => {
-          const next = c + 1
-          sessionRepsRef.current = next
-          return next
-        })
-      }
+    if (processed.repCompletedThisFrame) {
+      setRepCount(processed.repCount)
+      sessionRepsRef.current = processed.repCount
     }
 
     const POSE_CONNECTIONS = (window as Window & { POSE_CONNECTIONS?: [number, number][] }).POSE_CONNECTIONS
@@ -122,7 +88,8 @@ export function PoseDetector() {
       ctx.lineWidth = 2
       POSE_CONNECTIONS.forEach(([s, e]) => {
         const start = lm[s], end = lm[e]
-        if ((start.visibility ?? 0) > 0.5 && (end.visibility ?? 0) > 0.5) {
+        if (!start || !end) return
+        if ((start.visibility ?? 0) > MIN_JOINT_VISIBILITY && (end.visibility ?? 0) > MIN_JOINT_VISIBILITY) {
           ctx.beginPath()
           ctx.moveTo(start.x * canvas.width, start.y * canvas.height)
           ctx.lineTo(end.x * canvas.width, end.y * canvas.height)
@@ -132,7 +99,7 @@ export function PoseDetector() {
     }
 
     lm.forEach((point) => {
-      if ((point.visibility ?? 0) > 0.5) {
+      if ((point.visibility ?? 0) > MIN_JOINT_VISIBILITY) {
         ctx.fillStyle = '#22f59a'
         ctx.beginPath()
         ctx.arc(point.x * canvas.width, point.y * canvas.height, 4, 0, 2 * Math.PI)
@@ -142,7 +109,8 @@ export function PoseDetector() {
 
     ctx.fillStyle = 'white'
     ctx.font = 'bold 20px sans-serif'
-    ctx.fillText(`${Math.round(currentAngle)}°`, b.x + 10, b.y - 10)
+    const labelPoint = left?.b ?? right?.b
+    if (labelPoint) ctx.fillText(`${Math.round(currentAngle)}°`, labelPoint.x + 10, labelPoint.y - 10)
   }, [selectedExercise])
 
   const startCamera = useCallback(async () => {
@@ -159,6 +127,8 @@ export function PoseDetector() {
         modelComplexity: 1,
         smoothLandmarks: true,
         enableSegmentation: false,
+        // MediaPipe-documented defaults; also reused as MIN_JOINT_VISIBILITY
+        // above so angle math and detection confidence stay consistent.
         minDetectionConfidence: 0.5,
         minTrackingConfidence: 0.5,
       })
@@ -174,6 +144,7 @@ export function PoseDetector() {
       cameraRef.current = camera
       setIsActive(true)
       setCameraError('')
+      sessionStateRef.current = createFormCheckerSession()
       sessionRepsRef.current = 0
     } catch {
       setCameraError('Camera access denied or not available. Allow camera permissions and refresh.')
@@ -190,6 +161,8 @@ export function PoseDetector() {
     poseRef.current = null
     setIsActive(false)
     setRepCount(0)
+    setHoldSeconds(0)
+    sessionStateRef.current = createFormCheckerSession()
     sessionRepsRef.current = 0
     setFeedback('Get in position to start')
 
@@ -222,12 +195,19 @@ export function PoseDetector() {
     }
   }, [])
 
+  const isPlank = selectedExercise === 'plank'
+
   return (
     <div className="space-y-6">
       <div className="elite-panel flex flex-wrap justify-center gap-2 p-3">
         {Object.entries(EXERCISES).map(([key, ex]) => (
           <button key={key}
-            onClick={() => { setSelectedExercise(key as keyof typeof EXERCISES); setRepCount(0) }}
+            onClick={() => {
+              setSelectedExercise(key as ExerciseKey)
+              setRepCount(0)
+              sessionStateRef.current = createFormCheckerSession()
+              sessionRepsRef.current = 0
+            }}
             className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all ${
               selectedExercise === key
                 ? 'bg-primary text-primary-foreground border-primary shadow-[0_8px_24px_rgba(34,245,154,.16)]'
@@ -237,6 +217,10 @@ export function PoseDetector() {
           </button>
         ))}
       </div>
+
+      <p className="text-center text-xs text-[#6b756f]" title={EXERCISES[selectedExercise].citation}>
+        Threshold source: {EXERCISES[selectedExercise].citation}
+      </p>
 
       <div className="relative rounded-3xl overflow-hidden bg-[#0b0e0c] aspect-video max-w-2xl mx-auto border border-white/[.1] shadow-[0_30px_90px_rgba(0,0,0,.38)]">
         <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
@@ -258,6 +242,7 @@ export function PoseDetector() {
           <div className="absolute top-4 left-4 right-4 flex justify-between gap-2">
             <div className="glass px-3 py-2 rounded-xl min-w-[4.5rem]">
               <RepCounter count={repCount} />
+              {isPlank && <p className="mt-0.5 text-center text-[10px] text-[#8f9a94]">holds</p>}
             </div>
             <AnimatePresence mode="wait">
               <motion.div
@@ -283,9 +268,11 @@ export function PoseDetector() {
                 animate={{ scale: 1, opacity: 1 }}
                 className="font-heading text-2xl font-black text-white"
               >
-                {angle}°
+                {isPlank ? `${holdSeconds}s` : `${angle}°`}
               </motion.div>
-              <FitnessBadge variant="sets" className="mt-0.5 border-0 bg-transparent px-0">Angle</FitnessBadge>
+              <FitnessBadge variant="sets" className="mt-0.5 border-0 bg-transparent px-0">
+                {isPlank ? 'Hold time' : 'Angle'}
+              </FitnessBadge>
             </div>
           </div>
         )}

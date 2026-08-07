@@ -13,4 +13,9 @@ const NotificationSchema = new Schema({
   link: { type: String },
 }, { timestamps: true })
 
+// GET /api/notifications (polled from every dashboard page via NotificationBell)
+// filters by userId and sorts by createdAt for the list, and counts unread by
+// userId for the badge — both covered by this compound index.
+NotificationSchema.index({ userId: 1, createdAt: -1 })
+
 export default mongoose.models.Notification || mongoose.model('Notification', NotificationSchema)

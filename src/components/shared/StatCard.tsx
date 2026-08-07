@@ -56,11 +56,11 @@ export function StatCard({
   const canAnimate = animate && isNumeric && !Number.isNaN(numericValue)
 
   return (
-    <Card className={cn('dashboard-stat-card metric-glow card-athletic interactive-lift h-full overflow-hidden', className)}>
-      <CardContent className="relative flex h-full flex-col p-5">
+    <Card className={cn('dashboard-stat-card metric-glow card-athletic interactive-lift h-full', className)}>
+      <CardContent className="relative flex h-full min-h-[9.5rem] flex-col p-5">
         <div className={cn('pointer-events-none absolute inset-0 bg-gradient-to-br', styles.gradient)} />
         <div className="relative flex items-start justify-between gap-3">
-          <p className="workout-label text-muted-foreground">{label}</p>
+          <p className="workout-label min-h-[2.5em] flex-1 break-words leading-snug text-muted-foreground">{label}</p>
           {Icon && (
             <span className={cn('flex size-10 shrink-0 items-center justify-center rounded-xl border', styles.iconBg)}>
               <Icon className="size-4.5" strokeWidth={2.2} />

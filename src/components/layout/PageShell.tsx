@@ -63,7 +63,7 @@ export function PageHero({
       animate="visible"
       variants={fadeUp}
       transition={easeTransition}
-      className={cn('page-hero relative mb-8 overflow-hidden px-6 py-10 sm:px-8 sm:py-12', className)}
+      className={cn('page-hero relative mb-8 min-h-[12rem] overflow-hidden px-6 py-10 sm:min-h-[14rem] sm:px-8 sm:py-12', className)}
     >
       <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-primary/10 blur-3xl animate-energy-pulse" />
       {eyebrow && <p className="eyebrow relative mb-3">{eyebrow}</p>}

@@ -90,6 +90,13 @@ export default function MyFitnessInner({
   const [startingWorkout, setStartingWorkout] = useState(false)
   const [completedExercises, setCompletedExercises] = useState<number[]>([])
   const [completingWorkout, setCompletingWorkout] = useState(false)
+  // Today's already-completed log (if any), so a revisit after "Complete
+  // Workout" shows the checklist as it was left instead of resetting to
+  // empty (see BUG_REPORT.md — checklist unchecked after completing).
+  const [completedTodayLog, setCompletedTodayLog] = useState<{
+    _id: string
+    exercises?: Array<{ name: string; completed?: boolean }>
+  } | null>(null)
   const [foodSearch, setFoodSearch] = useState('')
   const [foodResults, setFoodResults] = useState<FoodResult[]>([])
   const [searchingFood, setSearchingFood] = useState(false)
@@ -142,8 +149,11 @@ export default function MyFitnessInner({
         r.ok ? r.json() : { logs: [], streak: 0, totalCompleted: 0 },
       ),
       fetch('/api/gamification/me', { signal: controller.signal }).then((r) => (r.ok ? r.json() : null)),
+      // Restore today's in-progress workout (if any) so the checklist
+      // survives a reload/revisit instead of resetting to empty.
+      fetch('/api/tracking/logs/active', { signal: controller.signal }).then((r) => (r.ok ? r.json() : { log: null })),
     ])
-      .then(([planData, progressData, mealData, historyData, gamificationData]) => {
+      .then(([planData, progressData, mealData, historyData, gamificationData, activeData]) => {
         if (planData?.plan === null) setPlan(null)
         else if (planData?._id) setPlan(planData)
         else if (planData?.plan) setPlan(planData.plan)
@@ -151,6 +161,28 @@ export default function MyFitnessInner({
         setMeals(mealData)
         setWorkoutHistory(historyData)
         if (gamificationData?.xp !== undefined) setGamification(gamificationData)
+
+        const activeLog = activeData?.log as
+          | { _id: string; exercises?: Array<{ completed?: boolean }> }
+          | null
+          | undefined
+        if (activeLog?._id) {
+          setActiveLogId(activeLog._id)
+          setWorkoutStarted(true)
+          setCompletedExercises(
+            (activeLog.exercises || [])
+              .map((exercise, index) => (exercise.completed ? index : -1))
+              .filter((index) => index !== -1),
+          )
+        } else {
+          setActiveLogId(null)
+          setWorkoutStarted(false)
+          setCompletedExercises([])
+        }
+        setCompletedTodayLog(
+          (activeData?.completedToday as { _id: string; exercises?: Array<{ name: string; completed?: boolean }> } | null) ||
+            null,
+        )
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === 'AbortError') {
@@ -177,6 +209,14 @@ export default function MyFitnessInner({
   const todayGrouped = useMemo(
     () => (todaySchedule?.exercises ? groupExercisesByBodyPart(todaySchedule.exercises) : {}),
     [todaySchedule],
+  )
+
+  const completedTodayNames = useMemo(
+    () =>
+      new Set(
+        (completedTodayLog?.exercises || []).filter((exercise) => exercise.completed).map((exercise) => exercise.name),
+      ),
+    [completedTodayLog],
   )
 
   const chartData = progress.map((r) => ({
@@ -232,7 +272,14 @@ export default function MyFitnessInner({
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.message || 'Failed to delete')
       toast.success('Progress entry deleted')
-      reloadData()
+      // The DELETE already confirmed removal server-side, so the local list is
+      // updated directly instead of calling reloadData(). reloadData() re-fetches
+      // six unrelated endpoints (plan, meals, workout history, gamification,
+      // active log) and flips `loading` back to true, which blanks the entire
+      // Progress tab — chart, form, and history table — behind a skeleton for
+      // seconds on every single-row delete. That made a successful delete look
+      // like it had wiped the whole list or done nothing.
+      setProgress((prev) => prev.filter((entry) => entry._id !== id))
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to delete progress')
     } finally {
@@ -268,11 +315,43 @@ export default function MyFitnessInner({
       setActiveLogId(logId)
       setWorkoutStarted(true)
       setCompletedExercises([])
+      setCompletedTodayLog(null)
       toast.success('Workout started')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to start workout')
     } finally {
       setStartingWorkout(false)
+    }
+  }
+
+  const handleToggleExercise = (index: number, checked: boolean) => {
+    // Optimistic local update so the checkbox feels instant...
+    setCompletedExercises((current) =>
+      checked ? [...current, index] : current.filter((i) => i !== index),
+    )
+    // ...then persist to the in-progress log so a reload/revisit doesn't
+    // lose the checklist (see BUG_REPORT.md).
+    if (!activeLogId) return
+    fetch(`/api/tracking/logs/${activeLogId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ exerciseIndex: index, completed: checked }),
+    }).catch(() => {
+      toast.error('Could not save checklist — check your connection')
+    })
+  }
+
+  const handleCancelWorkout = () => {
+    const logId = activeLogId
+    setWorkoutStarted(false)
+    setActiveLogId(null)
+    setCompletedExercises([])
+    if (logId) {
+      fetch(`/api/tracking/logs/${logId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'skipped' }),
+      }).catch(() => {})
     }
   }
 
@@ -482,12 +561,21 @@ export default function MyFitnessInner({
                       <p className="text-[#a0a0a0]">Rest day — recover and recharge</p>
                     ) : (
                       <div className="space-y-5">
+                        {!workoutStarted && completedTodayLog && (
+                          <div className="rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-primary">
+                            ✓ Today&apos;s workout is already completed — checklist below reflects what you finished.
+                            Start a new session if you want to log another one.
+                          </div>
+                        )}
                         {Object.entries(todayGrouped).map(([part, exercises]) => (
                           <div key={part}>
                             <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-primary">{part}</h3>
                             <div className="space-y-2">
                               {exercises.map((ex) => {
                                 const globalIndex = todaySchedule.exercises.indexOf(ex)
+                                const isChecked = workoutStarted
+                                  ? completedExercises.includes(globalIndex)
+                                  : completedTodayNames.has(ex.name)
                                 return (
                                   <div
                                     key={`${part}-${globalIndex}`}
@@ -496,20 +584,16 @@ export default function MyFitnessInner({
                                     <label className="flex items-center gap-3">
                                       <input
                                         type="checkbox"
-                                        checked={completedExercises.includes(globalIndex)}
+                                        checked={isChecked}
                                         disabled={!workoutStarted}
                                         onChange={(event) =>
-                                          setCompletedExercises((current) =>
-                                            event.target.checked
-                                              ? [...current, globalIndex]
-                                              : current.filter((index) => index !== globalIndex),
-                                          )
+                                          handleToggleExercise(globalIndex, event.target.checked)
                                         }
                                         className="h-4 w-4 accent-primary"
                                       />
                                       <span
                                         className={
-                                          completedExercises.includes(globalIndex)
+                                          isChecked
                                             ? 'font-medium text-[#a0a0a0] line-through'
                                             : 'font-medium text-white'
                                         }
@@ -546,11 +630,7 @@ export default function MyFitnessInner({
                               </Button>
                               <Button
                                 variant="outline"
-                                onClick={() => {
-                                  setWorkoutStarted(false)
-                                  setActiveLogId(null)
-                                  setCompletedExercises([])
-                                }}
+                                onClick={handleCancelWorkout}
                               >
                                 Cancel
                               </Button>

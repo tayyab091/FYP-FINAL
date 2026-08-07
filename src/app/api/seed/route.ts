@@ -6,6 +6,7 @@ import Gym from '@/models/Gym'
 import bcrypt from 'bcryptjs'
 import { parseJsonBody, setupKeySchema } from '@/lib/validation'
 import { rateLimitAuth } from '@/lib/rate-limit'
+import { allocateTrainerSlug } from '@/lib/trainer-slug-server'
 
 export async function POST(req: NextRequest) {
   try {
@@ -65,8 +66,9 @@ export async function POST(req: NextRequest) {
         tUser = await User.create({ fullName: t.fullName, email: t.email, password: hash('Trainer@123'), role: 'trainer', country: t.country })
       }
       if (!await Trainer.findOne({ email: t.email })) {
+        const slug = await allocateTrainerSlug(t.fullName)
         await Trainer.create({
-          userId: tUser._id, name: t.fullName, email: t.email,
+          userId: tUser._id, slug, name: t.fullName, email: t.email,
           specialty: t.specialty, country: t.country, bio: t.bio,
           isFeatured: t.isFeatured, isFullyVerified: true, isActive: true,
           gymVerificationStatus: 'approved', adminVerificationStatus: 'approved',

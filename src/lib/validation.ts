@@ -285,10 +285,23 @@ export const verifyEmailSchema = z.object({
 
 export const adminActionSchema = z.object({
   action: z.enum(['verify', 'reject']),
+  reason: optionalPlainTextSchema(500),
 })
 
 export const suspendSchema = z.object({
   suspend: z.boolean(),
+  reason: optionalPlainTextSchema(500),
+})
+
+export const superAdminCreateSchema = z.object({
+  fullName: plainTextSchema(100, 2),
+  email: emailSchema,
+  password: passwordSchema,
+})
+
+export const superAdminSuspendSchema = z.object({
+  suspend: z.boolean(),
+  reason: plainTextSchema(500, 3),
 })
 
 export const progressBodySchema = z.object({
@@ -412,6 +425,17 @@ export const workoutLogStartSchema = z.object({
     .max(100)
     .optional()
     .default([]),
+})
+
+/** Toggle a single exercise's checklist-completed flag on an in-progress log. */
+export const workoutLogToggleSchema = z.object({
+  exerciseIndex: z.number().int().min(0).max(99),
+  completed: z.boolean(),
+})
+
+/** Abandon an in-progress workout log without completing it (XP is never awarded). */
+export const workoutLogCancelSchema = z.object({
+  status: z.literal('skipped'),
 })
 
 export const workoutCompleteSchema = z.object({
