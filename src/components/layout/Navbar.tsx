@@ -100,7 +100,7 @@ export function Navbar() {
           <div className="ml-auto hidden items-center gap-2.5 md:flex">
             <ThemeToggle />
             {isLoading ? (
-              <div className="h-8 w-28 animate-pulse rounded-full bg-white/[.06]" />
+              <div className="h-8 w-28 animate-pulse rounded-full bg-muted" />
             ) : user ? (
               <>
                 <NotificationBell />

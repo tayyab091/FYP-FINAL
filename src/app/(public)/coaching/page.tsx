@@ -268,7 +268,7 @@ export default function CoachingPage() {
 
       {meta?.source === 'fallback' && !loading && (
         <div className="max-w-6xl mx-auto px-6 mt-4">
-          <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-200">
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
             <strong>Preview mode:</strong> Showing sample trainers because the database is empty.
             Run the seed script (see README) to connect with real coaches.
           </div>

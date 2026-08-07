@@ -1052,19 +1052,19 @@ export default function AdminPageClient() {
             <div className="space-y-6">
               <div>
                 <p className="section-eyebrow">Elevated access</p>
-                <h1 className="text-2xl font-black text-white">Super Admin</h1>
-                <p className="mt-1 text-sm text-[#a0a0a0]">Create admin accounts and moderate platform operators.</p>
+                <h1 className="text-2xl font-black text-foreground">Super Admin</h1>
+                <p className="mt-1 text-sm text-muted-foreground">Create admin accounts and moderate platform operators.</p>
               </div>
 
               <div className="tile space-y-4">
-                <h2 className="text-lg font-bold text-white">Create admin account</h2>
+                <h2 className="text-lg font-bold text-foreground">Create admin account</h2>
                 <form onSubmit={createAdminAccount} className="grid gap-3 sm:grid-cols-2">
                   <input
                     required
                     placeholder="Full name"
                     value={newAdmin.fullName}
                     onChange={(e) => setNewAdmin((v) => ({ ...v, fullName: e.target.value }))}
-                    className="rounded-lg border border-white/10 bg-[#0f0f0f] px-3 py-2 text-sm text-white"
+                    className="rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground"
                   />
                   <input
                     required
@@ -1072,7 +1072,7 @@ export default function AdminPageClient() {
                     placeholder="Email"
                     value={newAdmin.email}
                     onChange={(e) => setNewAdmin((v) => ({ ...v, email: e.target.value }))}
-                    className="rounded-lg border border-white/10 bg-[#0f0f0f] px-3 py-2 text-sm text-white"
+                    className="rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground"
                   />
                   <input
                     required
@@ -1081,7 +1081,7 @@ export default function AdminPageClient() {
                     placeholder="Password (min 12 chars)"
                     value={newAdmin.password}
                     onChange={(e) => setNewAdmin((v) => ({ ...v, password: e.target.value }))}
-                    className="rounded-lg border border-white/10 bg-[#0f0f0f] px-3 py-2 text-sm text-white sm:col-span-2"
+                    className="rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground sm:col-span-2"
                   />
                   <button
                     type="submit"
@@ -1095,8 +1095,8 @@ export default function AdminPageClient() {
 
               <div className="tile overflow-hidden p-0">
                 <table className="w-full text-sm">
-                  <thead className="border-b border-white/5">
-                    <tr className="text-left text-[#a0a0a0]">
+                  <thead className="border-b border-border">
+                    <tr className="text-left text-muted-foreground">
                       <th className="px-4 py-3 font-medium">Admin</th>
                       <th className="px-4 py-3 font-medium">Plan</th>
                       <th className="px-4 py-3 font-medium">Status</th>
@@ -1107,10 +1107,10 @@ export default function AdminPageClient() {
                     {platformAdmins.map((row) => {
                       const busy = subActionId === row._id
                       return (
-                        <tr key={row._id} className="border-b border-white/5 hover:bg-white/[.02]">
+                        <tr key={row._id} className="border-b border-border hover:bg-muted/40">
                           <td className="px-4 py-3">
-                            <p className="font-medium text-white">{row.fullName}</p>
-                            <p className="text-xs text-[#a0a0a0]">{row.email}</p>
+                            <p className="font-medium text-foreground">{row.fullName}</p>
+                            <p className="text-xs text-muted-foreground">{row.email}</p>
                           </td>
                           <td className="px-4 py-3">
                             <span className={`badge-accent text-xs ${PLAN_COLORS[row.subscription?.plan || 'basic'] || ''}`}>
@@ -1146,7 +1146,7 @@ export default function AdminPageClient() {
                                 type="button"
                                 disabled={busy}
                                 onClick={() => manageAdminSubscription(row._id, 'revoke')}
-                                className="rounded-lg border border-white/10 px-2.5 py-1 text-xs text-[#a0a0a0]"
+                                className="rounded-lg border border-border px-2.5 py-1 text-xs text-muted-foreground"
                               >
                                 Revoke
                               </button>
