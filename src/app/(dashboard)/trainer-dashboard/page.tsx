@@ -121,6 +121,7 @@ export default function TrainerDashboardPage() {
   const [clientProgress, setClientProgress] = useState<Record<string, unknown> | null>(null)
   const [progressClient, setProgressClient] = useState<Client | null>(null)
   const [loadingProgress, setLoadingProgress] = useState(false)
+  const [activeTab, setActiveTab] = useState('overview')
 
   const loadData = () => {
     setLoading(true)
@@ -373,7 +374,7 @@ export default function TrainerDashboardPage() {
           </div>
         </div>
 
-        <Tabs defaultValue="overview">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-8">
             {['overview', 'requests', 'clients', 'meal-plans', 'availability', 'chat'].map(t => (
               <TabsTrigger key={t} value={t} className="capitalize">
@@ -688,7 +689,7 @@ export default function TrainerDashboardPage() {
           </TabsContent>
 
           <TabsContent value="availability">
-            <AvailabilityTab />
+            {activeTab === 'availability' ? <AvailabilityTab /> : null}
           </TabsContent>
 
           <TabsContent value="chat">
