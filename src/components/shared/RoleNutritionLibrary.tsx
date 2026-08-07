@@ -94,7 +94,11 @@ export function RoleNutritionLibrary({
       const res = await fetch(`/api/meals?${buildQuery(nextPage).replace('meta=true&', '').replace('&meta=true', '').replace('meta=true', '')}`)
       if (res.ok) {
         const data = await res.json()
-        setMeals((prev) => [...prev, ...(data.meals || [])])
+        setMeals((prev) => {
+          const seen = new Set(prev.map((meal) => meal.id))
+          const next = (data.meals || []).filter((meal: MealItem) => meal.id && !seen.has(meal.id))
+          return [...prev, ...next]
+        })
         setPage(nextPage)
       }
     } finally {
@@ -142,8 +146,8 @@ export function RoleNutritionLibrary({
               className="min-w-[160px] flex-1 rounded-xl border border-border bg-muted/60 px-3 py-2.5 text-sm text-foreground outline-none"
             >
               <option value="All">All categories</option>
-              {(meta?.categories || []).map((c) => (
-                <option key={c} value={c}>
+              {(meta?.categories || []).map((c, index) => (
+                <option key={`${c}-${index}`} value={c}>
                   {c}
                 </option>
               ))}
@@ -154,8 +158,8 @@ export function RoleNutritionLibrary({
               className="min-w-[160px] flex-1 rounded-xl border border-border bg-muted/60 px-3 py-2.5 text-sm text-foreground outline-none"
             >
               <option value="All">All cuisines</option>
-              {(meta?.areas || []).map((a) => (
-                <option key={a} value={a}>
+              {(meta?.areas || []).map((a, index) => (
+                <option key={`${a}-${index}`} value={a}>
                   {a}
                 </option>
               ))}
@@ -174,9 +178,9 @@ export function RoleNutritionLibrary({
         ) : (
           <>
             <div className="dashboard-grid cols-3">
-              {meals.map((meal) => (
+              {meals.map((meal, index) => (
                 <div
-                  key={meal.id}
+                  key={`${meal.id || 'meal'}-${index}`}
                   className="elite-panel card-athletic flex h-full min-h-[280px] flex-col overflow-hidden rounded-2xl"
                 >
                   <div className="relative h-40 bg-card">

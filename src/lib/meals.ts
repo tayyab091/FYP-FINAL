@@ -135,8 +135,8 @@ async function buildMealCatalog(): Promise<MealCatalog> {
   return {
     meals,
     meta: {
-      categories: categories.sort(),
-      areas: areas.sort(),
+      categories: [...new Set(categories)].sort(),
+      areas: [...new Set(areas)].sort(),
       total: meals.length,
     },
   }
