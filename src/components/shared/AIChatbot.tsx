@@ -2,11 +2,13 @@
 import { useState, useRef, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { Bot, Send, X } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
 
 interface Message { role: 'user' | 'assistant'; content: string }
 
 export function AIChatbot() {
   const pathname = usePathname()
+  const { user, isLoading } = useAuth()
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([
     { role: 'assistant', content: 'Hi! I\'m your T.E.S.T. AI fitness coach 🤖 Ask me anything about workouts, nutrition, or your fitness goals!' }
@@ -20,6 +22,7 @@ export function AIChatbot() {
   }, [messages, loading])
 
   if (pathname.startsWith('/chat')) return null
+  if (pathname === '/' && !isLoading && !user) return null
 
   const send = async () => {
     if (!input.trim() || loading) return
