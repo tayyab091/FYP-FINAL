@@ -29,9 +29,14 @@ export const LANDMARKS = {
   rightAnkle: 28,
 } as const
 
-export const MIN_JOINT_VISIBILITY = 0.5
+export const MIN_JOINT_VISIBILITY = 0.4
 export const MIN_REP_HOLD_MS = 250
 export const PLANK_HOLD_INCREMENT_MS = 10_000
+/** Drop from extended position to count as entering a rep (helps off-angle cameras). */
+export const ROM_ENTER_DELTA = 15
+/** Recovery from deepest point to complete a rep (relative ROM path). */
+export const ROM_EXIT_DELTA = 12
+export const CAMERA_HINT_AFTER_MS = 8_000
 
 export interface ExerciseDef {
   name: string
@@ -224,12 +229,26 @@ export function computePoseAngles(
   return { leftAngle, rightAngle, currentAngle, bilateralMode, left, right, visibility }
 }
 
+/** Smaller angle = deeper flexion. Prefer the more-bent side when both are visible. */
+export function getFlexionAngle(angles: PoseAngles): number | null {
+  const { leftAngle, rightAngle, currentAngle } = angles
+  if (leftAngle !== null && rightAngle !== null) {
+    return Math.min(leftAngle, rightAngle)
+  }
+  return currentAngle
+}
+
 export interface FormCheckerSessionState {
   repState: 'up' | 'down'
   downSinceMs: number | null
   repCount: number
   plankHoldStartMs: number | null
   plankHoldCreditedMs: number
+  /** Highest flexion angle while arms/legs extended (relative ROM). */
+  peakExtendedAngle: number
+  /** Deepest flexion angle during current rep (relative ROM). */
+  troughFlexionAngle: number
+  firstDetectedMs: number | null
 }
 
 export function createFormCheckerSession(): FormCheckerSessionState {
@@ -239,6 +258,9 @@ export function createFormCheckerSession(): FormCheckerSessionState {
     repCount: 0,
     plankHoldStartMs: null,
     plankHoldCreditedMs: 0,
+    peakExtendedAngle: 0,
+    troughFlexionAngle: 180,
+    firstDetectedMs: null,
   }
 }
 
@@ -299,8 +321,11 @@ export function processPoseFrame(
   }
 
   const currentAngle = angles.currentAngle
+  const flexionAngle = getFlexionAngle(angles) ?? currentAngle
+  if (state.firstDetectedMs === null) state.firstDetectedMs = nowMs
+
   const good =
-    exercise === 'plank' ? currentAngle >= ex.goodAngle : currentAngle <= ex.goodAngle
+    exercise === 'plank' ? currentAngle >= ex.goodAngle : flexionAngle <= ex.goodAngle
 
   let feedback: string
   if (exercise === 'lunge' && angles.leftAngle !== null && angles.rightAngle !== null) {
@@ -308,26 +333,57 @@ export function processPoseFrame(
   } else if (exercise === 'plank') {
     feedback = getPlankFeedback(currentAngle, ex, good, angles.left, angles.right)
   } else {
-    feedback = getGradedFeedback(currentAngle, ex, good)
+    feedback = getGradedFeedback(flexionAngle, ex, good)
+  }
+
+  if (
+    exercise !== 'plank' &&
+    state.repCount === 0 &&
+    state.firstDetectedMs !== null &&
+    nowMs - state.firstDetectedMs >= CAMERA_HINT_AFTER_MS &&
+    flexionAngle > ex.goodAngle + 25
+  ) {
+    feedback =
+      'Reps not registering — rotate to a side profile so the camera can see your joint bend clearly'
   }
 
   let repCompletedThisFrame = false
   let holdSeconds = 0
 
   if (exercise !== 'plank') {
-    if (currentAngle <= ex.goodAngle && state.repState === 'up') {
-      state.repState = 'down'
-      state.downSinceMs = nowMs
-    } else if (
-      currentAngle >= ex.repAngle &&
-      state.repState === 'down' &&
-      state.downSinceMs !== null &&
-      nowMs - state.downSinceMs >= MIN_REP_HOLD_MS
-    ) {
-      state.repState = 'up'
-      state.downSinceMs = null
-      state.repCount += 1
-      repCompletedThisFrame = true
+    const enteredDownAbsolute = flexionAngle <= ex.goodAngle && state.repState === 'up'
+
+    if (state.repState === 'up') {
+      state.peakExtendedAngle = Math.max(state.peakExtendedAngle, flexionAngle)
+      const enteredDownRelative =
+        state.peakExtendedAngle - flexionAngle >= ROM_ENTER_DELTA && flexionAngle > ex.goodAngle
+
+      if (enteredDownAbsolute || enteredDownRelative) {
+        state.repState = 'down'
+        state.downSinceMs = nowMs
+        state.troughFlexionAngle = flexionAngle
+      }
+    } else {
+      state.troughFlexionAngle = Math.min(state.troughFlexionAngle, flexionAngle)
+
+      const exitedUpAbsolute =
+        flexionAngle >= ex.repAngle &&
+        state.downSinceMs !== null &&
+        nowMs - state.downSinceMs >= MIN_REP_HOLD_MS
+
+      const exitedUpRelative =
+        flexionAngle - state.troughFlexionAngle >= ROM_EXIT_DELTA &&
+        state.downSinceMs !== null &&
+        nowMs - state.downSinceMs >= MIN_REP_HOLD_MS
+
+      if (exitedUpAbsolute || exitedUpRelative) {
+        state.repState = 'up'
+        state.downSinceMs = null
+        state.repCount += 1
+        state.peakExtendedAngle = flexionAngle
+        state.troughFlexionAngle = 180
+        repCompletedThisFrame = true
+      }
     }
   } else if (good) {
     if (state.plankHoldStartMs === null) state.plankHoldStartMs = nowMs

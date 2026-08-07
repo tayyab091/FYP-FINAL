@@ -26,7 +26,8 @@ const VIDEOS: { file: string; exercise: ExerciseKey; manualReps: number }[] = [
   { file: 'Plank.mp4', exercise: 'plank', manualReps: 0 },
 ]
 
-const SAMPLE_MS = 200
+const SAMPLE_MS = Number(process.env.FORM_CHECKER_SAMPLE_MS || '100')
+const FRAME_SNAPSHOT_INTERVAL_SEC = Number(process.env.FORM_CHECKER_FRAME_INTERVAL_SEC || '0.5')
 
 interface FrameLog {
   timeSec: number
@@ -97,7 +98,7 @@ async function extractSampleFrames(page: Page, baseUrl: string, file: string, la
   const frameDir = path.join(FRAME_DIR, label)
   fs.mkdirSync(frameDir, { recursive: true })
   const times: number[] = []
-  for (let t = 0; t <= duration; t += 1.5) times.push(Number(t.toFixed(2)))
+  for (let t = 0; t <= duration; t += FRAME_SNAPSHOT_INTERVAL_SEC) times.push(Number(t.toFixed(2)))
 
   await page.goto(`${baseUrl}/player.html?src=${encodeURIComponent(videoUrl)}`, { waitUntil: 'domcontentloaded' })
   await page.waitForFunction(() => (window as unknown as { __videoReady?: unknown }).__videoReady, { timeout: 30000 })
