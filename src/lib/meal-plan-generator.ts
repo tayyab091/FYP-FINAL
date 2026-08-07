@@ -87,20 +87,31 @@ const MEAL_POOLS: Record<FitnessGoal, MealTemplate[]> = {
   ],
 }
 
-function pickMeals(pool: MealTemplate[], dayIndex: number): MealTemplate[] {
+function shuffleWithSeed<T>(items: T[], seed: number): T[] {
+  const arr = [...items]
+  let state = seed >>> 0
+  for (let i = arr.length - 1; i > 0; i--) {
+    state = (state * 1664525 + 1013904223) >>> 0
+    const j = state % (i + 1)
+    ;[arr[i], arr[j]] = [arr[j], arr[i]]
+  }
+  return arr
+}
+
+function pickMeals(pool: MealTemplate[], dayIndex: number, variationSeed: number): MealTemplate[] {
   const byType = (type: MealTemplate['mealType']) =>
     pool.filter((m) => m.mealType === type)
 
-  const breakfasts = byType('breakfast')
-  const lunches = byType('lunch')
-  const dinners = byType('dinner')
-  const snacks = byType('snack')
+  const breakfasts = shuffleWithSeed(byType('breakfast'), variationSeed + dayIndex * 3)
+  const lunches = shuffleWithSeed(byType('lunch'), variationSeed + dayIndex * 5 + 1)
+  const dinners = shuffleWithSeed(byType('dinner'), variationSeed + dayIndex * 7 + 2)
+  const snacks = shuffleWithSeed(byType('snack'), variationSeed + dayIndex * 11 + 3)
 
   return [
     breakfasts[dayIndex % breakfasts.length],
-    lunches[dayIndex % lunches.length],
-    dinners[dayIndex % dinners.length],
-    snacks[dayIndex % snacks.length],
+    lunches[(dayIndex + 1) % lunches.length],
+    dinners[(dayIndex + 2) % dinners.length],
+    snacks[(dayIndex + 3) % snacks.length],
   ]
 }
 
@@ -165,11 +176,14 @@ export function generateMealPlan(input: GenerateMealPlanInput): GeneratedMealPla
 
   const pool = MEAL_POOLS[goal]
   const goalLabel = goal.replace(/_/g, ' ')
-  const title = input.title?.trim() || `${goalLabel} meal plan · ${dailyCalories} kcal`
+  const stamp = new Date().toISOString().slice(0, 10)
+  const variationSeed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0
+  const title =
+    input.title?.trim() || `${goalLabel} meal plan · ${dailyCalories} kcal · ${stamp}`
 
   const days = DAYS.map((day, index) => ({
     day,
-    meals: scaleMeals(pickMeals(pool, index), dailyCalories).map((meal) => ({
+    meals: scaleMeals(pickMeals(pool, index, variationSeed), dailyCalories).map((meal) => ({
       mealType: meal.mealType,
       name: meal.name,
       calories: meal.calories,

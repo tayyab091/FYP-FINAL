@@ -29,17 +29,17 @@ export function GamificationBar({ data }: { data: GamificationMeResponse | null 
           <span className="text-xl font-black text-black">{level}</span>
         </div>
         <div>
-          <p className="text-xs uppercase tracking-wider text-[#a0a0a0]">Level</p>
-          <p className="font-bold text-white">{data?.levelTitle || levelTitle(level)}</p>
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">Level</p>
+          <p className="font-bold text-foreground">{data?.levelTitle || levelTitle(level)}</p>
         </div>
       </div>
 
       <div className="min-w-0 w-full flex-1 basis-[200px] sm:min-w-[200px]">
-        <div className="mb-2 flex justify-between text-xs text-[#a0a0a0]">
+        <div className="mb-2 flex justify-between text-xs text-muted-foreground">
           <span>{current} XP</span>
           <span>{data?.progressToNextLevel?.xpRemaining ?? Math.max(0, required - current)} XP to Level {level + 1}</span>
         </div>
-        <div className="h-2.5 overflow-hidden rounded-full bg-[#1a1a1a]">
+        <div className="h-2.5 overflow-hidden rounded-full bg-muted">
           <div
             className="h-full rounded-full transition-all duration-700"
             style={{
@@ -53,8 +53,8 @@ export function GamificationBar({ data }: { data: GamificationMeResponse | null 
       <div className="flex flex-shrink-0 items-center gap-2">
         <span className="text-2xl" aria-hidden>🔥</span>
         <div>
-          <p className="text-lg font-bold text-white">{streak}</p>
-          <p className="text-xs text-[#a0a0a0]">day streak</p>
+          <p className="text-lg font-bold text-foreground">{streak}</p>
+          <p className="text-xs text-muted-foreground">day streak</p>
         </div>
       </div>
 
@@ -68,8 +68,8 @@ export function GamificationBar({ data }: { data: GamificationMeResponse | null 
               title={badge.label}
               className={`flex h-10 w-10 items-center justify-center rounded-xl text-xl transition-all ${
                 earned
-                  ? 'border border-[#00ff87]/30 bg-[#00ff87]/15'
-                  : 'bg-[#1a1a1a] opacity-30 grayscale'
+                  ? 'border border-primary/30 bg-primary/15'
+                  : 'bg-muted opacity-30 grayscale'
               }`}
             >
               {badge.emoji}

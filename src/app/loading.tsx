@@ -7,7 +7,7 @@ export default function Loading() {
           <div className="size-10 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
         </div>
         <div className="text-center">
-          <p className="font-heading text-sm font-bold text-white">Preparing your experience</p>
+          <p className="font-heading text-sm font-bold text-foreground">Preparing your experience</p>
           <p className="mt-1 text-xs text-muted-foreground">Train. Eat. Sleep. Thrive.</p>
         </div>
       </div>

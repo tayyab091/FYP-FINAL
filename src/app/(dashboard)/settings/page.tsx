@@ -9,6 +9,7 @@ import { SignInGate } from '@/components/shared/AccessGate'
 import { PageLoader } from '@/components/shared/PageLoader'
 import { BackButton } from '@/components/shared/BackButton'
 import { Avatar } from '@/components/shared/Avatar'
+import { ThemeToggle } from '@/components/shared/ThemeToggle'
 
 const AVATAR_MAX_BYTES = 5 * 1024 * 1024
 const AVATAR_ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
@@ -253,15 +254,15 @@ export default function SettingsPage() {
   if (!user) return <SignInGate redirectLabel="Sign in to access settings" />
 
   const inputClass =
-    'w-full bg-[#0e1a14] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-[#555] outline-none focus:border-[#00ff87] transition-colors'
+    'w-full bg-card border border-border rounded-xl px-4 py-3 text-foreground text-sm placeholder:text-muted-foreground outline-none focus:border-primary transition-colors'
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 pb-28">
       <BackButton />
       <div className="mb-8">
         <p className="section-eyebrow">Configuration</p>
-        <h1 className="text-3xl font-black text-white">Settings</h1>
-        <p className="mt-1 text-[#a0a0a0]">Manage your account, preferences, and security</p>
+        <h1 className="text-3xl font-black text-foreground">Settings</h1>
+        <p className="mt-1 text-muted-foreground">Manage your account, preferences, and security</p>
       </div>
 
       <div className="flex flex-col gap-6 md:flex-row">
@@ -274,8 +275,8 @@ export default function SettingsPage() {
                 onClick={() => setTab(t.id)}
                 className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-all ${
                   tab === t.id
-                    ? 'border border-[#00ff87]/20 bg-[#00ff87]/15 text-[#00ff87]'
-                    : 'text-[#a0a0a0] hover:bg-white/5 hover:text-white'
+                    ? 'border border-primary/20 bg-primary/15 text-primary'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                 }`}
               >
                 <span>{t.icon}</span>
@@ -289,8 +290,8 @@ export default function SettingsPage() {
           {tab === 'profile' && (
             <div className="tile space-y-5">
               <div>
-                <h2 className="text-xl font-bold text-white">Profile Information</h2>
-                <p className="mt-1 text-sm text-[#a0a0a0]">Update your personal information</p>
+                <h2 className="text-xl font-bold text-foreground">Profile Information</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Update your personal information</p>
               </div>
               <div className="flex flex-wrap items-center gap-4">
                 <Avatar
@@ -301,9 +302,9 @@ export default function SettingsPage() {
                   loading={avatarUploading}
                 />
                 <div className="flex-1 space-y-2">
-                  <p className="text-sm font-medium text-white">Profile photo</p>
-                  <p className="text-xs text-[#a0a0a0]">JPG, PNG, or WebP · max 5MB</p>
-                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10">
+                  <p className="text-sm font-medium text-foreground">Profile photo</p>
+                  <p className="text-xs text-muted-foreground">JPG, PNG, or WebP · max 5MB</p>
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-secondary/50 px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary">
                     <input
                       type="file"
                       accept="image/jpeg,image/png,image/webp"
@@ -321,7 +322,7 @@ export default function SettingsPage() {
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <label className="mb-1.5 block text-xs text-[#a0a0a0]">Full Name</label>
+                  <label className="mb-1.5 block text-xs text-muted-foreground">Full Name</label>
                   <input
                     value={profile.fullName}
                     onChange={(e) => setProfile((p) => ({ ...p, fullName: e.target.value }))}
@@ -329,7 +330,7 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-xs text-[#a0a0a0]">Country</label>
+                  <label className="mb-1.5 block text-xs text-muted-foreground">Country</label>
                   <select
                     value={profile.country}
                     onChange={(e) => setProfile((p) => ({ ...p, country: e.target.value }))}
@@ -344,7 +345,7 @@ export default function SettingsPage() {
                 </div>
               </div>
               <div>
-                <label className="mb-1.5 block text-xs text-[#a0a0a0]">Bio</label>
+                <label className="mb-1.5 block text-xs text-muted-foreground">Bio</label>
                 <textarea
                   value={profile.bio}
                   onChange={(e) => setProfile((p) => ({ ...p, bio: e.target.value }))}
@@ -353,7 +354,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-xs text-[#a0a0a0]">Email address</label>
+                <label className="mb-1.5 block text-xs text-muted-foreground">Email address</label>
                 <input value={user.email || ''} disabled className={`${inputClass} cursor-not-allowed opacity-50`} />
               </div>
               <button type="button" onClick={saveProfile} disabled={saving} className="btn-accent w-full py-3 text-sm font-bold disabled:opacity-50">
@@ -365,8 +366,8 @@ export default function SettingsPage() {
           {tab === 'trainer' && (
             <div className="tile space-y-5">
               <div>
-                <h2 className="text-xl font-bold text-white">Coach Profile</h2>
-                <p className="mt-1 text-sm text-[#a0a0a0]">Specialty, rates, and credentials</p>
+                <h2 className="text-xl font-bold text-foreground">Coach Profile</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Specialty, rates, and credentials</p>
               </div>
               {[
                 { key: 'specialty', label: 'Specialty (comma-separated)' },
@@ -376,7 +377,7 @@ export default function SettingsPage() {
                 { key: 'bio', label: 'Coach Bio' },
               ].map((field) => (
                 <div key={field.key}>
-                  <label className="mb-1.5 block text-xs text-[#a0a0a0]">{field.label}</label>
+                  <label className="mb-1.5 block text-xs text-muted-foreground">{field.label}</label>
                   <input
                     value={trainerProfile[field.key as keyof typeof trainerProfile]}
                     onChange={(e) => setTrainerProfile((p) => ({ ...p, [field.key]: e.target.value }))}
@@ -398,11 +399,11 @@ export default function SettingsPage() {
           {tab === 'fitness' && (
             <div className="tile space-y-5">
               <div>
-                <h2 className="text-xl font-bold text-white">Fitness Goals</h2>
-                <p className="mt-1 text-sm text-[#a0a0a0]">Set your goals to get personalized recommendations</p>
+                <h2 className="text-xl font-bold text-foreground">Fitness Goals</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Set your goals to get personalized recommendations</p>
               </div>
               <div>
-                <label className="mb-1.5 block text-xs text-[#a0a0a0]">Primary Goal</label>
+                <label className="mb-1.5 block text-xs text-muted-foreground">Primary Goal</label>
                 <select
                   value={profile.fitnessGoal}
                   onChange={(e) => setProfile((p) => ({ ...p, fitnessGoal: e.target.value }))}
@@ -416,7 +417,7 @@ export default function SettingsPage() {
                 </select>
               </div>
               <div>
-                <label className="mb-1.5 block text-xs text-[#a0a0a0]">Activity Level</label>
+                <label className="mb-1.5 block text-xs text-muted-foreground">Activity Level</label>
                 <select
                   value={profile.activityLevel}
                   onChange={(e) => setProfile((p) => ({ ...p, activityLevel: e.target.value }))}
@@ -431,7 +432,7 @@ export default function SettingsPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-1.5 block text-xs text-[#a0a0a0]">Current Weight (kg)</label>
+                  <label className="mb-1.5 block text-xs text-muted-foreground">Current Weight (kg)</label>
                   <input
                     type="number"
                     value={profile.currentWeight}
@@ -440,7 +441,7 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-xs text-[#a0a0a0]">Target Weight (kg)</label>
+                  <label className="mb-1.5 block text-xs text-muted-foreground">Target Weight (kg)</label>
                   <input
                     type="number"
                     value={profile.targetWeight}
@@ -450,9 +451,9 @@ export default function SettingsPage() {
                 </div>
               </div>
               {profile.currentWeight && (
-                <div className="tile min-h-0 border-[#00ff87]/20 bg-[#00ff87]/5 py-4">
-                  <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[#00ff87]">Estimated Daily Calories</p>
-                  <p className="text-2xl font-black text-white">
+                <div className="tile min-h-0 border-primary/20 bg-primary/5 py-4">
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-primary">Estimated Daily Calories</p>
+                  <p className="text-2xl font-black text-foreground">
                     {Math.round(parseFloat(profile.currentWeight) * 24 * 1.375)} kcal
                   </p>
                 </div>
@@ -466,8 +467,8 @@ export default function SettingsPage() {
           {tab === 'notifications' && (
             <div className="tile space-y-5">
               <div>
-                <h2 className="text-xl font-bold text-white">Notification Preferences</h2>
-                <p className="mt-1 text-sm text-[#a0a0a0]">Choose what you want to be notified about</p>
+                <h2 className="text-xl font-bold text-foreground">Notification Preferences</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Choose what you want to be notified about</p>
               </div>
               <div className="space-y-4">
                 {[
@@ -478,12 +479,12 @@ export default function SettingsPage() {
                   { label: 'Achievement unlocked', desc: 'When you earn a new badge or level up' },
                   { label: 'Connection request', desc: 'When a trainer accepts your request' },
                 ].map((pref) => (
-                  <div key={pref.label} className="flex items-center justify-between border-b border-white/5 py-3 last:border-0">
+                  <div key={pref.label} className="flex items-center justify-between border-b border-border py-3 last:border-0">
                     <div>
-                      <p className="text-sm font-medium text-white">{pref.label}</p>
-                      <p className="text-xs text-[#a0a0a0]">{pref.desc}</p>
+                      <p className="text-sm font-medium text-foreground">{pref.label}</p>
+                      <p className="text-xs text-muted-foreground">{pref.desc}</p>
                     </div>
-                    <button type="button" className="relative h-6 w-11 flex-shrink-0 rounded-full bg-[#00ff87] transition-colors">
+                    <button type="button" className="relative h-6 w-11 flex-shrink-0 rounded-full bg-primary transition-colors">
                       <div className="absolute right-1 top-1 h-4 w-4 rounded-full bg-black" />
                     </button>
                   </div>
@@ -498,12 +499,12 @@ export default function SettingsPage() {
           {tab === 'security' && (
             <div className="tile space-y-5">
               <div>
-                <h2 className="text-xl font-bold text-white">Security</h2>
-                <p className="mt-1 text-sm text-[#a0a0a0]">Keep your account safe</p>
+                <h2 className="text-xl font-bold text-foreground">Security</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Keep your account safe</p>
               </div>
               <div className="space-y-4">
                 <div>
-                  <label className="mb-1.5 block text-xs text-[#a0a0a0]">Current Password</label>
+                  <label className="mb-1.5 block text-xs text-muted-foreground">Current Password</label>
                   <input
                     type="password"
                     value={passwords.current}
@@ -512,7 +513,7 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-xs text-[#a0a0a0]">New Password</label>
+                  <label className="mb-1.5 block text-xs text-muted-foreground">New Password</label>
                   <input
                     type="password"
                     value={passwords.newPass}
@@ -521,7 +522,7 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-xs text-[#a0a0a0]">Confirm New Password</label>
+                  <label className="mb-1.5 block text-xs text-muted-foreground">Confirm New Password</label>
                   <input
                     type="password"
                     value={passwords.confirm}
@@ -533,12 +534,12 @@ export default function SettingsPage() {
               <button type="button" onClick={changePassword} disabled={saving} className="btn-accent w-full py-3 text-sm font-bold disabled:opacity-50">
                 {saving ? 'Changing...' : 'Change Password'}
               </button>
-              <div className="tile mt-4 min-h-0 space-y-2 border-white/5 bg-[#111]">
-                <p className="text-xs font-semibold uppercase tracking-wider text-[#a0a0a0]">Active Sessions</p>
+              <div className="tile mt-4 min-h-0 space-y-2 border-border bg-muted">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Active Sessions</p>
                 <div className="flex items-center justify-between py-2">
                   <div>
-                    <p className="text-sm text-white">Current Session</p>
-                    <p className="text-xs text-[#a0a0a0]">This device · Active now</p>
+                    <p className="text-sm text-foreground">Current Session</p>
+                    <p className="text-xs text-muted-foreground">This device · Active now</p>
                   </div>
                   <span className="badge-accent text-xs">Active</span>
                 </div>
@@ -550,8 +551,8 @@ export default function SettingsPage() {
             <div className="space-y-4">
               <div className="tile space-y-5">
                 <div>
-                  <h2 className="text-xl font-bold text-white">Admin Controls</h2>
-                  <p className="mt-1 text-sm text-[#a0a0a0]">
+                  <h2 className="text-xl font-bold text-foreground">Admin Controls</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
                     Elite platform tools for verification, content, audit, and subscriptions
                   </p>
                 </div>
@@ -569,18 +570,18 @@ export default function SettingsPage() {
                     <Link
                       key={item.href}
                       href={item.href}
-                      className="rounded-xl border border-white/10 bg-white/[.03] p-4 transition-colors hover:border-primary/40"
+                      className="rounded-xl border border-border bg-muted/40 p-4 transition-colors hover:border-primary/40"
                     >
-                      <p className="font-bold text-white">{item.label}</p>
-                      <p className="mt-1 text-xs text-[#a0a0a0]">{item.desc}</p>
+                      <p className="font-bold text-foreground">{item.label}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{item.desc}</p>
                     </Link>
                   ))}
                 </div>
               </div>
               <div className="tile space-y-4">
                 <div>
-                  <h3 className="font-bold text-white">Notification Control</h3>
-                  <p className="mt-1 text-sm text-[#a0a0a0]">Broadcast-style preferences for admin alerts</p>
+                  <h3 className="font-bold text-foreground">Notification Control</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">Broadcast-style preferences for admin alerts</p>
                 </div>
                 {[
                   { label: 'New trainer applications', desc: 'Alert when trainers request verification' },
@@ -588,12 +589,12 @@ export default function SettingsPage() {
                   { label: 'User suspension events', desc: 'Track moderation activity' },
                   { label: 'Subscription upgrades', desc: 'Monitor plan changes' },
                 ].map((pref) => (
-                  <div key={pref.label} className="flex items-center justify-between border-b border-white/5 py-3 last:border-0">
+                  <div key={pref.label} className="flex items-center justify-between border-b border-border py-3 last:border-0">
                     <div>
-                      <p className="text-sm font-medium text-white">{pref.label}</p>
-                      <p className="text-xs text-[#a0a0a0]">{pref.desc}</p>
+                      <p className="text-sm font-medium text-foreground">{pref.label}</p>
+                      <p className="text-xs text-muted-foreground">{pref.desc}</p>
                     </div>
-                    <button type="button" className="relative h-6 w-11 flex-shrink-0 rounded-full bg-[#00ff87] transition-colors">
+                    <button type="button" className="relative h-6 w-11 flex-shrink-0 rounded-full bg-primary transition-colors">
                       <div className="absolute right-1 top-1 h-4 w-4 rounded-full bg-black" />
                     </button>
                   </div>
@@ -601,7 +602,7 @@ export default function SettingsPage() {
               </div>
               <div className="tile space-y-3 border-amber-500/20 bg-amber-500/5">
                 <p className="text-sm font-bold text-amber-300">Safe admin tools</p>
-                <p className="text-xs text-[#a0a0a0]">
+                <p className="text-xs text-muted-foreground">
                   Destructive seed and wipe actions stay CLI/env-gated. Use the admin console APIs for day-to-day moderation instead of raw database resets.
                 </p>
                 <Link href="/admin?tab=audit" className="inline-flex text-sm font-bold text-primary hover:underline">
@@ -614,8 +615,8 @@ export default function SettingsPage() {
           {tab === 'gym' && (
             <div className="tile space-y-5">
               <div>
-                <h2 className="text-xl font-bold text-white">Facility Privileges</h2>
-                <p className="mt-1 text-sm text-[#a0a0a0]">Shortcuts for gym operations and content review</p>
+                <h2 className="text-xl font-bold text-foreground">Facility Privileges</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Shortcuts for gym operations and content review</p>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 {[
@@ -627,10 +628,10 @@ export default function SettingsPage() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="rounded-xl border border-white/10 bg-white/[.03] p-4 transition-colors hover:border-primary/40"
+                    className="rounded-xl border border-border bg-muted/40 p-4 transition-colors hover:border-primary/40"
                   >
-                    <p className="font-bold text-white">{item.label}</p>
-                    <p className="mt-1 text-xs text-[#a0a0a0]">{item.desc}</p>
+                    <p className="font-bold text-foreground">{item.label}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{item.desc}</p>
                   </Link>
                 ))}
               </div>
@@ -640,31 +641,41 @@ export default function SettingsPage() {
           {tab === 'account' && (
             <div className="tile space-y-5">
               <div>
-                <h2 className="text-xl font-bold text-white">Account</h2>
-                <p className="mt-1 text-sm text-[#a0a0a0]">Manage your account data and subscription</p>
+                <h2 className="text-xl font-bold text-foreground">Account</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Manage your account data and subscription</p>
               </div>
-              <div className="tile min-h-0 space-y-3 border-white/5 bg-[#111]">
-                <p className="text-xs font-semibold uppercase tracking-wider text-[#a0a0a0]">Account Details</p>
+              <div className="tile min-h-0 space-y-3 border-border bg-muted">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Appearance</p>
+                <div className="flex items-center justify-between gap-3 py-2">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Theme</p>
+                    <p className="text-xs text-muted-foreground">Light mode uses purple accents; dark keeps the classic look</p>
+                  </div>
+                  <ThemeToggle showLabel />
+                </div>
+              </div>
+              <div className="tile min-h-0 space-y-3 border-border bg-muted">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Account Details</p>
                 {[
                   { label: 'Email', value: user.email },
                   { label: 'Role', value: user.role },
                   { label: 'Plan', value: user.subscription?.plan || 'basic' },
                 ].map((d) => (
-                  <div key={d.label} className="flex items-center justify-between border-b border-white/5 py-2 last:border-0">
-                    <span className="text-sm text-[#a0a0a0]">{d.label}</span>
-                    <span className="text-sm font-medium capitalize text-white">{d.value}</span>
+                  <div key={d.label} className="flex items-center justify-between border-b border-border py-2 last:border-0">
+                    <span className="text-sm text-muted-foreground">{d.label}</span>
+                    <span className="text-sm font-medium capitalize text-foreground">{d.value}</span>
                   </div>
                 ))}
               </div>
               <Link
                 href="/subscription"
-                className="block w-full rounded-2xl border border-[#00ff87]/30 py-3 text-center text-sm font-bold text-[#00ff87] transition-colors hover:bg-[#00ff87]/10"
+                className="block w-full rounded-2xl border border-primary/30 py-3 text-center text-sm font-bold text-primary transition-colors hover:bg-primary/10"
               >
                 Manage Subscription →
               </Link>
               <div className="tile min-h-0 space-y-3 border-red-500/20 bg-red-500/5">
                 <p className="text-sm font-bold text-red-400">⚠ Danger Zone</p>
-                <p className="text-xs text-[#a0a0a0]">Deleting your account is permanent and cannot be undone.</p>
+                <p className="text-xs text-muted-foreground">Deleting your account is permanent and cannot be undone.</p>
                 <input
                   value={deleteConfirm}
                   onChange={(e) => setDeleteConfirm(e.target.value)}
