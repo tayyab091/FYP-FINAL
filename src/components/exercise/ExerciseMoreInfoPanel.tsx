@@ -48,16 +48,16 @@ export function ExerciseMoreInfoPanel({ exercise }: ExerciseMoreInfoPanelProps) 
     <div className="space-y-3">
       <div className="flex flex-wrap gap-1">
         <span
-          className={`workout-badge rounded-full border px-1.5 py-px ${MUSCLE_COLORS[exercise.muscle] || 'border-white/15 bg-white/[.04] text-muted-foreground'}`}
+          className={`workout-badge rounded-full border px-1.5 py-px ${MUSCLE_COLORS[exercise.muscle] || 'border-border bg-muted/60 text-muted-foreground'}`}
         >
           {exercise.muscle}
         </span>
-        <span className="inline-flex items-center gap-0.5 rounded-full border border-white/10 bg-white/[.04] px-1.5 py-px text-[9px] text-muted-foreground">
+        <span className="inline-flex items-center gap-0.5 rounded-full border border-border bg-muted/60 px-1.5 py-px text-[9px] text-muted-foreground">
           <Wrench className="size-2.5 text-emerald-400/80" />
           {exercise.equipment}
         </span>
         <span
-          className={`rounded-full border px-1.5 py-px text-[9px] font-semibold ${DIFFICULTY_COLORS[exercise.difficulty] || 'border-white/10 text-muted-foreground'}`}
+          className={`rounded-full border px-1.5 py-px text-[9px] font-semibold ${DIFFICULTY_COLORS[exercise.difficulty] || 'border-border text-muted-foreground'}`}
         >
           {exercise.difficulty}
         </span>
@@ -84,7 +84,7 @@ export function ExerciseMoreInfoPanel({ exercise }: ExerciseMoreInfoPanelProps) 
 
       <div className="flex flex-wrap gap-1.5 text-[9px]">
         {bodyPart && (
-          <span className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/[.03] px-1.5 py-0.5 text-muted-foreground">
+          <span className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/40 px-1.5 py-0.5 text-muted-foreground">
             <Activity className="size-2.5 text-emerald-400/70" />
             {titleCase(bodyPart)}
           </span>

@@ -67,7 +67,7 @@ export default function ChatListPage() {
                   <p className="text-muted-foreground text-sm truncate mt-0.5">{c.lastMessage || 'No messages yet'}</p>
                 </div>
                 {c.unreadCount > 0 && (
-                  <Badge className="bg-primary text-black flex-shrink-0">{c.unreadCount}</Badge>
+                  <Badge className="bg-primary text-primary-foreground flex-shrink-0">{c.unreadCount}</Badge>
                 )}
               </Link>
             ))}

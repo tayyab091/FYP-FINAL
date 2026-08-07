@@ -358,7 +358,7 @@ export default function NutritionPage() {
         <FadeIn>
           <div className="page-hero px-6 py-10 sm:px-10 md:py-14 gym-floor">
             <span className="eyebrow">Nutrition Intelligence</span>
-            <h1 className="display-title text-4xl md:text-6xl text-white mt-3">Fuel Every Ambition</h1>
+            <h1 className="display-title text-4xl md:text-6xl text-foreground mt-3">Fuel Every Ambition</h1>
             <p className="mt-3 text-muted-foreground">Track meals, understand your macros, and stay aligned with your goals · {todayLabel}</p>
             <p className="workout-label mt-3 text-primary/70">Macros · Meals · Momentum</p>
           </div>
@@ -377,7 +377,7 @@ export default function NutritionPage() {
               <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl border border-primary/20 bg-primary/[.08] text-primary">
                 <Salad className="size-7" />
               </div>
-              <p className="text-white font-semibold mb-2">Sign in to track nutrition</p>
+              <p className="text-foreground font-semibold mb-2">Sign in to track nutrition</p>
               <p className="text-muted-foreground text-sm mb-6">Log meals, monitor macros, and hit your daily goals.</p>
               <Link href="/login" className="btn-accent px-6 py-3 text-sm">Sign In</Link>
             </div>
@@ -387,7 +387,7 @@ export default function NutritionPage() {
                 <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-xl border border-primary/20 bg-primary/[.08] text-primary">
                   <ClipboardList className="size-6" />
                 </div>
-                <p className="text-white font-medium">No meals logged today</p>
+                <p className="text-foreground font-medium">No meals logged today</p>
                 <p className="text-muted-foreground text-sm mt-1">Search for a food below and log your first meal.</p>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -437,7 +437,7 @@ export default function NutritionPage() {
               <div className="glass rounded-2xl p-5">
                 <div className="flex justify-between text-sm mb-2">
                   <span className="text-muted-foreground">Calorie progress</span>
-                  <span className="text-white font-medium">{Math.round(totals.calories)} / {calorieGoal} cal</span>
+                  <span className="text-foreground font-medium">{Math.round(totals.calories)} / {calorieGoal} cal</span>
                 </div>
                 <div className="h-3 bg-muted rounded-full overflow-hidden">
                   <div className="h-full bg-gradient-to-r from-primary to-sky-400 rounded-full transition-all duration-500"
@@ -460,7 +460,7 @@ export default function NutritionPage() {
                 onChange={e => setSearchQuery(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSearch()}
                 placeholder='e.g. "chicken biryani" or "roti"'
-                className="flex-1 bg-background border border-border rounded-xl px-4 py-3 text-white text-sm placeholder:text-muted-foreground outline-none focus:border-primary"
+                className="flex-1 bg-background border border-border rounded-xl px-4 py-3 text-foreground text-sm placeholder:text-muted-foreground outline-none focus:border-primary"
               />
               <button onClick={handleSearch} disabled={searching || !searchQuery.trim()}
                 className="btn-accent px-6 py-3 text-sm font-bold disabled:opacity-50">
@@ -480,7 +480,7 @@ export default function NutritionPage() {
                   <div key={idx} className="glass rounded-xl p-4 border border-border">
                     <div className="flex justify-between items-start gap-4">
                       <div className="flex-1 min-w-0">
-                        <p className="text-white font-semibold capitalize">{item.name}</p>
+                        <p className="text-foreground font-semibold capitalize">{item.name}</p>
                         <p className="text-muted-foreground text-sm mt-1">{item.calories} cal per {item.per}</p>
                         <p className="text-muted-foreground text-xs mt-1">P: {item.protein}g · C: {item.carbs}g · F: {item.fat}g</p>
                       </div>
@@ -497,14 +497,14 @@ export default function NutritionPage() {
                           <div>
                             <label className="text-muted-foreground text-xs block mb-1">Meal type</label>
                             <select value={logMealType} onChange={e => setLogMealType(e.target.value)}
-                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-primary">
+                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm outline-none focus:border-primary">
                               {MEAL_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                             </select>
                           </div>
                           <div>
                             <label className="text-muted-foreground text-xs block mb-1">Quantity (g)</label>
                             <input type="number" min="1" value={logQuantity} onChange={e => setLogQuantity(e.target.value)}
-                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-primary" />
+                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm outline-none focus:border-primary" />
                           </div>
                         </div>
                         <button onClick={() => handleLogMeal(item)} disabled={submittingLog}
@@ -550,7 +550,7 @@ export default function NutritionPage() {
                         </div>
                         {meal.foods.map((food, i) => (
                           <div key={i} className="flex justify-between text-sm">
-                            <span className="text-white">{food.name}</span>
+                            <span className="text-foreground">{food.name}</span>
                             <span className="text-primary font-medium">{Math.round(food.calories)} cal</span>
                           </div>
                         ))}
@@ -591,7 +591,7 @@ export default function NutritionPage() {
               value={mealSearch}
               onChange={(e) => setMealSearch(e.target.value)}
               placeholder="Search recipes by name..."
-              className="w-full bg-background border border-border rounded-xl px-4 py-3 text-white text-sm placeholder:text-muted-foreground outline-none focus:border-primary"
+              className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground text-sm placeholder:text-muted-foreground outline-none focus:border-primary"
             />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -600,7 +600,7 @@ export default function NutritionPage() {
                 <select
                   value={mealCategory}
                   onChange={(e) => setMealCategory(e.target.value)}
-                  className="bg-background border border-border rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-primary"
+                  className="bg-background border border-border rounded-xl px-3 py-2.5 text-sm text-foreground outline-none focus:border-primary"
                 >
                   <option value="All">All categories</option>
                   {mealCategories.map((c) => (
@@ -613,7 +613,7 @@ export default function NutritionPage() {
                 <select
                   value={mealArea}
                   onChange={(e) => setMealArea(e.target.value)}
-                  className="bg-background border border-border rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-primary"
+                  className="bg-background border border-border rounded-xl px-3 py-2.5 text-sm text-foreground outline-none focus:border-primary"
                 >
                   <option value="All">All cuisines</option>
                   {mealAreas.map((a) => (
@@ -627,7 +627,7 @@ export default function NutritionPage() {
               <button
                 onClick={() => setMealLetter('All')}
                 className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${
-                  mealLetter === 'All' ? 'border-primary bg-primary text-black' : 'border-border text-muted-foreground'
+                  mealLetter === 'All' ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground'
                 }`}
               >
                 All
@@ -637,7 +637,7 @@ export default function NutritionPage() {
                   key={letter}
                   onClick={() => setMealLetter(letter)}
                   className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
-                    mealLetter === letter ? 'border-primary bg-primary text-black' : 'border-border text-muted-foreground hover:border-white/20'
+                    mealLetter === letter ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:border-primary/25'
                   }`}
                 >
                   {letter}
@@ -646,7 +646,7 @@ export default function NutritionPage() {
             </div>
 
             {hasMealFilters && (
-              <button onClick={clearMealFilters} className="text-xs text-muted-foreground hover:text-white underline underline-offset-2">
+              <button onClick={clearMealFilters} className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2">
                 Clear recipe filters
               </button>
             )}
@@ -659,7 +659,7 @@ export default function NutritionPage() {
           ) : recipeMeals.length === 0 ? (
             <div className="glass rounded-2xl p-8 text-center">
               <UtensilsCrossed className="size-8 mx-auto mb-3 text-primary/50" />
-              <p className="text-white font-medium">No recipes match your filters</p>
+              <p className="text-foreground font-medium">No recipes match your filters</p>
               <p className="text-muted-foreground text-sm mt-1">Try a different category, cuisine, or search term.</p>
             </div>
           ) : (
@@ -689,7 +689,7 @@ export default function NutritionPage() {
                         />
                       </Link>
                       <div className="flex flex-1 flex-col p-5">
-                        <Link href={`/nutrition/${recipe.id}`} className="text-white font-semibold leading-tight hover:text-primary transition-colors">
+                        <Link href={`/nutrition/${recipe.id}`} className="text-foreground font-semibold leading-tight hover:text-primary transition-colors">
                           {recipe.name}
                         </Link>
                         <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">

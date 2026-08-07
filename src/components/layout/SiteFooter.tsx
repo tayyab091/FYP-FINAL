@@ -28,7 +28,7 @@ export function SiteFooter() {
         </Link>
         <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
           {links.map((link) => (
-            <Link key={link.href} href={link.href} className="transition-colors hover:text-white">
+            <Link key={link.href} href={link.href} className="transition-colors hover:text-foreground">
               {link.label}
             </Link>
           ))}

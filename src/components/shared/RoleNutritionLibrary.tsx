@@ -124,7 +124,7 @@ export function RoleNutritionLibrary({
         <div className="elite-panel mb-6 space-y-4 p-4">
           <div className="flex items-center gap-2 text-sm">
             <Filter className="size-4 text-primary" />
-            <span className="font-medium text-white">Meal filters</span>
+            <span className="font-medium text-foreground">Meal filters</span>
             <span className="ml-auto text-xs text-muted-foreground">
               Showing {total.toLocaleString()} of {catalogTotal.toLocaleString()}
             </span>
@@ -133,13 +133,13 @@ export function RoleNutritionLibrary({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search meals by name..."
-            className="w-full rounded-xl border border-white/[.09] bg-black/25 px-4 py-3 text-sm text-white outline-none placeholder:text-muted-foreground focus:border-primary/40"
+            className="w-full rounded-xl border border-border bg-muted/60 px-4 py-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary/40"
           />
           <div className="flex flex-wrap gap-3">
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="min-w-[160px] flex-1 rounded-xl border border-white/[.09] bg-black/25 px-3 py-2.5 text-sm text-white outline-none"
+              className="min-w-[160px] flex-1 rounded-xl border border-border bg-muted/60 px-3 py-2.5 text-sm text-foreground outline-none"
             >
               <option value="All">All categories</option>
               {(meta?.categories || []).map((c) => (
@@ -151,7 +151,7 @@ export function RoleNutritionLibrary({
             <select
               value={area}
               onChange={(e) => setArea(e.target.value)}
-              className="min-w-[160px] flex-1 rounded-xl border border-white/[.09] bg-black/25 px-3 py-2.5 text-sm text-white outline-none"
+              className="min-w-[160px] flex-1 rounded-xl border border-border bg-muted/60 px-3 py-2.5 text-sm text-foreground outline-none"
             >
               <option value="All">All cuisines</option>
               {(meta?.areas || []).map((a) => (
@@ -196,7 +196,7 @@ export function RoleNutritionLibrary({
                     )}
                   </div>
                   <div className="flex flex-1 flex-col p-4">
-                    <h3 className="font-bold text-white">{meal.name}</h3>
+                    <h3 className="font-bold text-foreground">{meal.name}</h3>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {meal.category && (
                         <Badge className="bg-primary/10 text-xs text-primary">{meal.category}</Badge>

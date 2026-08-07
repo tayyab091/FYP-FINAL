@@ -54,14 +54,14 @@ export function AvailabilityTab() {
   return (
     <div className="space-y-4 max-w-xl">
       <div>
-        <h2 className="text-xl font-black text-white">Set Your Availability</h2>
-        <p className="text-[#a0a0a0] text-sm mt-1">Clients will see these hours when booking sessions</p>
+        <h2 className="text-xl font-black text-foreground">Set Your Availability</h2>
+        <p className="text-muted-foreground text-sm mt-1">Clients will see these hours when booking sessions</p>
       </div>
       <div className="tile space-y-3">
         {slots.map((slot, i) => (
           <div
             key={slot.dayOfWeek}
-            className="flex items-center gap-4 py-2 border-b border-white/5 last:border-0 flex-wrap gap-y-2"
+            className="flex items-center gap-4 py-2 border-b border-border last:border-0 flex-wrap gap-y-2"
           >
             <div className="w-28 flex-shrink-0 flex items-center gap-2">
               <button
@@ -71,13 +71,13 @@ export function AvailabilityTab() {
                     s.map((sl, idx) => (idx === i ? { ...sl, isAvailable: !sl.isAvailable } : sl)),
                   )
                 }
-                className={`w-10 h-5 rounded-full transition-colors relative flex-shrink-0 ${slot.isAvailable ? 'bg-[#00ff87]' : 'bg-white/10'}`}
+                className={`w-10 h-5 rounded-full transition-colors relative flex-shrink-0 ${slot.isAvailable ? 'bg-primary' : 'bg-white/10'}`}
               >
                 <div
                   className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${slot.isAvailable ? 'right-0.5' : 'left-0.5'}`}
                 />
               </button>
-              <span className={`text-sm font-medium ${slot.isAvailable ? 'text-white' : 'text-[#555]'}`}>
+              <span className={`text-sm font-medium ${slot.isAvailable ? 'text-foreground' : 'text-muted-foreground'}`}>
                 {DAYS[i]}
               </span>
             </div>
@@ -89,20 +89,20 @@ export function AvailabilityTab() {
                   onChange={(e) =>
                     setSlots((s) => s.map((sl, idx) => (idx === i ? { ...sl, startTime: e.target.value } : sl)))
                   }
-                  className="bg-[#0e1a14] border border-white/10 rounded-lg px-3 py-1.5 text-white text-sm outline-none focus:border-[#00ff87]"
+                  className="bg-card border border-border rounded-lg px-3 py-1.5 text-foreground text-sm outline-none focus:border-primary"
                 />
-                <span className="text-[#555] text-sm">to</span>
+                <span className="text-muted-foreground text-sm">to</span>
                 <input
                   type="time"
                   value={slot.endTime}
                   onChange={(e) =>
                     setSlots((s) => s.map((sl, idx) => (idx === i ? { ...sl, endTime: e.target.value } : sl)))
                   }
-                  className="bg-[#0e1a14] border border-white/10 rounded-lg px-3 py-1.5 text-white text-sm outline-none focus:border-[#00ff87]"
+                  className="bg-card border border-border rounded-lg px-3 py-1.5 text-foreground text-sm outline-none focus:border-primary"
                 />
               </div>
             )}
-            {!slot.isAvailable && <span className="text-xs text-[#555] italic">Not available</span>}
+            {!slot.isAvailable && <span className="text-xs text-muted-foreground italic">Not available</span>}
           </div>
         ))}
       </div>

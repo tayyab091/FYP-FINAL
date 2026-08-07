@@ -140,7 +140,7 @@ export default function SubscriptionPage() {
       <div className="max-w-6xl mx-auto">
         <div className="page-hero text-center mb-12 px-6 py-12 sm:px-10 md:py-16">
           <p className="eyebrow mb-3">Invest in your strongest self</p>
-          <h1 className="display-title text-balance text-4xl md:text-6xl text-white mb-5">A Plan for Every Ambition</h1>
+          <h1 className="display-title text-balance text-4xl md:text-6xl text-foreground mb-5">A Plan for Every Ambition</h1>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             Unlock personalized workouts, meal plans, and expert coaching.
           </p>
@@ -168,7 +168,7 @@ export default function SubscriptionPage() {
                 }`}>
                 {plan.highlighted && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="bg-primary text-black text-xs font-bold px-3 py-1 rounded-full uppercase">
+                    <span className="bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-full uppercase">
                       Most Popular
                     </span>
                   </div>
@@ -182,9 +182,9 @@ export default function SubscriptionPage() {
                   </div>
                 )}
 
-                <h2 className="text-2xl font-bold text-white mb-2">{plan.name}</h2>
+                <h2 className="text-2xl font-bold text-foreground mb-2">{plan.name}</h2>
                 <div className="mb-6">
-                  <span className={`text-5xl font-black ${plan.highlighted ? 'text-primary' : 'text-white'}`}>
+                  <span className={`text-5xl font-black ${plan.highlighted ? 'text-primary' : 'text-foreground'}`}>
                     {plan.price}
                   </span>
                   {plan.period && <span className="text-muted-foreground text-lg">{plan.period}</span>}
@@ -238,7 +238,7 @@ export default function SubscriptionPage() {
           <div className="elite-panel space-y-2 rounded-xl p-4">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Plan</span>
-              <span className="font-medium capitalize text-white">{selectedPlan}</span>
+              <span className="font-medium capitalize text-foreground">{selectedPlan}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Amount</span>

@@ -45,15 +45,15 @@ export function AIChatbot() {
   return (
     <>
       <button onClick={() => setOpen(!open)} aria-label="AI Fitness Coach"
-        className="fixed z-50 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#55ffb1] to-primary text-primary-foreground shadow-[0_16px_45px_rgba(34,245,154,.26)] transition-transform hover:-translate-y-1 right-5 md:right-6"
+        className="fixed z-50 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_16px_45px_color-mix(in_srgb,var(--primary)_26%,transparent)] transition-transform hover:-translate-y-1 right-5 md:right-6 dark:from-[#55ffb1] dark:shadow-[0_16px_45px_rgba(34,245,154,.26)]"
         style={{ bottom: 160 }}>
         {open ? <X className="size-5" /> : <Bot className="size-6" />}
       </button>
 
       {open && (
-        <div className="fixed right-3 md:right-6 z-50 flex w-[calc(100vw-1.5rem)] max-w-sm flex-col overflow-hidden rounded-3xl border border-white/[.1] bg-[#0c100d]/96 shadow-[0_30px_100px_rgba(0,0,0,.5)] backdrop-blur-2xl"
+        <div className="fixed right-3 md:right-6 z-50 flex w-[calc(100vw-1.5rem)] max-w-sm flex-col overflow-hidden rounded-3xl border border-border bg-card/95 shadow-[0_30px_100px_rgba(0,0,0,.5)] backdrop-blur-2xl"
           style={{ height: 420, bottom: 230 }}>
-          <div className="px-4 py-3 border-b border-white/[.07] flex items-center gap-3 flex-shrink-0">
+          <div className="px-4 py-3 border-b border-border flex items-center gap-3 flex-shrink-0">
             <div className="flex size-9 items-center justify-center rounded-xl border border-primary/15 bg-primary/[.09] text-primary"><Bot className="size-4" /></div>
             <div>
               <div className="text-sm font-bold">AI Fitness Coach</div>
@@ -70,7 +70,7 @@ export function AIChatbot() {
                 <div className={`max-w-[85%] px-3 py-2.5 rounded-2xl text-sm leading-relaxed ${
                   m.role === 'user'
                     ? 'bg-primary text-primary-foreground font-semibold rounded-br-sm'
-                    : 'bg-white/[.06] border border-white/[.06] text-white rounded-bl-sm'
+                    : 'bg-muted border border-border text-foreground rounded-bl-sm'
                 }`}>
                   {m.content}
                 </div>
@@ -89,11 +89,11 @@ export function AIChatbot() {
             <div ref={bottomRef} />
           </div>
 
-          <div className="px-3 py-3 border-t border-white/[.07] flex gap-2 flex-shrink-0">
+          <div className="px-3 py-3 border-t border-border flex gap-2 flex-shrink-0">
             <input value={input} onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && send()}
               placeholder="Ask about fitness, nutrition..."
-              className="flex-1 bg-black/25 border border-white/[.09] rounded-xl px-3 py-2 text-sm text-white placeholder-[#56615b] outline-none focus:border-primary/40 transition-colors" />
+              className="flex-1 bg-muted/60 border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/40 transition-colors" />
             <button onClick={send} disabled={!input.trim() || loading}
               className="flex size-9 flex-shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground disabled:opacity-40">
               <Send className="size-3.5" />

@@ -83,13 +83,13 @@ function TrainerCard({ trainer, connectable, onConnect }: { trainer: Trainer; co
         <div className="flex items-start justify-between mb-2">
           <div>
             <Link href={isPreview ? '/coaching' : trainerPublicPath(trainer)}>
-              <h3 className="font-bold text-white text-base hover:text-primary transition-colors">{name}</h3>
+              <h3 className="font-bold text-foreground text-base hover:text-primary transition-colors">{name}</h3>
             </Link>
             <p className="text-muted-foreground text-xs mt-0.5">{trainer.country}{trainer.gymName ? ` · ${trainer.gymName}` : ''}</p>
           </div>
           <div className="flex items-center gap-1 bg-muted px-2 py-1 rounded-lg">
             <span className="text-yellow-400 text-xs">★</span>
-            <span className="text-white text-xs font-bold">{trainer.rating?.toFixed(1) || '5.0'}</span>
+            <span className="text-foreground text-xs font-bold">{trainer.rating?.toFixed(1) || '5.0'}</span>
           </div>
         </div>
 
@@ -111,9 +111,9 @@ function TrainerCard({ trainer, connectable, onConnect }: { trainer: Trainer; co
           className={`w-full py-2.5 rounded-xl text-sm font-bold transition-all ${
             status === 'sent' ? 'bg-primary/20 text-primary border border-primary/30 cursor-default' :
             status === 'pending' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 cursor-default' :
-            status === 'loading' ? 'bg-primary text-black opacity-70 cursor-wait' :
+            status === 'loading' ? 'bg-primary text-primary-foreground opacity-70 cursor-wait' :
             isPreview ? 'bg-muted text-muted-foreground cursor-not-allowed' :
-            'bg-primary text-black hover:brightness-95 hover:-translate-y-0.5 active:translate-y-0'
+            'bg-primary text-primary-foreground hover:brightness-95 hover:-translate-y-0.5 active:translate-y-0'
           }`}>
           {status === 'loading' ? 'Sending...' :
            status === 'sent' ? '✓ Request Sent' :
@@ -222,7 +222,7 @@ export default function CoachingPage() {
       <FadeIn>
         <div className="page-hero max-w-6xl mx-4 px-6 py-10 sm:mx-6 sm:px-10 md:mx-auto md:py-14 gym-floor min-h-[14rem] md:min-h-[16rem]">
           <p className="eyebrow mb-3">Trainer Marketplace</p>
-          <h1 className="display-title text-balance text-4xl md:text-6xl text-white mb-4">Find Your Perfect Trainer</h1>
+          <h1 className="display-title text-balance text-4xl md:text-6xl text-foreground mb-4">Find Your Perfect Trainer</h1>
           <p className="max-w-xl text-muted-foreground">Discover verified coaches matched to your goals, training style, and location.</p>
           <p className="workout-label mt-3 text-primary/70">Your coach · Your rules · Your gains</p>
         </div>
@@ -233,7 +233,7 @@ export default function CoachingPage() {
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Search by name, specialty, or keyword..."
-          className="w-full rounded-xl border border-white/[.09] bg-black/25 px-5 py-3.5 text-sm text-white outline-none transition-all placeholder:text-muted-foreground focus:border-primary/40 focus:ring-3 focus:ring-primary/10"
+          className="w-full rounded-xl border border-border bg-muted/60 px-5 py-3.5 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary/40 focus:ring-3 focus:ring-primary/10"
         />
 
         <div className="flex gap-2 flex-wrap">
@@ -241,8 +241,8 @@ export default function CoachingPage() {
             <button key={s} onClick={() => setSpecialty(s)}
               className={`px-4 py-2 rounded-full text-xs font-semibold border transition-all ${
                 specialty === s
-                  ? 'bg-primary text-black border-primary filter-pill-active'
-                  : 'bg-transparent text-muted-foreground border-border hover:border-white/20'
+                  ? 'bg-primary text-primary-foreground border-primary filter-pill-active'
+                  : 'bg-transparent text-muted-foreground border-border hover:border-primary/25'
               }`}>
               {s}
             </button>

@@ -125,7 +125,7 @@ function ExerciseCard({ exercise }: { exercise: Exercise }) {
 
       <div className="flex flex-1 flex-col p-4">
         <div className="flex items-start justify-between mb-2 gap-2">
-          <Link href={`/exercises/${exercise.id}`} className="font-bold text-white leading-tight hover:text-primary transition-colors">
+          <Link href={`/exercises/${exercise.id}`} className="font-bold text-foreground leading-tight hover:text-primary transition-colors">
             {exercise.name}
           </Link>
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${MUSCLE_COLORS[exercise.muscle] || 'bg-muted text-muted-foreground'}`}>
@@ -192,7 +192,7 @@ function FilterSelect({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded-xl border border-white/[.09] bg-black/25 px-3 py-2.5 text-sm text-white outline-none focus:border-primary/40"
+        className="rounded-xl border border-border bg-muted/60 px-3 py-2.5 text-sm text-foreground outline-none focus:border-primary/40"
       >
         <option value="All">All</option>
         {options.map((opt) => (
@@ -312,7 +312,7 @@ export default function ExercisesPage() {
         <FadeIn>
           <div className="page-hero mb-6 px-6 py-10 sm:px-10 md:py-14 gym-floor min-h-[14rem] md:min-h-[16rem]">
             <p className="eyebrow mb-3">Exercise Library</p>
-            <h1 className="display-title text-4xl md:text-6xl text-white mb-3">Master Every Movement</h1>
+            <h1 className="display-title text-4xl md:text-6xl text-foreground mb-3">Master Every Movement</h1>
             <p className="max-w-xl text-muted-foreground">
               {catalogTotal > 0
                 ? `${catalogTotal.toLocaleString()} exercises with GIF demos — filter by muscle, body part, equipment, and more.`
@@ -325,7 +325,7 @@ export default function ExercisesPage() {
         <div className="elite-panel mb-6 p-4 sm:p-5 space-y-4">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Filter className="size-4 text-primary" />
-            <span className="font-medium text-white">Filters</span>
+            <span className="font-medium text-foreground">Filters</span>
             {!loading && (
               <span className="ml-auto text-xs">
                 Showing <span className="text-primary font-semibold">{filteredExercises.length.toLocaleString()}</span>
@@ -350,7 +350,7 @@ export default function ExercisesPage() {
                   className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
                     bodyPartCategory === bp.value
                       ? 'border-primary/40 bg-primary/15 text-primary filter-pill-active'
-                      : 'border-white/10 text-muted-foreground hover:border-primary/30 hover:text-white'
+                      : 'border-border text-muted-foreground hover:border-primary/30 hover:text-foreground'
                   }`}
                 >
                   {display}
@@ -365,7 +365,7 @@ export default function ExercisesPage() {
               value={filters.search}
               onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
               placeholder="Search exercises by name..."
-              className="w-full rounded-xl border border-white/[.09] bg-black/25 pl-11 pr-5 py-3.5 text-sm text-white outline-none placeholder:text-muted-foreground focus:border-primary/40 focus:ring-3 focus:ring-primary/10"
+              className="w-full rounded-xl border border-border bg-muted/60 pl-11 pr-5 py-3.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary/40 focus:ring-3 focus:ring-primary/10"
             />
           </div>
 
@@ -410,7 +410,7 @@ export default function ExercisesPage() {
               ))}
               <button
                 onClick={clearFilters}
-                className="text-xs text-muted-foreground hover:text-white underline underline-offset-2"
+                className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
               >
                 Clear all
               </button>
