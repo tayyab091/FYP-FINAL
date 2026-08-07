@@ -14,7 +14,7 @@ export function AvailabilityTab() {
       isAvailable: i >= 1 && i <= 5,
     })),
   )
-  const [loading, setLoading] = useState(true)
+  const [hydrating, setHydrating] = useState(true)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -32,7 +32,7 @@ export function AvailabilityTab() {
       } catch {
         // keep defaults
       } finally {
-        setLoading(false)
+        setHydrating(false)
       }
     })()
   }, [])
@@ -49,15 +49,13 @@ export function AvailabilityTab() {
     setSaving(false)
   }
 
-  if (loading) return <div className="tile skeleton h-80" />
-
   return (
-    <div className="space-y-4 max-w-xl">
+    <div className="space-y-4 max-w-xl" data-testid="availability-form">
       <div>
         <h2 className="text-xl font-black text-foreground">Set Your Availability</h2>
         <p className="text-muted-foreground text-sm mt-1">Clients will see these hours when booking sessions</p>
       </div>
-      <div className="tile space-y-3">
+      <div className={`tile space-y-3 ${hydrating ? 'opacity-70' : ''}`}>
         {slots.map((slot, i) => (
           <div
             key={slot.dayOfWeek}
@@ -85,6 +83,7 @@ export function AvailabilityTab() {
               <div className="flex items-center gap-2">
                 <input
                   type="time"
+                  data-testid="availability-time-input"
                   value={slot.startTime}
                   onChange={(e) =>
                     setSlots((s) => s.map((sl, idx) => (idx === i ? { ...sl, startTime: e.target.value } : sl)))
@@ -94,6 +93,7 @@ export function AvailabilityTab() {
                 <span className="text-muted-foreground text-sm">to</span>
                 <input
                   type="time"
+                  data-testid="availability-time-input"
                   value={slot.endTime}
                   onChange={(e) =>
                     setSlots((s) => s.map((sl, idx) => (idx === i ? { ...sl, endTime: e.target.value } : sl)))
@@ -108,8 +108,9 @@ export function AvailabilityTab() {
       </div>
       <button
         type="button"
+        data-testid="availability-save"
         onClick={save}
-        disabled={saving}
+        disabled={saving || hydrating}
         className="btn-accent w-full py-3 text-sm font-bold disabled:opacity-50"
       >
         {saving ? 'Saving...' : 'Save Availability'}
