@@ -28,7 +28,7 @@ export function DishMoreInfoPanel({ dish }: DishMoreInfoPanelProps) {
   return (
     <div className="space-y-3">
       <div className="flex gap-2.5">
-        <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-primary/20 bg-black/30">
+        <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-primary/20 bg-muted/70">
           {dish.thumb ? (
             <Image
               src={dish.thumb}
@@ -44,12 +44,12 @@ export function DishMoreInfoPanel({ dish }: DishMoreInfoPanelProps) {
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[11px] font-semibold text-white">{dish.name}</p>
+          <p className="truncate text-[11px] font-semibold text-foreground">{dish.name}</p>
           <div className="mt-1 flex flex-wrap gap-1">
             <span className="workout-badge rounded-full border border-primary/25 bg-primary/10 px-1.5 py-px text-primary">
               {dish.category}
             </span>
-            <span className="inline-flex items-center gap-0.5 rounded-full border border-white/10 bg-white/[.04] px-1.5 py-px text-[9px] text-muted-foreground">
+            <span className="inline-flex items-center gap-0.5 rounded-full border border-border bg-muted/60 px-1.5 py-px text-[9px] text-muted-foreground">
               <Globe className="size-2.5" />
               {dish.area}
             </span>
@@ -62,7 +62,7 @@ export function DishMoreInfoPanel({ dish }: DishMoreInfoPanelProps) {
           <Leaf className="size-2.5" />
           {ingredientCount} ingredients
         </span>
-        <span className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/[.03] px-1.5 py-0.5 text-muted-foreground">
+        <span className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/40 px-1.5 py-0.5 text-muted-foreground">
           <Clock className="size-2.5" />
           Prep time varies
         </span>
@@ -78,7 +78,7 @@ export function DishMoreInfoPanel({ dish }: DishMoreInfoPanelProps) {
               title={`${ing.measure} ${ing.name}`.trim()}
             >
               <span className="text-primary/80">{ing.measure}</span>{' '}
-              <span className="text-white/80">{ing.name}</span>
+              <span className="text-foreground/80">{ing.name}</span>
             </span>
           ))}
         </div>

@@ -3,7 +3,7 @@ import { ArrowLeft, Dumbbell } from 'lucide-react'
 
 export default function NotFound() {
   return (
-    <div className="flex min-h-screen items-center justify-center px-6 text-white">
+    <div className="flex min-h-screen items-center justify-center px-6 text-foreground">
       <div className="page-hero max-w-xl px-8 py-14 text-center sm:px-12">
         <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10">
           <Dumbbell className="h-8 w-8 text-primary" />
@@ -18,7 +18,7 @@ export default function NotFound() {
             <ArrowLeft className="h-4 w-4" />
             Back home
           </Link>
-          <Link href="/exercises" className="rounded-full border border-white/10 px-6 py-3 text-sm font-bold hover:border-primary/40">
+          <Link href="/exercises" className="rounded-full border border-border px-6 py-3 text-sm font-bold hover:border-primary/40">
             Browse exercises
           </Link>
         </div>

@@ -191,10 +191,10 @@ export default function GymOwnerPage() {
             <p className="mt-2 text-muted-foreground">Manage your facility, trainers, and business performance.</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link href="/gym-owner/exercises" className="rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-white hover:border-primary/40">
+            <Link href="/gym-owner/exercises" className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-foreground hover:border-primary/40">
               Exercises
             </Link>
-            <Link href="/gym-owner/nutrition" className="rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-white hover:border-primary/40">
+            <Link href="/gym-owner/nutrition" className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-foreground hover:border-primary/40">
               Nutrition
             </Link>
             <Link href="/settings" className="rounded-xl border border-primary/30 px-4 py-2 text-sm font-bold text-primary hover:bg-primary/10">
@@ -276,7 +276,7 @@ export default function GymOwnerPage() {
                     <Badge variant="outline" className="capitalize">
                       {gym.verificationStatus || 'pending'}
                     </Badge>
-                    <Button type="submit" disabled={savingGym} className="bg-primary text-black hover:brightness-95">
+                    <Button type="submit" disabled={savingGym} className="bg-primary text-primary-foreground hover:brightness-95">
                       {savingGym ? 'Saving...' : 'Save Gym Details'}
                     </Button>
                   </div>
@@ -290,7 +290,7 @@ export default function GymOwnerPage() {
                         onChange={e => setTrainerEmail(e.target.value)}
                         className="bg-background border-border" />
                     </div>
-                    <Button type="submit" disabled={adding} className="bg-primary text-black hover:brightness-95">
+                    <Button type="submit" disabled={adding} className="bg-primary text-primary-foreground hover:brightness-95">
                       {adding ? 'Adding...' : 'Add Trainer'}
                     </Button>
                   </form>
@@ -330,7 +330,7 @@ export default function GymOwnerPage() {
                               <Button
                                 size="sm"
                                 onClick={() => updateTrainer(t._id, 'approve')}
-                                className="bg-primary text-black hover:brightness-95"
+                                className="bg-primary text-primary-foreground hover:brightness-95"
                               >
                                 Approve
                               </Button>

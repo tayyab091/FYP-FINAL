@@ -67,7 +67,7 @@ function GuestPage() {
   }, [])
 
   return (
-    <div className="min-h-screen text-white pb-24">
+    <div className="min-h-screen text-foreground pb-24">
       <ScrollProgress />
       {/* Hero */}
       <section className="relative pt-8 pb-14 px-4 sm:px-6 overflow-hidden">
@@ -136,7 +136,7 @@ function GuestPage() {
       </ParallaxSection>
 
       {/* Journey / Level up */}
-      <section className="py-16 px-6 border-y border-white/[.05] bg-white/[.012]">
+      <section className="py-16 px-6 border-y border-border bg-muted/30">
         <div className="max-w-6xl mx-auto">
           <FadeIn className="text-center mb-10">
             <p className="eyebrow mb-3">Your fitness RPG</p>
@@ -149,7 +149,7 @@ function GuestPage() {
               {JOURNEY_LEVELS.map((lvl) => (
                 <div key={lvl.level} className="elite-panel interactive-lift card-athletic flex h-full min-h-[12rem] flex-col rounded-2xl p-6 text-center relative">
                   <FitnessBadge variant="pr" className="mb-3">LVL {lvl.level}</FitnessBadge>
-                  <h3 className="text-lg font-bold text-white">{lvl.title}</h3>
+                  <h3 className="text-lg font-bold text-foreground">{lvl.title}</h3>
                   <p className="text-primary text-sm font-bold mt-1">{lvl.xp} XP</p>
                   <p className="text-muted-foreground text-xs mt-2 flex-1">{lvl.desc}</p>
                 </div>
@@ -174,7 +174,7 @@ function GuestPage() {
                   <div className="mb-3 flex size-11 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
                     <Icon className="size-5" />
                   </div>
-                  <h3 className="font-bold text-white">{a.label}</h3>
+                  <h3 className="font-bold text-foreground">{a.label}</h3>
                   <p className="mt-1 flex-1 text-sm text-muted-foreground">{a.desc}</p>
                 </div>
               )
@@ -205,7 +205,7 @@ function GuestPage() {
       </section>
 
       {/* Features */}
-      <section className="py-20 px-6 border-y border-white/[.05] bg-white/[.012]">
+      <section className="py-20 px-6 border-y border-border bg-muted/30">
         <div className="max-w-6xl mx-auto">
           <FadeIn className="text-center mb-12">
             <p className="eyebrow mb-3">One connected ecosystem</p>
@@ -284,14 +284,14 @@ function GuestPage() {
       </section>
 
       {/* Pricing */}
-      <section className="py-20 px-6 border-y border-white/[.05] bg-white/[.012]">
+      <section className="py-20 px-6 border-y border-border bg-muted/30">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-black text-center mb-4">Simple Pricing</h2>
           <p className="text-muted-foreground text-center mb-12">Start free, upgrade when you&apos;re ready</p>
           <StaggerChildren className="grid md:grid-cols-3 gap-6">
             {MARKETING_PLANS.map(p => (
               <div key={p.name} className={`interactive-lift card-athletic rounded-2xl p-8 border ${p.highlight ? 'border-primary/50 bg-primary/[.055] shadow-[0_20px_70px_rgba(34,245,154,.08)]' : 'elite-panel'}`}>
-                {p.highlight && <Badge className="mb-4 bg-primary text-black">Most Popular</Badge>}
+                {p.highlight && <Badge className="mb-4 bg-primary text-primary-foreground">Most Popular</Badge>}
                 <h3 className="text-xl font-bold">{p.name}</h3>
                 <div className="text-3xl font-black mt-2 mb-6">{p.price}</div>
                 <ul className="space-y-3 mb-8">

@@ -72,7 +72,7 @@ export function Navbar() {
           </Link>
 
           <div className="ml-2 hidden flex-1 items-center justify-center md:flex">
-            <div className="flex items-center gap-0.5 rounded-xl border border-white/[.06] bg-white/[.025] p-1">
+            <div className="flex items-center gap-0.5 rounded-xl border border-border bg-muted/50 p-1">
               {NAV_LINKS.map((l) => {
                 const active = pathname === l.href || pathname.startsWith(`${l.href}/`)
                 return (
@@ -80,7 +80,7 @@ export function Navbar() {
                     key={l.href}
                     href={l.href}
                     className={`relative rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
-                      active ? 'text-primary' : 'text-muted-foreground hover:bg-white/[.04] hover:text-white'
+                      active ? 'text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                     }`}
                   >
                     {active && (
@@ -106,13 +106,13 @@ export function Navbar() {
                 <NotificationBell />
                 <Link
                   href={dashboardHref}
-                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-white/[.04] hover:text-white"
+                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
                   Dashboard
                 </Link>
                 <Link
                   href="/settings"
-                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-white/[.04] hover:text-white"
+                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
                   Settings
                 </Link>
@@ -128,7 +128,7 @@ export function Navbar() {
               <>
                 <Link
                   href="/login"
-                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-white"
+                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
                 >
                   Sign In
                 </Link>
@@ -189,12 +189,12 @@ export function Navbar() {
               transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 380, damping: 34 }}
               className="absolute inset-y-0 right-0 flex w-[min(100%,20rem)] flex-col border-l border-border bg-background shadow-2xl"
             >
-              <div className="flex h-16 items-center justify-between border-b border-white/[.08] px-4">
-                <span className="font-heading text-base font-black tracking-[-.04em] text-white">Menu</span>
+              <div className="flex h-16 items-center justify-between border-b border-border px-4">
+                <span className="font-heading text-base font-black tracking-[-.04em] text-foreground">Menu</span>
                 <button
                   type="button"
                   aria-label="Close menu"
-                  className="flex size-9 items-center justify-center rounded-lg border border-white/[.08] text-muted-foreground hover:text-white"
+                  className="flex size-9 items-center justify-center rounded-lg border border-border text-muted-foreground hover:text-foreground"
                   onClick={() => setMenuOpen(false)}
                 >
                   <X className="size-4.5" />
@@ -217,7 +217,7 @@ export function Navbar() {
                         className={`block rounded-xl px-3 py-3 text-sm font-bold transition-colors ${
                           active
                             ? 'border border-primary/20 bg-primary/[.1] text-primary'
-                            : 'text-[#a0aaa4] hover:bg-white/[.04] hover:text-white'
+                            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                         }`}
                       >
                         {l.label}
@@ -227,20 +227,20 @@ export function Navbar() {
                 })}
               </nav>
 
-              <div className="space-y-2 border-t border-white/[.08] p-4">
+              <div className="space-y-2 border-t border-border p-4">
                 {user ? (
                   <>
                     <Link
                       href={dashboardHref}
                       onClick={() => setMenuOpen(false)}
-                      className="block rounded-xl border border-border py-3 text-center text-sm font-medium text-white"
+                      className="block rounded-xl border border-border py-3 text-center text-sm font-medium text-foreground"
                     >
                       Dashboard
                     </Link>
                     <Link
                       href="/settings"
                       onClick={() => setMenuOpen(false)}
-                      className="block rounded-xl border border-border py-3 text-center text-sm font-medium text-white"
+                      className="block rounded-xl border border-border py-3 text-center text-sm font-medium text-foreground"
                     >
                       Settings
                     </Link>

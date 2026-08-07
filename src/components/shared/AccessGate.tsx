@@ -19,7 +19,7 @@ export function AccessGate({ icon: Icon, title, description, action, className }
         <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10">
           <Icon className="size-7 text-primary" strokeWidth={2.2} />
         </div>
-        <h2 className="font-heading text-xl font-bold text-white">{title}</h2>
+        <h2 className="font-heading text-xl font-bold text-foreground">{title}</h2>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
         {action && <div className="mt-6">{action}</div>}
       </div>

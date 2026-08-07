@@ -265,15 +265,15 @@ export default function AdminPageClient() {
 
   const ROLE_COLORS: Record<string, string> = {
     user: 'bg-blue-500/20 text-blue-400',
-    trainer: 'bg-[#00ff87]/20 text-[#00ff87]',
+    trainer: 'bg-primary/20 text-primary',
     gym_owner: 'bg-orange-500/20 text-orange-400',
     admin: 'bg-purple-500/20 text-purple-400',
     super_admin: 'bg-red-500/20 text-red-400',
   }
 
   const PLAN_COLORS: Record<string, string> = {
-    basic: 'bg-[#a0a0a0]/20 text-[#a0a0a0]',
-    pro: 'bg-[#00ff87]/20 text-[#00ff87]',
+    basic: 'bg-muted text-muted-foreground',
+    pro: 'bg-primary/20 text-primary',
     elite: 'bg-yellow-500/20 text-yellow-400',
   }
 
@@ -283,19 +283,19 @@ export default function AdminPageClient() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="section-eyebrow">Platform Control</p>
-            <h1 className="text-3xl font-black text-white">Admin Console</h1>
-            <p className="mt-1 text-[#a0a0a0]">Users, verifications, content, and subscriptions</p>
+            <h1 className="text-3xl font-black text-foreground">Admin Console</h1>
+            <p className="mt-1 text-muted-foreground">Users, verifications, content, and subscriptions</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Link
               href="/admin/exercises"
-              className="rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-white hover:border-primary/40"
+              className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-foreground hover:border-primary/40"
             >
               Exercises
             </Link>
             <Link
               href="/admin/nutrition"
-              className="rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-white hover:border-primary/40"
+              className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-foreground hover:border-primary/40"
             >
               Nutrition
             </Link>
@@ -318,12 +318,12 @@ export default function AdminPageClient() {
               className={`relative flex-shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${
                 active === s.id
                   ? 'bg-primary/[.12] text-primary shadow-[inset_0_0_0_1px_rgba(34,245,154,.15)]'
-                  : 'text-[#a0a0a0] hover:bg-white/5 hover:text-white'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
               }`}
             >
               {s.label}
               {s.id === 'verifications' && pendingCount > 0 && (
-                <span className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                <span className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-foreground">
                   {pendingCount}
                 </span>
               )}
@@ -341,7 +341,7 @@ export default function AdminPageClient() {
             <div className="tile overflow-hidden p-0">
               <div className="space-y-0">
                 {[...Array(5)].map((_, i) => (
-                  <div key={i} className="flex items-center gap-4 border-b border-white/5 px-4 py-4">
+                  <div key={i} className="flex items-center gap-4 border-b border-border px-4 py-4">
                     <div className="skeleton h-4 w-32 rounded" />
                     <div className="skeleton h-4 w-20 rounded" />
                     <div className="ml-auto skeleton h-4 w-24 rounded" />
@@ -356,7 +356,7 @@ export default function AdminPageClient() {
             <div className="space-y-6">
               <div>
                 <p className="section-eyebrow">Platform Overview</p>
-                <h1 className="text-2xl font-black text-white">Dashboard</h1>
+                <h1 className="text-2xl font-black text-foreground">Dashboard</h1>
               </div>
               <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                 {[
@@ -375,7 +375,7 @@ export default function AdminPageClient() {
                     <p className="text-3xl font-black" style={{ color: stat.color }}>
                       {stat.value}
                     </p>
-                    <p className="mt-1 text-xs text-[#a0a0a0]">{stat.label}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{stat.label}</p>
                   </div>
                 ))}
               </div>
@@ -384,7 +384,7 @@ export default function AdminPageClient() {
                   <div className="flex items-center justify-between gap-4">
                     <div>
                       <p className="font-bold text-yellow-400">⚠ Action Required</p>
-                      <p className="mt-1 text-sm text-[#a0a0a0]">
+                      <p className="mt-1 text-sm text-muted-foreground">
                         {pendingTileCount} pending verification{pendingTileCount !== 1 ? 's' : ''} need your review
                       </p>
                     </div>
@@ -401,12 +401,12 @@ export default function AdminPageClient() {
             <div className="space-y-4">
               <div>
                 <p className="section-eyebrow">User Management</p>
-                <h1 className="text-2xl font-black text-white">All Users</h1>
+                <h1 className="text-2xl font-black text-foreground">All Users</h1>
               </div>
               <div className="tile overflow-hidden p-0">
                 <table className="w-full text-sm">
-                  <thead className="border-b border-white/5">
-                    <tr className="text-left text-[#a0a0a0]">
+                  <thead className="border-b border-border">
+                    <tr className="text-left text-muted-foreground">
                       <th className="px-4 py-3 font-medium">User</th>
                       <th className="px-4 py-3 font-medium">Role</th>
                       <th className="hidden px-4 py-3 font-medium md:table-cell">Plan</th>
@@ -417,10 +417,10 @@ export default function AdminPageClient() {
                   </thead>
                   <tbody>
                     {users.map((u) => (
-                      <tr key={u._id} className="border-b border-white/5 transition-colors hover:bg-white/[.02]">
+                      <tr key={u._id} className="border-b border-border transition-colors hover:bg-white/[.02]">
                         <td className="px-4 py-3">
-                          <p className="font-medium text-white">{u.fullName}</p>
-                          <p className="text-xs text-[#a0a0a0]">{u.email}</p>
+                          <p className="font-medium text-foreground">{u.fullName}</p>
+                          <p className="text-xs text-muted-foreground">{u.email}</p>
                         </td>
                         <td className="px-4 py-3">
                           <span className={`badge-accent text-xs ${ROLE_COLORS[u.role] || ''}`}>{u.role}</span>
@@ -430,7 +430,7 @@ export default function AdminPageClient() {
                             {u.subscription?.plan || 'basic'}
                           </span>
                         </td>
-                        <td className="hidden px-4 py-3 text-xs text-[#a0a0a0] md:table-cell">
+                        <td className="hidden px-4 py-3 text-xs text-muted-foreground md:table-cell">
                           {new Date(u.createdAt).toLocaleDateString()}
                         </td>
                         <td className="px-4 py-3">
@@ -457,7 +457,7 @@ export default function AdminPageClient() {
                     ))}
                     {users.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="px-4 py-12 text-center text-[#a0a0a0]">
+                        <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
                           No users found
                         </td>
                       </tr>
@@ -472,12 +472,12 @@ export default function AdminPageClient() {
             <div className="space-y-4">
               <div>
                 <p className="section-eyebrow">Trainer Management</p>
-                <h1 className="text-2xl font-black text-white">All Trainers</h1>
+                <h1 className="text-2xl font-black text-foreground">All Trainers</h1>
               </div>
               <div className="tile overflow-hidden p-0">
                 <table className="w-full text-sm">
-                  <thead className="border-b border-white/5">
-                    <tr className="text-left text-[#a0a0a0]">
+                  <thead className="border-b border-border">
+                    <tr className="text-left text-muted-foreground">
                       <th className="px-4 py-3 font-medium">Trainer</th>
                       <th className="hidden px-4 py-3 font-medium md:table-cell">Specialty</th>
                       <th className="px-4 py-3 font-medium">Gym Verified</th>
@@ -487,10 +487,10 @@ export default function AdminPageClient() {
                   </thead>
                   <tbody>
                     {trainers.map((t) => (
-                      <tr key={t._id} className="border-b border-white/5 hover:bg-white/[.02]">
+                      <tr key={t._id} className="border-b border-border hover:bg-white/[.02]">
                         <td className="px-4 py-3">
-                          <p className="font-medium text-white">{t.name}</p>
-                          <p className="text-xs text-[#a0a0a0]">{t.email}</p>
+                          <p className="font-medium text-foreground">{t.name}</p>
+                          <p className="text-xs text-muted-foreground">{t.email}</p>
                         </td>
                         <td className="hidden px-4 py-3 md:table-cell">
                           <div className="flex flex-wrap gap-1">
@@ -521,7 +521,7 @@ export default function AdminPageClient() {
                               <button
                                 type="button"
                                 onClick={() => verifyTrainer(t._id, 'verify')}
-                                className="rounded-lg border border-[#00ff87]/30 bg-[#00ff87]/20 px-3 py-1.5 text-xs text-[#00ff87] hover:bg-[#00ff87]/30"
+                                className="rounded-lg border border-primary/30 bg-primary/20 px-3 py-1.5 text-xs text-primary hover:bg-primary/30"
                               >
                                 Verify
                               </button>
@@ -534,14 +534,14 @@ export default function AdminPageClient() {
                               </button>
                             </div>
                           ) : (
-                            <span className="text-xs text-[#a0a0a0]">✓ Verified</span>
+                            <span className="text-xs text-muted-foreground">✓ Verified</span>
                           )}
                         </td>
                       </tr>
                     ))}
                     {trainers.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="px-4 py-12 text-center text-[#a0a0a0]">
+                        <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
                           No trainers found
                         </td>
                       </tr>
@@ -556,12 +556,12 @@ export default function AdminPageClient() {
             <div className="space-y-4">
               <div>
                 <p className="section-eyebrow">Gym Management</p>
-                <h1 className="text-2xl font-black text-white">All Gyms</h1>
+                <h1 className="text-2xl font-black text-foreground">All Gyms</h1>
               </div>
               <div className="tile overflow-hidden p-0">
                 <table className="w-full text-sm">
-                  <thead className="border-b border-white/5">
-                    <tr className="text-left text-[#a0a0a0]">
+                  <thead className="border-b border-border">
+                    <tr className="text-left text-muted-foreground">
                       <th className="px-4 py-3 font-medium">Gym</th>
                       <th className="hidden px-4 py-3 font-medium md:table-cell">Owner</th>
                       <th className="hidden px-4 py-3 font-medium md:table-cell">Country</th>
@@ -571,13 +571,13 @@ export default function AdminPageClient() {
                   </thead>
                   <tbody>
                     {gyms.map((g) => (
-                      <tr key={g._id} className="border-b border-white/5 hover:bg-white/[.02]">
+                      <tr key={g._id} className="border-b border-border hover:bg-white/[.02]">
                         <td className="px-4 py-3">
-                          <p className="font-medium text-white">{g.name}</p>
-                          <p className="text-xs text-[#a0a0a0]">{g.address}</p>
+                          <p className="font-medium text-foreground">{g.name}</p>
+                          <p className="text-xs text-muted-foreground">{g.address}</p>
                         </td>
-                        <td className="hidden px-4 py-3 text-xs text-[#a0a0a0] md:table-cell">{g.ownerId?.fullName || '—'}</td>
-                        <td className="hidden px-4 py-3 text-xs text-[#a0a0a0] md:table-cell">{g.country}</td>
+                        <td className="hidden px-4 py-3 text-xs text-muted-foreground md:table-cell">{g.ownerId?.fullName || '—'}</td>
+                        <td className="hidden px-4 py-3 text-xs text-muted-foreground md:table-cell">{g.country}</td>
                         <td className="px-4 py-3">
                           <span
                             className={`badge-accent text-xs ${
@@ -597,7 +597,7 @@ export default function AdminPageClient() {
                               <button
                                 type="button"
                                 onClick={() => verifyGym(g._id, 'verify')}
-                                className="rounded-lg border border-[#00ff87]/30 bg-[#00ff87]/20 px-3 py-1.5 text-xs text-[#00ff87] hover:bg-[#00ff87]/30"
+                                className="rounded-lg border border-primary/30 bg-primary/20 px-3 py-1.5 text-xs text-primary hover:bg-primary/30"
                               >
                                 Verify
                               </button>
@@ -610,14 +610,14 @@ export default function AdminPageClient() {
                               </button>
                             </div>
                           ) : (
-                            <span className="text-xs text-[#a0a0a0]">✓ Verified</span>
+                            <span className="text-xs text-muted-foreground">✓ Verified</span>
                           )}
                         </td>
                       </tr>
                     ))}
                     {gyms.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="px-4 py-12 text-center text-[#a0a0a0]">
+                        <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
                           No gyms found
                         </td>
                       </tr>
@@ -632,26 +632,26 @@ export default function AdminPageClient() {
             <div className="space-y-6">
               <div>
                 <p className="section-eyebrow">Requires Action</p>
-                <h1 className="text-2xl font-black text-white">Pending Verifications</h1>
+                <h1 className="text-2xl font-black text-foreground">Pending Verifications</h1>
               </div>
               {pendingTrainers.length > 0 && (
                 <div>
-                  <h2 className="mb-3 text-lg font-bold text-white">Trainers ({pendingTrainers.length})</h2>
+                  <h2 className="mb-3 text-lg font-bold text-foreground">Trainers ({pendingTrainers.length})</h2>
                   <div className="space-y-3">
                     {pendingTrainers.map((t) => (
                       <div key={t._id} className="tile flex-row flex-wrap items-center justify-between gap-4">
                         <div>
-                          <p className="font-bold text-white">{t.name}</p>
-                          <p className="text-sm text-[#a0a0a0]">
+                          <p className="font-bold text-foreground">{t.name}</p>
+                          <p className="text-sm text-muted-foreground">
                             {t.email} · {(t.specialty || []).join(', ')}
                           </p>
-                          <p className="mt-1 text-xs text-[#555]">Gym status: {t.gymVerificationStatus}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">Gym status: {t.gymVerificationStatus}</p>
                         </div>
                         <div className="flex gap-2">
                           <button
                             type="button"
                             onClick={() => verifyTrainer(t._id, 'verify')}
-                            className="rounded-xl border border-[#00ff87]/30 bg-[#00ff87]/20 px-4 py-2 text-sm font-medium text-[#00ff87] hover:bg-[#00ff87]/30"
+                            className="rounded-xl border border-primary/30 bg-primary/20 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/30"
                           >
                             ✓ Verify
                           </button>
@@ -670,13 +670,13 @@ export default function AdminPageClient() {
               )}
               {pendingGyms.length > 0 && (
                 <div>
-                  <h2 className="mb-3 text-lg font-bold text-white">Gyms ({pendingGyms.length})</h2>
+                  <h2 className="mb-3 text-lg font-bold text-foreground">Gyms ({pendingGyms.length})</h2>
                   <div className="space-y-3">
                     {pendingGyms.map((g) => (
                       <div key={g._id} className="tile flex-row flex-wrap items-center justify-between gap-4">
                         <div>
-                          <p className="font-bold text-white">{g.name}</p>
-                          <p className="text-sm text-[#a0a0a0]">
+                          <p className="font-bold text-foreground">{g.name}</p>
+                          <p className="text-sm text-muted-foreground">
                             {g.address} · {g.country}
                           </p>
                         </div>
@@ -684,7 +684,7 @@ export default function AdminPageClient() {
                           <button
                             type="button"
                             onClick={() => verifyGym(g._id, 'verify')}
-                            className="rounded-xl border border-[#00ff87]/30 bg-[#00ff87]/20 px-4 py-2 text-sm font-medium text-[#00ff87] hover:bg-[#00ff87]/30"
+                            className="rounded-xl border border-primary/30 bg-primary/20 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/30"
                           >
                             ✓ Verify
                           </button>
@@ -704,8 +704,8 @@ export default function AdminPageClient() {
               {pendingCount === 0 && (
                 <div className="tile items-center justify-center py-16 text-center">
                   <span className="mb-4 text-4xl">✅</span>
-                  <p className="font-bold text-white">All caught up!</p>
-                  <p className="mt-1 text-sm text-[#a0a0a0]">No pending verifications</p>
+                  <p className="font-bold text-foreground">All caught up!</p>
+                  <p className="mt-1 text-sm text-muted-foreground">No pending verifications</p>
                 </div>
               )}
             </div>
@@ -715,12 +715,12 @@ export default function AdminPageClient() {
             <div className="space-y-4">
               <div>
                 <p className="section-eyebrow">Security</p>
-                <h1 className="text-2xl font-black text-white">Audit Logs</h1>
+                <h1 className="text-2xl font-black text-foreground">Audit Logs</h1>
               </div>
               <div className="tile overflow-hidden p-0">
                 <table className="w-full text-sm">
-                  <thead className="border-b border-white/5">
-                    <tr className="text-left text-[#a0a0a0]">
+                  <thead className="border-b border-border">
+                    <tr className="text-left text-muted-foreground">
                       <th className="px-4 py-3 font-medium">Action</th>
                       <th className="hidden px-4 py-3 font-medium md:table-cell">Admin</th>
                       <th className="hidden px-4 py-3 font-medium md:table-cell">Target</th>
@@ -729,25 +729,25 @@ export default function AdminPageClient() {
                   </thead>
                   <tbody>
                     {auditLogs.map((log) => (
-                      <tr key={log._id} className="border-b border-white/5 hover:bg-white/[.02]">
+                      <tr key={log._id} className="border-b border-border hover:bg-white/[.02]">
                         <td className="px-4 py-3">
                           <span className="badge-accent bg-purple-500/20 text-xs text-purple-400">{log.action}</span>
                         </td>
-                        <td className="hidden px-4 py-3 text-xs text-[#a0a0a0] md:table-cell">
+                        <td className="hidden px-4 py-3 text-xs text-muted-foreground md:table-cell">
                           {typeof log.adminId === 'object' ? log.adminId?.fullName : log.adminId}
                         </td>
-                        <td className="hidden px-4 py-3 text-xs text-[#a0a0a0] md:table-cell">
+                        <td className="hidden px-4 py-3 text-xs text-muted-foreground md:table-cell">
                           {log.targetModel}{' '}
                           {typeof log.targetId === 'object' && log.targetId?.toString
                             ? log.targetId.toString().slice(-6)
                             : String(log.targetId || '').slice(-6)}
                         </td>
-                        <td className="px-4 py-3 text-xs text-[#a0a0a0]">{new Date(log.createdAt).toLocaleString()}</td>
+                        <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(log.createdAt).toLocaleString()}</td>
                       </tr>
                     ))}
                     {auditLogs.length === 0 && (
                       <tr>
-                        <td colSpan={4} className="px-4 py-12 text-center text-[#a0a0a0]">
+                        <td colSpan={4} className="px-4 py-12 text-center text-muted-foreground">
                           No audit logs yet
                         </td>
                       </tr>
@@ -762,8 +762,8 @@ export default function AdminPageClient() {
             <div className="space-y-4">
               <div>
                 <p className="section-eyebrow">Revenue</p>
-                <h1 className="text-2xl font-black text-white">Subscriptions</h1>
-                <p className="mt-1 text-sm text-[#a0a0a0]">
+                <h1 className="text-2xl font-black text-foreground">Subscriptions</h1>
+                <p className="mt-1 text-sm text-muted-foreground">
                   Grant, renew, or revoke plans manually — platform DB only (not synced to Stripe).
                 </p>
               </div>
@@ -776,16 +776,16 @@ export default function AdminPageClient() {
                       <p className="text-4xl font-black" style={{ color: colors[plan] }}>
                         {count}
                       </p>
-                      <p className="mt-2 font-bold capitalize text-white">{plan}</p>
-                      <p className="text-xs text-[#a0a0a0]">effective subscribers</p>
+                      <p className="mt-2 font-bold capitalize text-foreground">{plan}</p>
+                      <p className="text-xs text-muted-foreground">effective subscribers</p>
                     </div>
                   )
                 })}
               </div>
               <div className="tile overflow-x-auto p-0">
                 <table className="w-full text-sm">
-                  <thead className="border-b border-white/5">
-                    <tr className="text-left text-[#a0a0a0]">
+                  <thead className="border-b border-border">
+                    <tr className="text-left text-muted-foreground">
                       <th className="px-4 py-3 font-medium">User</th>
                       <th className="px-4 py-3 font-medium">Plan</th>
                       <th className="px-4 py-3 font-medium">Status</th>
@@ -800,11 +800,11 @@ export default function AdminPageClient() {
                       const endDate = row.subscription?.endDate
                       const busy = subActionId === row._id
                       return (
-                        <tr key={row._id} className="border-b border-white/5 hover:bg-white/[.02]">
+                        <tr key={row._id} className="border-b border-border hover:bg-white/[.02]">
                           <td className="px-4 py-3">
-                            <p className="font-medium text-white">{row.fullName}</p>
-                            <p className="text-xs text-[#a0a0a0]">{row.email}</p>
-                            <p className="mt-0.5 text-[10px] uppercase tracking-wide text-[#555]">{row.role}</p>
+                            <p className="font-medium text-foreground">{row.fullName}</p>
+                            <p className="text-xs text-muted-foreground">{row.email}</p>
+                            <p className="mt-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">{row.role}</p>
                           </td>
                           <td className="px-4 py-3">
                             <span className={`badge-accent text-xs ${PLAN_COLORS[plan] || ''}`}>
@@ -822,7 +822,7 @@ export default function AdminPageClient() {
                               {status}
                             </span>
                           </td>
-                          <td className="hidden px-4 py-3 text-xs text-[#a0a0a0] md:table-cell">
+                          <td className="hidden px-4 py-3 text-xs text-muted-foreground md:table-cell">
                             {endDate ? new Date(endDate).toLocaleDateString() : '—'}
                           </td>
                           <td className="px-4 py-3">
@@ -831,7 +831,7 @@ export default function AdminPageClient() {
                                 type="button"
                                 disabled={busy}
                                 onClick={() => manageSubscription(row._id, 'grant', 'pro')}
-                                className="rounded-lg border border-[#00ff87]/30 px-2.5 py-1 text-xs text-[#00ff87] hover:bg-[#00ff87]/10 disabled:opacity-50"
+                                className="rounded-lg border border-primary/30 px-2.5 py-1 text-xs text-primary hover:bg-primary/10 disabled:opacity-50"
                               >
                                 Grant Pro
                               </button>
@@ -874,7 +874,7 @@ export default function AdminPageClient() {
                                   if (!window.confirm(`Set ${row.fullName} to ${value}?`)) return
                                   manageSubscription(row._id, 'set', value)
                                 }}
-                                className="rounded-lg border border-white/10 bg-[#0f0f0f] px-2 py-1 text-xs text-white disabled:opacity-50"
+                                className="rounded-lg border border-border bg-muted px-2 py-1 text-xs text-foreground disabled:opacity-50"
                               >
                                 <option value="" disabled>
                                   Set plan…
@@ -890,7 +890,7 @@ export default function AdminPageClient() {
                     })}
                     {subscriptions.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="px-4 py-12 text-center text-[#a0a0a0]">
+                        <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
                           No subscribers found
                         </td>
                       </tr>

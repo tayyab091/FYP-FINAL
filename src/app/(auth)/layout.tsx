@@ -9,9 +9,9 @@ const benefits = [
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="grid min-h-screen lg:grid-cols-[minmax(22rem,0.9fr)_1.1fr]">
-      <aside className="relative hidden overflow-hidden border-r border-white/[.07] bg-[#090d0a] p-10 lg:flex lg:flex-col lg:justify-between xl:p-14">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_15%,rgba(34,245,154,.18),transparent_23rem),radial-gradient(circle_at_85%_78%,rgba(61,189,255,.1),transparent_20rem)]" />
-        <div className="absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(255,255,255,.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.035)_1px,transparent_1px)] [background-size:58px_58px]" />
+      <aside className="relative hidden overflow-hidden border-r border-border bg-card p-10 lg:flex lg:flex-col lg:justify-between xl:p-14">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_15%,rgba(124,58,237,0.14),transparent_23rem),radial-gradient(circle_at_85%_78%,rgba(147,51,234,0.08),transparent_20rem)] dark:bg-[radial-gradient(circle_at_15%_15%,rgba(34,245,154,.18),transparent_23rem),radial-gradient(circle_at_85%_78%,rgba(61,189,255,.1),transparent_20rem)]" />
+        <div className="absolute inset-0 opacity-30 [background-image:linear-gradient(color-mix(in_srgb,var(--primary)_6%,transparent)_1px,transparent_1px),linear-gradient(90deg,color-mix(in_srgb,var(--primary)_6%,transparent)_1px,transparent_1px)] [background-size:58px_58px] dark:[background-image:linear-gradient(rgba(255,255,255,.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.035)_1px,transparent_1px)]" />
 
         <div className="relative flex items-center gap-3">
           <span className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[0_0_35px_rgba(34,245,154,.25)]">
@@ -30,7 +30,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           </p>
           <div className="mt-10 space-y-4">
             {benefits.map(({ icon: Icon, label }) => (
-              <div key={label} className="flex items-center gap-3 text-sm font-semibold text-[#bac3be]">
+              <div key={label} className="flex items-center gap-3 text-sm font-semibold text-muted-foreground">
                 <span className="flex size-9 items-center justify-center rounded-xl border border-primary/15 bg-primary/[.07] text-primary">
                   <Icon className="size-4" />
                 </span>
@@ -40,7 +40,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           </div>
         </div>
 
-        <p className="relative text-xs text-[#59655e]">Built for ambitious people who want measurable progress.</p>
+        <p className="relative text-xs text-muted-foreground">Built for ambitious people who want measurable progress.</p>
       </aside>
       <div className="relative min-w-0">{children}</div>
     </div>

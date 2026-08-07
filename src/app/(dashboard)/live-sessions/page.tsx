@@ -206,7 +206,7 @@ export default function LiveSessionsPage() {
         <div>
           <div className="mb-1 flex flex-wrap items-center gap-2">
             <h3
-              className={`font-heading text-lg font-bold ${completed ? 'text-muted-foreground' : 'text-white'}`}
+              className={`font-heading text-lg font-bold ${completed ? 'text-muted-foreground' : 'text-foreground'}`}
             >
               {session.title}
             </h3>
@@ -348,7 +348,7 @@ export default function LiveSessionsPage() {
           if (!open) resetForm()
         }}
       >
-        <DialogContent className="bg-card/60 border-border text-white sm:max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-card/60 border-border text-foreground sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Schedule a live session</DialogTitle>
           </DialogHeader>
@@ -369,7 +369,7 @@ export default function LiveSessionsPage() {
                 value={form.clientId}
                 onChange={(e) => setForm((f) => ({ ...f, clientId: e.target.value }))}
                 required
-                className="flex h-11 w-full rounded-xl border border-white/10 bg-black/40 px-3 text-sm text-white outline-none focus:border-primary/40"
+                className="flex h-11 w-full rounded-xl border border-border bg-black/40 px-3 text-sm text-foreground outline-none focus:border-primary/40"
               >
                 <option value="">Select a client</option>
                 {clients.map((client) => (
@@ -395,7 +395,7 @@ export default function LiveSessionsPage() {
                   value={form.date}
                   onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
                   required
-                  className="flex h-11 w-full rounded-xl border border-white/10 bg-black/40 px-3 text-sm text-white outline-none focus:border-primary/40"
+                  className="flex h-11 w-full rounded-xl border border-border bg-black/40 px-3 text-sm text-foreground outline-none focus:border-primary/40"
                 />
               </div>
               <div>
@@ -407,7 +407,7 @@ export default function LiveSessionsPage() {
                   value={form.time}
                   onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))}
                   required
-                  className="flex h-11 w-full rounded-xl border border-white/10 bg-black/40 px-3 text-sm text-white outline-none focus:border-primary/40"
+                  className="flex h-11 w-full rounded-xl border border-border bg-black/40 px-3 text-sm text-foreground outline-none focus:border-primary/40"
                 />
               </div>
             </div>
@@ -419,7 +419,7 @@ export default function LiveSessionsPage() {
               <select
                 value={form.durationMinutes}
                 onChange={(e) => setForm((f) => ({ ...f, durationMinutes: e.target.value }))}
-                className="flex h-11 w-full rounded-xl border border-white/10 bg-black/40 px-3 text-sm text-white outline-none focus:border-primary/40"
+                className="flex h-11 w-full rounded-xl border border-border bg-black/40 px-3 text-sm text-foreground outline-none focus:border-primary/40"
               >
                 {DURATION_OPTIONS.map((mins) => (
                   <option key={mins} value={String(mins)}>

@@ -171,20 +171,20 @@ export function NotificationBell() {
         onClick={() => void handleOpen()}
         aria-label="Notifications"
         aria-expanded={open}
-        className="relative rounded-xl border border-white/[.09] bg-white/[.03] p-2 text-[#aaa] transition-colors hover:text-white"
+        className="relative rounded-xl border border-border bg-muted/40 p-2 text-muted-foreground transition-colors hover:text-foreground"
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-black">
+          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 top-[calc(100%+.5rem)] z-50 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-white/[.09] bg-[#0b0e0c]/98 shadow-2xl backdrop-blur-2xl">
-          <div className="flex items-center justify-between border-b border-white/[.06] px-4 py-3">
-            <p className="text-sm font-bold text-white">Notifications</p>
+        <div className="absolute right-0 top-[calc(100%+.5rem)] z-50 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-border bg-card/98 shadow-2xl backdrop-blur-2xl">
+          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <p className="text-sm font-bold text-foreground">Notifications</p>
             {unreadCount > 0 && (
               <button
                 type="button"
@@ -211,7 +211,7 @@ export function NotificationBell() {
                     key={notification._id}
                     type="button"
                     onClick={() => void handleNotificationClick(notification)}
-                    className={`flex w-full items-start gap-3 border-b border-white/[.04] px-4 py-3 text-left transition-colors hover:bg-white/[.03] ${
+                    className={`flex w-full items-start gap-3 border-b border-border px-4 py-3 text-left transition-colors hover:bg-muted/40 ${
                       !notification.isRead ? 'bg-primary/[.04]' : ''
                     }`}
                   >
@@ -222,13 +222,13 @@ export function NotificationBell() {
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center gap-2">
-                        <span className="truncate text-sm font-semibold text-white">{notification.title}</span>
+                        <span className="truncate text-sm font-semibold text-foreground">{notification.title}</span>
                         {!notification.isRead && (
                           <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary" />
                         )}
                       </span>
                       <span className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{notification.message}</span>
-                      <span className="mt-1 block text-[10px] text-[#666]">{formatTime(notification.createdAt)}</span>
+                      <span className="mt-1 block text-[10px] text-muted-foreground">{formatTime(notification.createdAt)}</span>
                     </span>
                   </button>
                 )
@@ -236,7 +236,7 @@ export function NotificationBell() {
             )}
           </div>
 
-          <div className="border-t border-white/[.06] px-4 py-2.5">
+          <div className="border-t border-border px-4 py-2.5">
             <Link
               href="/notifications"
               onClick={() => setOpen(false)}
