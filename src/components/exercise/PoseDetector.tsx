@@ -63,13 +63,17 @@ export function PoseDetector() {
     }
 
     const { angles } = processed
-    const currentAngle = angles.currentAngle!
+    const currentAngle = angles.currentAngle ?? 0
+    const flexionAngle =
+      angles.leftAngle !== null && angles.rightAngle !== null
+        ? Math.min(angles.leftAngle, angles.rightAngle)
+        : currentAngle
     const left = angles.left
     const right = angles.right
     const lm = results.poseLandmarks
     if (!lm) return
 
-    setAngle(Math.round(currentAngle))
+    setAngle(Math.round(flexionAngle))
     setIsGoodForm(processed.good)
     setFeedback(processed.feedback)
 
@@ -77,10 +81,8 @@ export function PoseDetector() {
       setHoldSeconds(processed.holdSeconds)
     }
 
-    if (processed.repCompletedThisFrame) {
-      setRepCount(processed.repCount)
-      sessionRepsRef.current = processed.repCount
-    }
+    setRepCount(processed.repCount)
+    sessionRepsRef.current = processed.repCount
 
     const POSE_CONNECTIONS = (window as Window & { POSE_CONNECTIONS?: [number, number][] }).POSE_CONNECTIONS
     if (POSE_CONNECTIONS) {
@@ -110,7 +112,7 @@ export function PoseDetector() {
     ctx.fillStyle = 'white'
     ctx.font = 'bold 20px sans-serif'
     const labelPoint = left?.b ?? right?.b
-    if (labelPoint) ctx.fillText(`${Math.round(currentAngle)}°`, labelPoint.x + 10, labelPoint.y - 10)
+    if (labelPoint) ctx.fillText(`${Math.round(flexionAngle)}°`, labelPoint.x + 10, labelPoint.y - 10)
   }, [selectedExercise])
 
   const startCamera = useCallback(async () => {
@@ -129,8 +131,8 @@ export function PoseDetector() {
         enableSegmentation: false,
         // MediaPipe-documented defaults; also reused as MIN_JOINT_VISIBILITY
         // above so angle math and detection confidence stay consistent.
-        minDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5,
+        minDetectionConfidence: 0.4,
+        minTrackingConfidence: 0.4,
       })
       pose.onResults((results) => onResults(results as PoseResults))
       poseRef.current = pose
@@ -220,6 +222,10 @@ export function PoseDetector() {
 
       <p className="text-center text-xs text-muted-foreground" title={EXERCISES[selectedExercise].citation}>
         Threshold source: {EXERCISES[selectedExercise].citation}
+      </p>
+      <p className="text-center text-xs text-primary/80 max-w-xl mx-auto">
+        Camera tip: use a <strong>side profile</strong> for squats and lunges; place the camera at chest height for push-ups.
+        Front-facing or screen recordings often under-report depth and may miss reps.
       </p>
 
       <div className="relative rounded-3xl overflow-hidden bg-card aspect-video max-w-2xl mx-auto border border-border shadow-[0_30px_90px_rgba(0,0,0,.38)]">
