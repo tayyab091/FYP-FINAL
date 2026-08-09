@@ -1,12 +1,13 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import Pusher from 'pusher-js'
-import { Activity, Heart, MessageCircle, Send, Trophy, Users } from 'lucide-react'
+import { Activity, Filter, Heart, MessageCircle, Search, Send, Trophy, Users } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { canAccessCommunityForUser } from '@/lib/access'
+import { COMMUNITY_POST_CATEGORIES } from '@/lib/community'
 import { PageLoader } from '@/components/shared/PageLoader'
 import { AccessGate, SignInGate } from '@/components/shared/AccessGate'
 import { BackButton } from '@/components/shared/BackButton'
@@ -20,8 +21,52 @@ import { FormSelect } from '@/components/ui/form-select'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { LeaderboardEntry } from '@/types/gamification'
 
-const CATEGORIES = ['Motivation', 'Question', 'Achievement', 'Workout'] as const
+const CATEGORIES = COMMUNITY_POST_CATEGORIES
 type PostCategory = (typeof CATEGORIES)[number]
+
+type FeedSort = 'newest' | 'liked' | 'commented'
+type FeedScope = 'all' | 'mine' | 'liked'
+
+const SORT_OPTIONS: { value: FeedSort; label: string }[] = [
+  { value: 'newest', label: 'Newest' },
+  { value: 'liked', label: 'Most Liked' },
+  { value: 'commented', label: 'Most Discussed' },
+]
+
+const SCOPE_OPTIONS: { value: FeedScope; label: string }[] = [
+  { value: 'all', label: 'All Posts' },
+  { value: 'mine', label: 'My Posts' },
+  { value: 'liked', label: 'Liked by Me' },
+]
+
+function filterPillClass(active: boolean) {
+  return `rounded-full border px-4 py-2 text-sm font-semibold transition-all ${
+    active
+      ? 'border-primary bg-primary text-primary-foreground'
+      : 'border-border text-muted-foreground hover:border-primary/25'
+  }`
+}
+
+function postMatchesFilters(
+  post: CommunityPostItem,
+  filters: {
+    category: PostCategory | 'all'
+    sort: FeedSort
+    scope: FeedScope
+    search: string
+    userId?: string
+  },
+) {
+  if (filters.category !== 'all' && post.category !== filters.category) return false
+  if (filters.scope === 'mine' && post.authorId !== filters.userId) return false
+  if (filters.scope === 'liked' && !post.likedByMe) return false
+  if (filters.search) {
+    const q = filters.search.toLowerCase()
+    const haystack = `${post.content} ${post.authorName}`.toLowerCase()
+    if (!haystack.includes(q)) return false
+  }
+  return true
+}
 
 interface CommunityPostItem {
   _id: string
@@ -82,11 +127,39 @@ export default function CommunityPage() {
   const [loadingComments, setLoadingComments] = useState<string | null>(null)
   const [submittingComment, setSubmittingComment] = useState<string | null>(null)
   const [likingIds, setLikingIds] = useState<Set<string>>(new Set())
+  const [categoryFilter, setCategoryFilter] = useState<PostCategory | 'all'>('all')
+  const [sortFilter, setSortFilter] = useState<FeedSort>('newest')
+  const [scopeFilter, setScopeFilter] = useState<FeedScope>('all')
+  const [searchInput, setSearchInput] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const hasActiveFilters =
+    categoryFilter !== 'all' ||
+    sortFilter !== 'newest' ||
+    scopeFilter !== 'all' ||
+    searchQuery.length > 0
+
+  useEffect(() => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current)
+    searchDebounceRef.current = setTimeout(() => setSearchQuery(searchInput.trim()), 300)
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current)
+    }
+  }, [searchInput])
 
   const loadPosts = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/community/posts')
+      const params = new URLSearchParams()
+      if (categoryFilter !== 'all') params.set('category', categoryFilter)
+      if (sortFilter !== 'newest') params.set('sort', sortFilter)
+      if (scopeFilter === 'mine') params.set('mine', 'true')
+      if (scopeFilter === 'liked') params.set('liked', 'true')
+      if (searchQuery) params.set('search', searchQuery)
+
+      const qs = params.toString()
+      const res = await fetch(`/api/community/posts${qs ? `?${qs}` : ''}`)
       const data = await res.json()
       if (!res.ok) throw new Error(data.message || 'Failed to load feed')
       setPosts(Array.isArray(data) ? data : [])
@@ -96,7 +169,7 @@ export default function CommunityPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [categoryFilter, sortFilter, scopeFilter, searchQuery])
 
   const loadLeaderboard = useCallback(async () => {
     setLoadingLeaderboard(true)
@@ -150,11 +223,28 @@ export default function CommunityPage() {
     channel.bind('new-post', (data: { post?: CommunityPostItem }) => {
       const post = data?.post
       if (!post?._id) return
+      const matches = postMatchesFilters(post, {
+        category: categoryFilter,
+        sort: sortFilter,
+        scope: scopeFilter,
+        search: searchQuery,
+        userId: user?.id,
+      })
+      if (!matches) return
       let didAdd = false
       setPosts((prev) => {
         if (prev.some((p) => p._id === post._id)) return prev
         didAdd = true
-        return [post, ...prev]
+        const next = [post, ...prev]
+        if (sortFilter === 'liked') {
+          next.sort((a, b) => b.likeCount - a.likeCount || +new Date(b.createdAt) - +new Date(a.createdAt))
+        } else if (sortFilter === 'commented') {
+          next.sort(
+            (a, b) =>
+              b.commentCount - a.commentCount || +new Date(b.createdAt) - +new Date(a.createdAt),
+          )
+        }
+        return next
       })
       if (didAdd) {
         setStats((s) => (s ? { ...s, totalPosts: s.totalPosts + 1 } : s))
@@ -178,7 +268,22 @@ export default function CommunityPage() {
       pusher.unsubscribe('community')
       pusher.disconnect()
     }
-  }, [user])
+  }, [user, categoryFilter, sortFilter, scopeFilter, searchQuery])
+
+  const clearFilters = () => {
+    setCategoryFilter('all')
+    setSortFilter('newest')
+    setScopeFilter('all')
+    setSearchInput('')
+    setSearchQuery('')
+  }
+
+  const emptyFeedMessage = useMemo(() => {
+    if (hasActiveFilters) {
+      return 'No posts match your filters. Try adjusting category, sort, or search.'
+    }
+    return '🏃 Be the first to post in the community!'
+  }, [hasActiveFilters])
 
   const handlePost = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -194,9 +299,20 @@ export default function CommunityPage() {
       if (!res.ok) throw new Error(data.message || 'Failed to post')
       setCompose('')
       setCategory('Motivation')
+      const newPost = data as CommunityPostItem
+      const visible =
+        postMatchesFilters(newPost, {
+          category: categoryFilter,
+          sort: sortFilter,
+          scope: scopeFilter,
+          search: searchQuery,
+          userId: user?.id,
+        }) || newPost.authorId === user?.id
+
       setPosts((prev) => {
-        if (prev.some((p) => p._id === data._id)) return prev
-        return [data as CommunityPostItem, ...prev]
+        if (prev.some((p) => p._id === newPost._id)) return prev
+        if (!visible) return prev
+        return [newPost, ...prev]
       })
       setStats((prev) =>
         prev ? { ...prev, totalPosts: prev.totalPosts + 1 } : prev,
@@ -338,6 +454,98 @@ export default function CommunityPage() {
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
           {/* Left — feed */}
           <div className="min-w-0 space-y-4">
+            <Card className="elite-panel border-border">
+              <CardContent className="space-y-4 pt-5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <Filter className="size-4 text-primary" />
+                    Filter feed
+                  </div>
+                  {hasActiveFilters ? (
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      className="text-xs font-semibold text-primary hover:underline"
+                    >
+                      Clear filters
+                    </button>
+                  ) : null}
+                </div>
+
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    placeholder="Search posts or authors…"
+                    aria-label="Search community posts"
+                    className="h-10 w-full rounded-xl border border-border bg-muted/60 pl-10 pr-3 text-sm text-foreground outline-none focus-visible:border-primary/40 focus-visible:ring-3 focus-visible:ring-ring/15"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Category
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCategoryFilter('all')}
+                      className={filterPillClass(categoryFilter === 'all')}
+                    >
+                      All
+                    </button>
+                    {CATEGORIES.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setCategoryFilter(c)}
+                        className={filterPillClass(categoryFilter === c)}
+                      >
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Sort by
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {SORT_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setSortFilter(option.value)}
+                        className={filterPillClass(sortFilter === option.value)}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Show
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {SCOPE_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setScopeFilter(option.value)}
+                        className={filterPillClass(scopeFilter === option.value)}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {loading ? (
               <>
                 <Skeleton className="h-36 rounded-xl bg-muted" />
@@ -347,7 +555,14 @@ export default function CommunityPage() {
             ) : posts.length === 0 ? (
               <Card className="elite-panel border-border">
                 <CardContent className="py-12 text-center text-sm text-muted-foreground">
-                  🏃 Be the first to post in the community!
+                  {emptyFeedMessage}
+                  {hasActiveFilters ? (
+                    <div className="mt-3">
+                      <Button type="button" variant="outline" size="sm" onClick={clearFilters}>
+                        Clear filters
+                      </Button>
+                    </div>
+                  ) : null}
                 </CardContent>
               </Card>
             ) : (

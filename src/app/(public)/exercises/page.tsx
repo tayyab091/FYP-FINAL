@@ -1,7 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
-import { motion, AnimatePresence } from 'framer-motion'
 import { Dumbbell, Wrench, ChevronDown, ChevronUp, Search, X, Filter } from 'lucide-react'
 import { FitnessBadge } from '@/components/motion/FitnessBadge'
 import { FadeIn } from '@/components/motion'
@@ -9,7 +8,6 @@ import { EmptyState } from '@/components/shared/EmptyState'
 import { CatalogImageFrame } from '@/components/shared/CatalogImageFrame'
 import { ExpandableCardPanel } from '@/components/shared/ExpandableCardPanel'
 import { ExerciseMoreInfoPanel } from '@/components/exercise/ExerciseMoreInfoPanel'
-import { easeTransition } from '@/lib/motion'
 
 interface Exercise {
   id: string
@@ -91,14 +89,7 @@ function ExerciseCard({ exercise }: { exercise: Exercise }) {
   const [imgError, setImgError] = useState(false)
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.96 }}
-      transition={easeTransition}
-      className="elite-panel interactive-lift card-athletic flex h-full flex-col rounded-2xl overflow-hidden"
-    >
+    <div className="elite-panel interactive-lift card-athletic flex h-full flex-col rounded-2xl overflow-hidden">
       <Link href={`/exercises/${exercise.id}`} className="block">
         <CatalogImageFrame
           src={exercise.gifUrl}
@@ -171,7 +162,7 @@ function ExerciseCard({ exercise }: { exercise: Exercise }) {
           </ExpandableCardPanel>
         )}
       </div>
-    </motion.div>
+    </div>
   )
 }
 
@@ -267,6 +258,9 @@ export default function ExercisesPage() {
           setMeta(data.meta)
           setCatalogTotal(data.meta.total ?? data.total ?? 0)
         }
+        // #region agent log
+        fetch('http://127.0.0.1:7893/ingest/3b5841b0-46ed-4652-9b9f-279e38a5ba27',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1483ff'},body:JSON.stringify({sessionId:'1483ff',hypothesisId:'H4',location:'exercises/page.tsx:fetch',message:'exercises loaded',data:{count:(data.exercises||[]).length},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
       })
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -433,17 +427,11 @@ export default function ExercisesPage() {
           </div>
         ) : exercises.length > 0 ? (
           <>
-            <AnimatePresence mode="popLayout">
-              <motion.div
-                key={`${filters.muscle}-${filters.bodyPart}-${filters.target}-${filters.equipment}-${debouncedSearch}`}
-                layout
-                className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr"
-              >
-                {filteredExercises.map((e) => (
-                  <ExerciseCard key={e.id} exercise={e} />
-                ))}
-              </motion.div>
-            </AnimatePresence>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
+              {filteredExercises.map((e) => (
+                <ExerciseCard key={e.id} exercise={e} />
+              ))}
+            </div>
 
             {page < totalPages && (
               <div className="mt-8 text-center">

@@ -12,6 +12,7 @@ export const DASHBOARD_SHELL_PREFIXES = [
   '/analytics',
   '/live-sessions',
   '/notifications',
+  '/exercise-check',
 ] as const
 
 /** Auth pages: hide marketing Navbar/Footer (auth layout has its own chrome). */

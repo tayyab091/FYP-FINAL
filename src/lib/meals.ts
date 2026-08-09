@@ -1,4 +1,4 @@
-import { getOrFetch, paginate } from '@/lib/server-cache'
+import { getCached, getOrFetch, paginate } from '@/lib/server-cache'
 
 const MEALDB_BASE = 'https://www.themealdb.com/api/json/v1/1'
 const CACHE_TTL = 60 * 60 * 1000 // 1 hour
@@ -53,7 +53,7 @@ function parseIngredients(meal: Record<string, string | null | undefined>) {
 function toSummary(meal: Record<string, string | null | undefined>): MealSummary {
   return {
     id: meal.idMeal || '',
-    name: meal.strMeal || 'Unknown meal',
+    name: (meal.strMeal || 'Unknown meal').trim(),
     category: meal.strCategory || 'Miscellaneous',
     area: meal.strArea || 'International',
     thumb: meal.strMealThumb || '',
@@ -79,83 +79,85 @@ async function fetchMealDb(path: string) {
   return res.json()
 }
 
-async function buildMealCatalog(): Promise<MealCatalog> {
-  const [categoriesData, areasData] = await Promise.all([
-    fetchMealDb('list.php?c=list'),
-    fetchMealDb('list.php?a=list'),
-  ])
-
-  const categories: string[] = (categoriesData.meals || []).map(
-    (m: { strCategory: string }) => m.strCategory,
+async function fetchCategoryMeals(category: string): Promise<MealSummary[]> {
+  const data = await fetchMealDb(`filter.php?c=${encodeURIComponent(category)}`)
+  return (data.meals || []).map((meal: Record<string, string>) =>
+    toSummary({ ...meal, strCategory: category }),
   )
-  const areas: string[] = (areasData.meals || []).map((m: { strArea: string }) => m.strArea)
+}
 
-  const byId = new Map<string, MealSummary>()
+async function fetchAreaMeals(area: string): Promise<MealSummary[]> {
+  const data = await fetchMealDb(`filter.php?a=${encodeURIComponent(area)}`)
+  return (data.meals || []).map((meal: Record<string, string>) =>
+    toSummary({ ...meal, strArea: area }),
+  )
+}
 
-  for (const category of categories) {
-    try {
-      const data = await fetchMealDb(`filter.php?c=${encodeURIComponent(category)}`)
-      for (const meal of data.meals || []) {
-        const existing = byId.get(meal.idMeal)
-        byId.set(meal.idMeal, {
-          ...toSummary(meal),
-          category,
-          area: existing?.area || 'International',
-        })
-      }
-      await new Promise((r) => setTimeout(r, 40))
-    } catch {
-      // skip failed category
-    }
-  }
-
-  for (const area of areas) {
-    try {
-      const data = await fetchMealDb(`filter.php?a=${encodeURIComponent(area)}`)
-      for (const meal of data.meals || []) {
-        const existing = byId.get(meal.idMeal)
-        if (existing) {
-          byId.set(meal.idMeal, { ...existing, area })
-        } else {
-          byId.set(meal.idMeal, {
-            ...toSummary(meal),
-            area,
-            category: 'Miscellaneous',
-          })
-        }
-      }
-      await new Promise((r) => setTimeout(r, 40))
-    } catch {
-      // skip failed area
-    }
-  }
-
-  const meals = [...byId.values()].sort((a, b) => a.name.localeCompare(b.name))
-
-  return {
-    meals,
-    meta: {
+export async function getMealMetaFast(): Promise<MealCatalogMeta> {
+  return getOrFetch('meal-meta-v1', CACHE_TTL, async () => {
+    const [categoriesData, areasData] = await Promise.all([
+      fetchMealDb('list.php?c=list'),
+      fetchMealDb('list.php?a=list'),
+    ])
+    const categories: string[] = (categoriesData.meals || []).map(
+      (m: { strCategory: string }) => m.strCategory,
+    )
+    const areas: string[] = (areasData.meals || []).map((m: { strArea: string }) => m.strArea)
+    return {
       categories: [...new Set(categories)].sort(),
       areas: [...new Set(areas)].sort(),
-      total: meals.length,
-    },
-  }
+      total: 0,
+    }
+  })
 }
 
-export async function getMealCatalog(): Promise<MealCatalog> {
-  return getOrFetch('meal-catalog-v3', CACHE_TTL, buildMealCatalog)
+function warmMealCatalog(): void {
+  if (getCached<MealCatalog>('meal-catalog-v3')) return
+  void getMealCatalog()
 }
 
-export async function queryMeals(options: {
+async function fetchMealsDirect(options: {
   search?: string
   category?: string
   area?: string
-  letter?: string
-  page?: number
-  limit?: number
-  includeMeta?: boolean
-}): Promise<MealQueryResult> {
-  const { meals, meta } = await getMealCatalog()
+}): Promise<MealSummary[]> {
+  if (options.search) {
+    const remote = await searchMeals(options.search)
+    if (remote.length > 0) return remote
+  }
+  if (options.category && options.category !== 'All') {
+    return fetchCategoryMeals(options.category)
+  }
+  if (options.area && options.area !== 'All') {
+    return fetchAreaMeals(options.area)
+  }
+
+  const meta = await getMealMetaFast()
+  const starterCategories = meta.categories.slice(0, 3)
+  const batches = await Promise.all(starterCategories.map((category) => fetchCategoryMeals(category)))
+  const byId = new Map<string, MealSummary>()
+  for (const batch of batches) {
+    for (const meal of batch) {
+      const existing = byId.get(meal.id)
+      byId.set(meal.id, existing ? { ...existing, ...meal } : meal)
+    }
+  }
+  return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name))
+}
+
+function queryMealsFromCatalog(
+  meals: MealSummary[],
+  meta: MealCatalogMeta,
+  options: {
+    search?: string
+    category?: string
+    area?: string
+    letter?: string
+    page?: number
+    limit?: number
+    includeMeta?: boolean
+  },
+): MealQueryResult {
   let filtered = meals
 
   if (options.search) {
@@ -185,6 +187,109 @@ export async function queryMeals(options: {
     totalPages: paged.totalPages,
     ...(options.includeMeta ? { meta } : {}),
   }
+}
+
+async function buildMealCatalog(): Promise<MealCatalog> {
+  const [categoriesData, areasData] = await Promise.all([
+    fetchMealDb('list.php?c=list'),
+    fetchMealDb('list.php?a=list'),
+  ])
+
+  const categories: string[] = (categoriesData.meals || []).map(
+    (m: { strCategory: string }) => m.strCategory,
+  )
+  const areas: string[] = (areasData.meals || []).map((m: { strArea: string }) => m.strArea)
+
+  const byId = new Map<string, MealSummary>()
+
+  const categoryBatches = await Promise.all(
+    categories.map(async (category) => {
+      try {
+        return await fetchCategoryMeals(category)
+      } catch {
+        return []
+      }
+    }),
+  )
+
+  for (const batch of categoryBatches) {
+    for (const meal of batch) {
+      const existing = byId.get(meal.id)
+      byId.set(meal.id, {
+        ...meal,
+        area: existing?.area || meal.area || 'International',
+      })
+    }
+  }
+
+  const areaBatches = await Promise.all(
+    areas.map(async (area) => {
+      try {
+        return await fetchAreaMeals(area)
+      } catch {
+        return []
+      }
+    }),
+  )
+
+  for (const batch of areaBatches) {
+    for (const meal of batch) {
+      const existing = byId.get(meal.id)
+      if (existing) {
+        byId.set(meal.id, { ...existing, area: meal.area })
+      } else {
+        byId.set(meal.id, { ...meal, category: meal.category || 'Miscellaneous' })
+      }
+    }
+  }
+
+  const meals = [...byId.values()].sort((a, b) => a.name.localeCompare(b.name))
+
+  return {
+    meals,
+    meta: {
+      categories: [...new Set(categories)].sort(),
+      areas: [...new Set(areas)].sort(),
+      total: meals.length,
+    },
+  }
+}
+
+export async function getMealCatalog(): Promise<MealCatalog> {
+  return getOrFetch('meal-catalog-v3', CACHE_TTL, buildMealCatalog)
+}
+
+export async function queryMeals(options: {
+  search?: string
+  category?: string
+  area?: string
+  letter?: string
+  page?: number
+  limit?: number
+  includeMeta?: boolean
+}): Promise<MealQueryResult> {
+  const needsFullCatalog = options.letter && options.letter !== 'All'
+  const cached = getCached<MealCatalog>('meal-catalog-v3')
+
+  if (cached) {
+    return queryMealsFromCatalog(cached.meals, cached.meta, options)
+  }
+
+  if (needsFullCatalog) {
+    const catalog = await getMealCatalog()
+    return queryMealsFromCatalog(catalog.meals, catalog.meta, options)
+  }
+
+  warmMealCatalog()
+  const meta = await getMealMetaFast()
+  const meals = await fetchMealsDirect(options)
+  const warmed = getCached<MealCatalog>('meal-catalog-v3')
+  const catalogMeta: MealCatalogMeta = {
+    ...meta,
+    total: warmed?.meta.total ?? meals.length,
+  }
+
+  return queryMealsFromCatalog(meals, catalogMeta, { ...options, includeMeta: options.includeMeta })
 }
 
 export async function searchMeals(query: string): Promise<MealSummary[]> {
@@ -235,11 +340,11 @@ export async function getMealById(id: string): Promise<MealDetail | null> {
 }
 
 export async function listCategories(): Promise<string[]> {
-  const { meta } = await getMealCatalog()
-  return meta.categories
+  const { categories } = await getMealMetaFast()
+  return categories
 }
 
 export async function listAreas(): Promise<string[]> {
-  const { meta } = await getMealCatalog()
-  return meta.areas
+  const { areas } = await getMealMetaFast()
+  return areas
 }

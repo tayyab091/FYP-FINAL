@@ -4,6 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Clock, Globe, Leaf, ListOrdered, ArrowRight, UtensilsCrossed } from 'lucide-react'
 import { parseInstructionSteps } from '@/lib/parse-instruction-steps'
+import { mealDetailPath } from '@/lib/meal-slug'
 
 export interface DishMoreInfoData {
   id: string
@@ -107,7 +108,7 @@ export function DishMoreInfoPanel({ dish }: DishMoreInfoPanelProps) {
       )}
 
       <Link
-        href={`/nutrition/${dish.id}`}
+        href={mealDetailPath(dish.name, dish.id)}
         className="group mt-1 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-2 py-1.5 text-[10px] font-bold text-primary transition-colors hover:bg-primary/20"
       >
         View full recipe

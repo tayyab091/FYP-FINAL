@@ -9,6 +9,7 @@ import {
   Apple,
   BarChart3,
   Building2,
+  Camera,
   ClipboardList,
   Dumbbell,
   Home,
@@ -42,6 +43,7 @@ const roleNavigation: Record<UserRole, NavItem[]> = {
   user: [
     { label: 'Home', href: '/dashboard', icon: Home, exact: true },
     { label: 'My Fitness', href: '/my-fitness', icon: LayoutDashboard },
+    { label: 'Form Checker', href: '/exercise-check', icon: Camera },
     { label: 'Meal Plans', href: '/meal-plans', icon: UtensilsCrossed },
     { label: 'Nutrition', href: '/my-fitness?tab=nutrition', icon: Apple },
     { label: 'Messages', href: '/chat', icon: MessageCircle },
@@ -55,6 +57,7 @@ const roleNavigation: Record<UserRole, NavItem[]> = {
     { label: 'Dashboard', href: '/trainer-dashboard', icon: Home, exact: true },
     { label: 'Messages', href: '/chat', icon: MessageCircle },
     { label: 'Exercises', href: '/trainer-dashboard/exercises', icon: Dumbbell },
+    { label: 'Form Checker', href: '/exercise-check', icon: Camera },
     { label: 'Nutrition', href: '/trainer-dashboard/nutrition', icon: Apple },
     { label: 'Meal Plans', href: '/meal-plans', icon: UtensilsCrossed },
     { label: 'Live Sessions', href: '/live-sessions', icon: Radio },
