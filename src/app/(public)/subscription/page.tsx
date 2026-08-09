@@ -149,11 +149,6 @@ export default function SubscriptionPage() {
               Current plan: <span className="text-primary font-bold capitalize">{currentPlan}</span>
             </p>
           )}
-          {!stripeReady && (
-            <p className="mt-3 text-xs text-amber-400/90">
-              Stripe keys not configured — demo payment mode is active.
-            </p>
-          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

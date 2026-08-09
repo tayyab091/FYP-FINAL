@@ -23,7 +23,7 @@ export function GamificationBar({ data }: { data: GamificationMeResponse | null 
   const streak = data?.streak || 0
 
   return (
-    <div className="tile min-h-0 w-full max-w-full flex-row flex-wrap items-center gap-4 overflow-hidden py-5 sm:gap-6">
+    <div className="tile min-h-0 w-full max-w-full flex-col gap-4 overflow-hidden py-5 md:flex-row md:flex-nowrap md:items-center md:gap-6">
       <div className="flex flex-shrink-0 items-center gap-3">
         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#00ff87] to-[#00d4ff]">
           <span className="text-xl font-black text-black">{level}</span>
@@ -34,7 +34,7 @@ export function GamificationBar({ data }: { data: GamificationMeResponse | null 
         </div>
       </div>
 
-      <div className="min-w-0 w-full flex-1 basis-[200px] sm:min-w-[200px]">
+      <div className="min-w-0 flex-1 md:min-w-[180px]">
         <div className="mb-2 flex justify-between text-xs text-muted-foreground">
           <span>{current} XP</span>
           <span>{data?.progressToNextLevel?.xpRemaining ?? Math.max(0, required - current)} XP to Level {level + 1}</span>
@@ -58,7 +58,7 @@ export function GamificationBar({ data }: { data: GamificationMeResponse | null 
         </div>
       </div>
 
-      <div className="flex max-w-full flex-shrink flex-wrap gap-2">
+      <div className="flex flex-shrink-0 gap-2">
         {BADGE_DEFS.map((badge) => {
           const fromApi = data?.achievements?.find((a) => a.id === badge.id || a.id.includes(badge.id))
           const earned = Boolean(fromApi?.unlocked)
