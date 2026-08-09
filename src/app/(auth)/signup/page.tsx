@@ -158,7 +158,14 @@ export default function SignupPage() {
               <input type="checkbox" id="terms" checked={agreed} onChange={e => setAgreed(e.target.checked)}
                 className="mt-0.5 size-4 accent-primary" />
               <label htmlFor="terms" className="text-xs leading-relaxed text-muted-foreground">
-                I agree to the Terms of Service and Privacy Policy
+                I agree to the{' '}
+                <Link href="/terms" className="font-medium text-primary hover:underline">
+                  Terms of Service
+                </Link>{' '}
+                and{' '}
+                <Link href="/privacy" className="font-medium text-primary hover:underline">
+                  Privacy Policy
+                </Link>
               </label>
             </div>
             {errors.terms && <p className="text-xs text-red-400">{errors.terms}</p>}

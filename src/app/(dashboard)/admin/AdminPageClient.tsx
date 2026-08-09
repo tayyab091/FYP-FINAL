@@ -229,6 +229,7 @@ export default function AdminPageClient() {
     const res = await fetch(url, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ suspend, reason }),
     })
     if (res.ok) {

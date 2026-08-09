@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/hooks/useAuth'
@@ -11,6 +11,13 @@ import { EmptyState } from '@/components/shared/EmptyState'
 import { easeTransition } from '@/lib/motion'
 import { Avatar } from '@/components/shared/Avatar'
 import { trainerPublicPath } from '@/lib/trainer-slug'
+import {
+  buildTrainerRelationshipMap,
+  connectStatusFromRelationship,
+  fetchUserTrainerRelationships,
+  type ConnectUiStatus,
+  type RelationshipRecordStatus,
+} from '@/lib/relationship-ui'
 
 interface Trainer {
   _id: string
@@ -40,23 +47,42 @@ function parseTrainersResponse(data: unknown): { trainers: Trainer[]; meta?: Tra
   return { trainers: [] }
 }
 
-function TrainerCard({ trainer, connectable, onConnect }: { trainer: Trainer; connectable: boolean; onConnect: (id: string) => Promise<void> }) {
-  const [status, setStatus] = useState<'idle' | 'loading' | 'sent' | 'pending'>('idle')
+function TrainerCard({
+  trainer,
+  connectable,
+  relationshipStatus,
+  onConnect,
+}: {
+  trainer: Trainer
+  connectable: boolean
+  relationshipStatus?: RelationshipRecordStatus | null
+  onConnect: (id: string) => Promise<void>
+}) {
+  const initialStatus = connectStatusFromRelationship(relationshipStatus ?? undefined)
+  const [status, setStatus] = useState<ConnectUiStatus>(initialStatus)
+
+  useEffect(() => {
+    setStatus(connectStatusFromRelationship(relationshipStatus ?? undefined))
+  }, [relationshipStatus, trainer._id])
+
   const name = trainer.name || trainer.fullName || 'Trainer'
   const specialties = Array.isArray(trainer.specialty) ? trainer.specialty : [trainer.specialty].filter(Boolean)
 
   const handleConnect = async () => {
+    if (status !== 'idle') return
     setStatus('loading')
     try {
       await onConnect(trainer._id)
-      setStatus('sent')
+      setStatus('pending')
     } catch (e: unknown) {
       if (e instanceof Error && e.message === 'pending') setStatus('pending')
-      else setStatus('idle')
+      else if (e instanceof Error && e.message === 'connected') setStatus('connected')
+      else setStatus(initialStatus)
     }
   }
 
   const isPreview = trainer.isFallback || !connectable
+  const disabled = status !== 'idle' || isPreview
 
   return (
     <motion.div
@@ -107,17 +133,17 @@ function TrainerCard({ trainer, connectable, onConnect }: { trainer: Trainer; co
 
         <button
           onClick={handleConnect}
-          disabled={status !== 'idle' || isPreview}
+          disabled={disabled}
           className={`w-full py-2.5 rounded-xl text-sm font-bold transition-all ${
-            status === 'sent' ? 'bg-primary/20 text-primary border border-primary/30 cursor-default' :
             status === 'pending' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 cursor-default' :
+            status === 'connected' ? 'bg-muted text-muted-foreground border border-border cursor-default' :
             status === 'loading' ? 'bg-primary text-primary-foreground opacity-70 cursor-wait' :
             isPreview ? 'bg-muted text-muted-foreground cursor-not-allowed' :
             'bg-primary text-primary-foreground hover:brightness-95 hover:-translate-y-0.5 active:translate-y-0'
           }`}>
           {status === 'loading' ? 'Sending...' :
-           status === 'sent' ? '✓ Request Sent' :
            status === 'pending' ? '⏳ Pending' :
+           status === 'connected' ? 'Connected' :
            isPreview ? 'Seed database to connect' :
            'Connect'}
         </button>
@@ -154,14 +180,29 @@ const SPECIALTIES = ['All', 'Strength Training', 'HIIT', 'Yoga', 'Cardio', 'Body
 const COUNTRIES = ['All', 'Pakistan', 'UAE', 'UK', 'USA']
 
 export default function CoachingPage() {
-  const { user } = useAuth()
+  const { user, isLoading: authLoading } = useAuth()
   const router = useRouter()
   const [trainers, setTrainers] = useState<Trainer[]>([])
   const [meta, setMeta] = useState<TrainersMeta | undefined>()
   const [loading, setLoading] = useState(true)
+  const [relationshipMap, setRelationshipMap] = useState<Map<string, RelationshipRecordStatus>>(new Map())
   const [specialty, setSpecialty] = useState('All')
   const [country, setCountry] = useState('All')
   const [search, setSearch] = useState('')
+
+  const refreshRelationships = useCallback(async () => {
+    if (!user || user.role !== 'user') {
+      setRelationshipMap(new Map())
+      return
+    }
+    const relationships = await fetchUserTrainerRelationships()
+    setRelationshipMap(buildTrainerRelationshipMap(relationships))
+  }, [user])
+
+  useEffect(() => {
+    if (authLoading) return
+    void refreshRelationships()
+  }, [authLoading, refreshRelationships])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -200,7 +241,10 @@ export default function CoachingPage() {
         credentials: 'include',
         signal: controller.signal,
       })
-      if (res.status === 409) { toast('Request already sent'); throw new Error('pending') }
+      if (res.status === 409) {
+        toast('Request already sent')
+        throw new Error('pending')
+      }
       if (!res.ok) {
         const data = await res.json().catch(() => ({ message: 'Failed to send request' }))
         const message = typeof data.message === 'string' ? data.message : 'Failed to send request'
@@ -212,6 +256,7 @@ export default function CoachingPage() {
         throw new Error('error')
       }
       toast.success('Connection request sent! 🎉')
+      await refreshRelationships()
     } finally {
       clearTimeout(timeout)
     }
@@ -302,6 +347,7 @@ export default function CoachingPage() {
                   key={t._id}
                   trainer={t}
                   connectable={meta?.connectable !== false && !t.isFallback}
+                  relationshipStatus={relationshipMap.get(t._id) ?? null}
                   onConnect={handleConnect}
                 />
               ))}

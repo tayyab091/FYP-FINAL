@@ -159,7 +159,7 @@ export default function CommunityPage() {
       if (searchQuery) params.set('search', searchQuery)
 
       const qs = params.toString()
-      const res = await fetch(`/api/community/posts${qs ? `?${qs}` : ''}`)
+      const res = await fetch(`/api/community/posts${qs ? `?${qs}` : ''}`, { credentials: 'include' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.message || 'Failed to load feed')
       setPosts(Array.isArray(data) ? data : [])
@@ -174,7 +174,7 @@ export default function CommunityPage() {
   const loadLeaderboard = useCallback(async () => {
     setLoadingLeaderboard(true)
     try {
-      const res = await fetch('/api/gamification/me?leaderboard=true')
+      const res = await fetch('/api/gamification/me?leaderboard=true', { credentials: 'include' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.message || 'Failed to load leaderboard')
       setLeaderboard(Array.isArray(data.leaderboard) ? data.leaderboard : [])
@@ -188,7 +188,7 @@ export default function CommunityPage() {
   const loadStats = useCallback(async () => {
     setLoadingStats(true)
     try {
-      const res = await fetch('/api/community/stats')
+      const res = await fetch('/api/community/stats', { credentials: 'include' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.message || 'Failed to load stats')
       setStats({
@@ -293,6 +293,7 @@ export default function CommunityPage() {
       const res = await fetch('/api/community/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ content: compose.trim(), category }),
       })
       const data = await res.json()
@@ -342,7 +343,7 @@ export default function CommunityPage() {
     )
 
     try {
-      const res = await fetch(`/api/community/posts/${postId}/like`, { method: 'POST' })
+      const res = await fetch(`/api/community/posts/${postId}/like`, { method: 'POST', credentials: 'include' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.message || 'Like failed')
       setPosts((prev) =>
@@ -380,7 +381,7 @@ export default function CommunityPage() {
 
     setLoadingComments(postId)
     try {
-      const res = await fetch(`/api/community/posts/${postId}/comments`)
+      const res = await fetch(`/api/community/posts/${postId}/comments`, { credentials: 'include' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.message || 'Failed to load comments')
       setComments((prev) => ({ ...prev, [postId]: Array.isArray(data) ? data : [] }))
@@ -399,6 +400,7 @@ export default function CommunityPage() {
       const res = await fetch(`/api/community/posts/${postId}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ content }),
       })
       const data = await res.json()

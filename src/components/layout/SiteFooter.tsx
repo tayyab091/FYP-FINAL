@@ -11,6 +11,8 @@ const links = [
   { label: 'Form Checker', href: '/exercise-check' },
   { label: 'Nutrition', href: '/nutrition' },
   { label: 'Pricing', href: '/subscription' },
+  { label: 'Privacy', href: '/privacy' },
+  { label: 'Terms', href: '/terms' },
 ]
 
 export function SiteFooter() {

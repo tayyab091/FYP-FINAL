@@ -17,6 +17,8 @@ const STATIC_ROUTES: MetadataRoute.Sitemap = [
   { url: absoluteUrl('/nutrition'), changeFrequency: 'weekly', priority: 0.8 },
   { url: absoluteUrl('/exercise-check'), changeFrequency: 'monthly', priority: 0.7 },
   { url: absoluteUrl('/subscription'), changeFrequency: 'monthly', priority: 0.8 },
+  { url: absoluteUrl('/privacy'), changeFrequency: 'yearly', priority: 0.4 },
+  { url: absoluteUrl('/terms'), changeFrequency: 'yearly', priority: 0.4 },
   { url: absoluteUrl('/login'), changeFrequency: 'yearly', priority: 0.3 },
   { url: absoluteUrl('/signup'), changeFrequency: 'yearly', priority: 0.5 },
 ]
