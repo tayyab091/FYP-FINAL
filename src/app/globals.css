@@ -458,8 +458,17 @@ h1, h2, h3, h4, h5, h6 {
 }
 @media (min-width: 1024px) {
   .dashboard-grid.cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .dashboard-grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .dashboard-grid.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* 3-column stat rows need sidebar-aware width — content area at lg is ~736px. */
+@media (min-width: 1280px) {
+  .dashboard-grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (min-width: 768px) and (max-width: 1279px) {
+  .dashboard-grid.cols-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 767px) {
+  .dashboard-grid.cols-3 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
 }
 .dashboard-grid > * {
   height: 100%;
@@ -469,22 +478,49 @@ h1, h2, h3, h4, h5, h6 {
   min-height: 9.5rem;
 }
 
+/* Action shortcut tiles — 4-up only when main column is wide enough (sidebar + xl). */
+.dashboard-action-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+@media (min-width: 480px) {
+  .dashboard-action-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1280px) {
+  .dashboard-action-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
 /* Reserve scroll space for FloatingChat + AIChatbot FAB stack (see layout.tsx). */
 .dashboard-fab-reserve {
   padding-bottom: 19rem;
+  padding-right: 4.5rem;
 }
 @media (min-width: 768px) {
   .dashboard-fab-reserve {
     padding-bottom: 14rem;
+    padding-right: 5rem;
+  }
+}
+@media (max-height: 700px) {
+  .dashboard-fab-reserve {
+    padding-bottom: 17rem;
   }
 }
 /* Member routes that also render the mobile BottomNav (~4rem). */
 .dashboard-fab-reserve-with-nav {
   padding-bottom: 19rem;
+  padding-right: 4.5rem;
 }
 @media (min-width: 768px) {
   .dashboard-fab-reserve-with-nav {
     padding-bottom: 12rem;
+    padding-right: 5rem;
+  }
+}
+@media (max-height: 700px) {
+  .dashboard-fab-reserve-with-nav {
+    padding-bottom: 17rem;
   }
 }
 
@@ -2487,11 +2523,20 @@ html.landing-page--looping body {
   margin-inline: calc(var(--landing-space-2) * -1);
   padding-inline: var(--landing-space-2);
   overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted-foreground) 35%, transparent) transparent;
+  cursor: grab;
+  scroll-behavior: smooth;
+}
+.landing-trainers__scroll-wrap:active {
+  cursor: grabbing;
 }
 .landing-trainers__scroll-wrap::-webkit-scrollbar {
-  display: none;
+  height: 6px;
+}
+.landing-trainers__scroll-wrap::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--muted-foreground) 35%, transparent);
 }
 
 .landing-trainers__scroll {
@@ -2635,6 +2680,7 @@ html.landing-page--looping body {
   grid-template-columns: 1fr;
   gap: var(--landing-space-3);
   align-items: stretch;
+  overflow: visible;
 }
 @media (min-width: 768px) {
   .landing-pricing__grid {
@@ -2646,6 +2692,8 @@ html.landing-page--looping body {
 .landing-pricing__cell {
   display: flex;
   height: 100%;
+  overflow: visible;
+  min-width: 0;
 }
 
 .landing-pricing__card {
@@ -2680,30 +2728,21 @@ html.landing-page--looping body {
 }
 
 .landing-pricing__card--elite {
-  position: relative;
-  transform: scale(1.03);
-  border: 2px solid transparent;
+  border-color: color-mix(in srgb, var(--primary) 45%, transparent);
   background:
-    radial-gradient(ellipse 90% 55% at 50% 0%, color-mix(in srgb, #fbbf24 14%, transparent), transparent 55%),
-    linear-gradient(160deg, color-mix(in srgb, var(--card) 96%, white), var(--card)) padding-box,
-    linear-gradient(135deg, #fbbf24, #a78bfa, #c084fc, #fbbf24) border-box;
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, #a78bfa 25%, transparent),
-    0 24px 64px color-mix(in srgb, #a78bfa 18%, transparent),
-    0 0 48px color-mix(in srgb, #fbbf24 12%, transparent);
+    radial-gradient(ellipse 80% 50% at 50% 0%, color-mix(in srgb, var(--primary) 14%, transparent), transparent 60%),
+    linear-gradient(160deg, color-mix(in srgb, var(--card) 96%, white), var(--card));
+  box-shadow: 0 20px 60px color-mix(in srgb, var(--primary) 12%, transparent);
 }
 .landing-pricing__card--elite:hover {
-  transform: scale(1.05) translateY(-4px);
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, #a78bfa 35%, transparent),
-    0 28px 72px color-mix(in srgb, #a78bfa 22%, transparent),
-    0 0 56px color-mix(in srgb, #fbbf24 16%, transparent);
+  transform: translateY(-4px);
 }
 .dark .landing-pricing__card--elite {
   background:
-    radial-gradient(ellipse 90% 55% at 50% 0%, rgba(251,191,36,.12), transparent 55%),
-    linear-gradient(160deg, rgba(255,255,255,.06), rgba(255,255,255,.02)) padding-box,
-    linear-gradient(135deg, #fbbf24, #a78bfa, #c084fc, #fbbf24) border-box;
+    radial-gradient(ellipse 80% 50% at 50% 0%, color-mix(in srgb, var(--primary) 12%, transparent), transparent 60%),
+    linear-gradient(160deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+  border-color: color-mix(in srgb, var(--primary) 40%, transparent);
+  box-shadow: 0 20px 60px color-mix(in srgb, var(--primary) 10%, transparent);
 }
 
 .landing-pricing__badge {
@@ -2711,11 +2750,10 @@ html.landing-page--looping body {
   margin-bottom: var(--landing-space-2);
 }
 .landing-pricing__badge--elite {
-  background: linear-gradient(135deg, #fbbf24, #a78bfa);
-  color: #1a1025;
+  background: var(--primary);
+  color: var(--primary-foreground);
   font-weight: 800;
   border: none;
-  box-shadow: 0 4px 16px color-mix(in srgb, #a78bfa 30%, transparent);
 }
 
 .landing-pricing__name {
@@ -2756,24 +2794,6 @@ html.landing-page--looping body {
 .landing-pricing__cta {
   width: 100%;
   margin-top: auto;
-}
-.landing-pricing__cta--elite {
-  padding-block: 0.85rem;
-  font-size: 1rem;
-  font-weight: 800;
-  background: linear-gradient(135deg, #fbbf24 0%, #a78bfa 50%, #c084fc 100%);
-  border: none;
-  color: #1a1025;
-  box-shadow:
-    0 8px 28px color-mix(in srgb, #a78bfa 35%, transparent),
-    0 0 20px color-mix(in srgb, #fbbf24 20%, transparent);
-  transition: transform 0.25s cubic-bezier(.22,1,.36,1), box-shadow 0.25s ease;
-}
-.landing-pricing__cta--elite:hover {
-  transform: translateY(-2px);
-  box-shadow:
-    0 12px 36px color-mix(in srgb, #a78bfa 45%, transparent),
-    0 0 28px color-mix(in srgb, #fbbf24 28%, transparent);
 }
 
 /* ── CTA band ── */

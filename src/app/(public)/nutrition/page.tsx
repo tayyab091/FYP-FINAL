@@ -8,6 +8,7 @@ import { SectionHeading } from '@/components/shared/SectionHeading'
 import { CatalogImageFrame } from '@/components/shared/CatalogImageFrame'
 import { ExpandableCardPanel } from '@/components/shared/ExpandableCardPanel'
 import { DishMoreInfoPanel } from '@/components/nutrition/DishMoreInfoPanel'
+import { mealDetailPath } from '@/lib/meal-slug'
 import { FadeIn, CountUp } from '@/components/motion'
 import { calculateDailyCalories } from '@/lib/nutrition'
 
@@ -183,7 +184,12 @@ export default function NutritionPage() {
         if (!controller.signal.aborted) setRecipeMeals([])
       })
       .finally(() => {
-        if (!controller.signal.aborted) setMealsLoading(false)
+        if (!controller.signal.aborted) {
+          setMealsLoading(false)
+          // #region agent log
+          fetch('http://127.0.0.1:7893/ingest/3b5841b0-46ed-4652-9b9f-279e38a5ba27',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1483ff'},body:JSON.stringify({sessionId:'1483ff',hypothesisId:'H3',location:'nutrition/page.tsx:fetch',message:'meals loaded',data:{},timestamp:Date.now()})}).catch(()=>{});
+          // #endregion
+        }
       })
 
     return () => controller.abort()
@@ -364,7 +370,6 @@ export default function NutritionPage() {
           </div>
         </FadeIn>
 
-        <FadeIn delay={0.1}>
         <section>
           <SectionHeading title="Daily Summary" />
 
@@ -448,9 +453,7 @@ export default function NutritionPage() {
             </div>
           )}
         </section>
-        </FadeIn>
 
-        <FadeIn delay={0.15}>
         <section>
           <SectionHeading title="Food Search" description="Search Pakistani and international foods to log meals" />
           <div className="glass rounded-2xl p-5 space-y-4">
@@ -519,7 +522,6 @@ export default function NutritionPage() {
             )}
           </div>
         </section>
-        </FadeIn>
 
         {user && todayMeals.length > 0 && (
           <section>
@@ -566,7 +568,6 @@ export default function NutritionPage() {
           </section>
         )}
 
-        <FadeIn delay={0.2}>
         <section>
           <SectionHeading
             title="Meal Inspiration"
@@ -670,7 +671,7 @@ export default function NutritionPage() {
                   const isOpen = expandedMeal === recipe.id
                   return (
                     <div key={recipe.id} className="glass interactive-lift card-athletic flex h-full flex-col overflow-hidden rounded-2xl">
-                      <Link href={`/nutrition/${recipe.id}`} className="block">
+                      <Link href={mealDetailPath(recipe.name, recipe.id)} className="block">
                         <CatalogImageFrame
                           src={recipe.thumb}
                           alt={recipe.name}
@@ -682,21 +683,21 @@ export default function NutritionPage() {
                             </div>
                           }
                           badge={
-                            <span className="absolute left-3 top-3 rounded-full border border-primary/20 bg-black/60 px-2 py-0.5 text-[10px] font-bold text-primary backdrop-blur">
+                            <span className="absolute left-3 top-3 rounded-full border border-border bg-background/85 px-2 py-0.5 text-[10px] font-bold text-foreground backdrop-blur">
                               {recipe.category}
                             </span>
                           }
                         />
                       </Link>
                       <div className="flex flex-1 flex-col p-5">
-                        <Link href={`/nutrition/${recipe.id}`} className="text-foreground font-semibold leading-tight hover:text-primary transition-colors">
+                        <Link href={mealDetailPath(recipe.name, recipe.id)} className="text-foreground font-semibold leading-tight hover:text-primary transition-colors">
                           {recipe.name}
                         </Link>
                         <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
                           <Globe className="size-3" /> {recipe.area}
                         </div>
                         <Link
-                          href={`/nutrition/${recipe.id}`}
+                          href={mealDetailPath(recipe.name, recipe.id)}
                           className="mt-2 text-xs font-medium text-primary hover:text-primary/80"
                         >
                           View full recipe →
@@ -754,7 +755,6 @@ export default function NutritionPage() {
             </>
           )}
         </section>
-        </FadeIn>
       </div>
     </div>
   )

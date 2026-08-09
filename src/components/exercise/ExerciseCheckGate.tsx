@@ -7,6 +7,7 @@ import { canAccessExerciseCheck } from '@/lib/access'
 import { PageLoader } from '@/components/shared/PageLoader'
 import { AccessGate, SignInGate } from '@/components/shared/AccessGate'
 import { PoseDetector } from '@/components/exercise/PoseDetector'
+import { ExerciseCheckSteps } from '@/components/exercise/ExerciseCheckSteps'
 
 export function ExerciseCheckGate() {
   const { user, isLoading } = useAuth()
@@ -33,4 +34,16 @@ export function ExerciseCheckGate() {
   }
 
   return <PoseDetector />
+}
+
+export function ExerciseCheckContent() {
+  const { user, isLoading } = useAuth()
+  const allowed = !isLoading && !!user && canAccessExerciseCheck(user)
+
+  return (
+    <>
+      <ExerciseCheckGate />
+      {allowed && <ExerciseCheckSteps />}
+    </>
+  )
 }

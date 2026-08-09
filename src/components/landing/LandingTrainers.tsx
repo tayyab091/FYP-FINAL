@@ -5,8 +5,8 @@
 import { useEffect, useRef, useState } from 'react'
 
 import Link from 'next/link'
-
-import Image from 'next/image'
+import { Avatar } from '@/components/shared/Avatar'
+import { useHorizontalWheelScroll } from '@/hooks/useHorizontalWheelScroll'
 
 import { motion, useInView, useReducedMotion } from 'framer-motion'
 
@@ -55,6 +55,7 @@ export function LandingTrainers() {
   const reduceMotion = useReducedMotion() ?? false
 
   const sectionRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useHorizontalWheelScroll<HTMLDivElement>()
 
   const shouldLoad = useInView(sectionRef, { once: true, margin: '240px 0px' })
 
@@ -210,7 +211,7 @@ export function LandingTrainers() {
 
       ) : (
 
-        <div className="landing-trainers__scroll-wrap">
+        <div className="landing-trainers__scroll-wrap" ref={scrollRef}>
 
           <div className="landing-trainers__scroll">
 
@@ -235,29 +236,7 @@ export function LandingTrainers() {
                 <Link href={trainerPublicPath(trainer)} className="landing-trainer-card group">
 
                   <div className="landing-trainer-card__avatar">
-
-                    {trainer.profileImage ? (
-
-                      <Image
-
-                        src={trainer.profileImage}
-
-                        alt={`${trainer.name} — verified fitness trainer`}
-
-                        fill
-
-                        sizes="64px"
-
-                        className="object-cover"
-
-                      />
-
-                    ) : (
-
-                      <span className="landing-trainer-card__initial">{trainer.name[0]}</span>
-
-                    )}
-
+                    <Avatar name={trainer.name} avatarUrl={trainer.profileImage} size={64} />
                   </div>
 
                   <div className="landing-trainer-card__body">

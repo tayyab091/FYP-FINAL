@@ -1,13 +1,8 @@
 import mongoose, { Schema } from 'mongoose'
+import { COMMUNITY_POST_CATEGORIES } from '@/lib/community'
 
-export const COMMUNITY_POST_CATEGORIES = [
-  'Motivation',
-  'Question',
-  'Achievement',
-  'Workout',
-] as const
-
-export type CommunityPostCategory = (typeof COMMUNITY_POST_CATEGORIES)[number]
+export { COMMUNITY_POST_CATEGORIES }
+export type { CommunityPostCategory } from '@/lib/community'
 
 const CommunityPostSchema = new Schema({
   authorId: { type: Schema.Types.ObjectId, ref: 'User', required: true },

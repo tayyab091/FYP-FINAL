@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url'
 import {
   EXERCISES,
   createFormCheckerSession,
+  getFlexionAngle,
   processPoseFrame,
   type ExerciseKey,
 } from '../src/lib/form-checker-pose'
@@ -19,30 +20,118 @@ const ROOT = path.resolve(__dirname, '..')
 const OUT_DIR = path.join(ROOT, 'scripts', 'form-checker-offline-output')
 const FRAME_DIR = path.join(OUT_DIR, 'frames')
 
-const VIDEOS: { file: string; exercise: ExerciseKey; manualReps: number }[] = [
+
+
+const VIDEO_EXERCISE_MAP: Record<string, ExerciseKey> = {
+  'Squat_1.mp4': 'squat',
+  'Squat_2.mp4': 'squat',
+  'Squat_3.mp4': 'squat',
+  'Squat_4.mp4': 'squat',
+  'Squat_5.mp4': 'squat',
+  'squats_5.mp4': 'squat',
+  'Push_UPS_1.mp4': 'pushup',
+  'Push_UPS_2.mp4': 'pushup',
+  'Push_UPS_3.mp4': 'pushup',
+  'Push_UPS_4.mp4': 'pushup',
+  'Lunges_1.mp4': 'lunge',
+  'Lunges_2.mp4': 'lunge',
+  'Lunges_3.mp4': 'lunge',
+  'Plank_2.mp4': 'plank',
+  'Plank_3.mp4': 'plank',
+  'Plank_4.mp4': 'plank',
+  'Plank_5.mp4': 'plank',
+  'Planks_1.mp4': 'plank',
+}
+
+const LEGACY_VIDEOS: { file: string; exercise: ExerciseKey; manualReps: number }[] = [
   { file: 'Squats.mp4', exercise: 'squat', manualReps: 3 },
   { file: 'Push_UP.mp4', exercise: 'pushup', manualReps: 3 },
   { file: 'Lunges.mp4', exercise: 'lunge', manualReps: 3 },
   { file: 'Plank.mp4', exercise: 'plank', manualReps: 0 },
 ]
 
-const SAMPLE_MS = 200
+const NEW_VIDEOS: { file: string; exercise: ExerciseKey; manualReps: number }[] = Object.keys(
+  VIDEO_EXERCISE_MAP,
+).map((file) => ({ file, exercise: VIDEO_EXERCISE_MAP[file], manualReps: 0 }))
+
+function discoverPatternVideos(): string[] {
+  return fs
+    .readdirSync(ROOT)
+    .filter((name) => /.mp4$/i.test(name) && /_d+.mp4$/i.test(name))
+    .filter((name) => name in VIDEO_EXERCISE_MAP)
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+}
+
+function parseVideosArg(argv: string[]): string[] | null {
+  const eq = argv.find((a) => a.startsWith('--videos='))
+  if (eq) return eq.slice('--videos='.length).split(/[,\s]+/).map((s) => s.trim()).filter(Boolean)
+  const idx = argv.indexOf('--videos')
+  if (idx >= 0) {
+    const names: string[] = []
+    for (let i = idx + 1; i < argv.length && !argv[i].startsWith('--'); i++) {
+      names.push(...argv[i].split(/[,\s]+/).map((s) => s.trim()).filter(Boolean))
+    }
+    if (names.length) return names
+  }
+  return null
+}
+
+function resolveVideos(): { file: string; exercise: ExerciseKey; manualReps: number }[] {
+  const argv = process.argv
+  const fromArg = parseVideosArg(argv)
+  const includeLegacy = argv.includes('--include-legacy')
+  const discover = argv.includes('--discover')
+
+  let files: string[]
+  if (fromArg) files = fromArg
+  else if (discover) files = discoverPatternVideos()
+  else files = NEW_VIDEOS.map((v) => v.file)
+
+  const list: { file: string; exercise: ExerciseKey; manualReps: number }[] = []
+  for (const file of files) {
+    const exercise = VIDEO_EXERCISE_MAP[file]
+    if (!exercise) {
+      console.error('Unknown video or missing exercise mapping: ' + file)
+      process.exit(1)
+    }
+    list.push({ file, exercise, manualReps: 0 })
+  }
+
+  if (includeLegacy) {
+    for (const v of LEGACY_VIDEOS) {
+      if (!list.some((x) => x.file === v.file)) list.push(v)
+    }
+  }
+
+  return list
+}
+
+const VIDEOS = resolveVideos()
+
+const SAMPLE_MS = Number(process.env.FORM_CHECKER_SAMPLE_MS || '100')
+const FRAME_SNAPSHOT_INTERVAL_SEC = Number(process.env.FORM_CHECKER_FRAME_INTERVAL_SEC || '0.5')
 
 interface FrameLog {
   timeSec: number
   detected: boolean
   angle: number | null
+  flexionAngle: number | null
   leftAngle: number | null
   rightAngle: number | null
   bilateralMode: string
   visibilityLeft: number[]
   visibilityRight: number[]
   good: boolean
+  scoringState: string
   feedback: string
   repState: string
   repCount: number
   repCompleted: boolean
   holdSeconds?: number
+  formAngle: number | null
+  useDepthProxy: boolean
+  peakAngleSpan: number
+  cameraQuality: string
 }
 
 function startVideoServer(): Promise<{ port: number; close: () => void; baseUrl: string }> {
@@ -97,7 +186,7 @@ async function extractSampleFrames(page: Page, baseUrl: string, file: string, la
   const frameDir = path.join(FRAME_DIR, label)
   fs.mkdirSync(frameDir, { recursive: true })
   const times: number[] = []
-  for (let t = 0; t <= duration; t += 1.5) times.push(Number(t.toFixed(2)))
+  for (let t = 0; t <= duration; t += FRAME_SNAPSHOT_INTERVAL_SEC) times.push(Number(t.toFixed(2)))
 
   await page.goto(`${baseUrl}/player.html?src=${encodeURIComponent(videoUrl)}`, { waitUntil: 'domcontentloaded' })
   await page.waitForFunction(() => (window as unknown as { __videoReady?: unknown }).__videoReady, { timeout: 30000 })
@@ -156,38 +245,58 @@ async function runVideoAnalysis(page: Page, baseUrl: string, file: string, exerc
 
     if (!processed.detected) dropouts++
 
+    const flexion =
+      processed.detected && processed.angles.currentAngle !== null
+        ? getFlexionAngle(processed.angles)
+        : null
+
     logs.push({
       timeSec,
       detected: processed.detected,
       angle: processed.angles.currentAngle !== null ? Math.round(processed.angles.currentAngle) : null,
+      flexionAngle: flexion !== null ? Math.round(flexion) : null,
       leftAngle: processed.angles.leftAngle !== null ? Math.round(processed.angles.leftAngle) : null,
       rightAngle: processed.angles.rightAngle !== null ? Math.round(processed.angles.rightAngle) : null,
       bilateralMode: processed.angles.bilateralMode,
       visibilityLeft: processed.angles.visibility.left.map((v) => Number(v.toFixed(2))),
       visibilityRight: processed.angles.visibility.right.map((v) => Number(v.toFixed(2))),
       good: processed.good,
+      scoringState: processed.scoringState,
       feedback: processed.feedback,
       repState: processed.repState,
       repCount: processed.repCount,
       repCompleted: processed.repCompletedThisFrame,
       holdSeconds: processed.holdSeconds,
+      formAngle: processed.detected ? Math.round(processed.formAngle) : null,
+      useDepthProxy: processed.useDepthProxy,
+      peakAngleSpan: processed.peakAngleSpan,
+      cameraQuality: processed.cameraQuality,
     })
   }
 
-  const detectedFrames = logs.filter((l) => l.detected && l.angle !== null)
+  const detectedFrames = logs.filter((l) => l.detected && l.formAngle !== null)
   const ex = EXERCISES[exercise]
   const isPlank = exercise === 'plank'
   const peakForm = detectedFrames.reduce<FrameLog | null>((best, f) => {
-    if (f.angle === null) return best
-    if (!best || best.angle === null) return f
-    if (isPlank) return f.angle > best.angle ? f : best
-    return f.angle < best.angle ? f : best
+    if (f.formAngle === null) return best
+    if (!best || best.formAngle === null) return f
+    if (isPlank) return f.formAngle > best.formAngle ? f : best
+    return f.formAngle < best.formAngle ? f : best
   }, null)
   const depthFrames = detectedFrames.filter((l) => {
     if (l.angle === null) return false
     return isPlank ? l.angle >= ex.goodAngle - 15 : l.angle <= ex.goodAngle + 15
   })
-  const goodFrames = detectedFrames.filter((l) => l.good)
+  const goodFrames = detectedFrames.filter((l) => l.scoringState === 'good')
+  const unscoredFrames = detectedFrames.filter((l) => l.scoringState === 'unscored')
+
+  const flexionAngles = detectedFrames
+    .map((l) => l.flexionAngle)
+    .filter((a): a is number => a !== null)
+  const avgAngles = detectedFrames.map((l) => l.angle).filter((a): a is number => a !== null)
+  const flexionSpan =
+    flexionAngles.length > 0 ? Math.max(...flexionAngles) - Math.min(...flexionAngles) : 0
+  const avgSpan = avgAngles.length > 0 ? Math.max(...avgAngles) - Math.min(...avgAngles) : 0
 
   return {
     meta: setup,
@@ -198,6 +307,7 @@ async function runVideoAnalysis(page: Page, baseUrl: string, file: string, exerc
     depthFrames,
     goodFrames,
     goodFrameCount: goodFrames.length,
+    unscoredFrameCount: unscoredFrames.length,
     repEvents: logs.filter((l) => l.repCompleted),
     finalRepCount: session.repCount,
     threshold: ex.goodAngle,
@@ -218,7 +328,7 @@ async function main() {
   const visualNotes: string[] = [
     '# Visual sanity — real human reference footage',
     '',
-    'Squats.mp4, Push_UP.mp4, Lunges.mp4, and Plank.mp4 are **real human** recordings at the repo root.',
+    'Reference MP4s at the repo root (new batch; legacy via --include-legacy).',
     'Inspect PNGs under `scripts/form-checker-offline-output/frames/`.',
     '',
   ]
@@ -293,12 +403,22 @@ function formatSummary(
   lines.push(`## ${label} (${exercise})`)
   lines.push(`- Pose detected: ${result.logs.length - result.dropouts}/${result.logs.length} (${((1 - result.dropoutRate) * 100).toFixed(0)}%)`)
   lines.push(`- Good-form frames: ${result.goodFrameCount}/${result.logs.length - result.dropouts}`)
+  lines.push(`- Unscored frames: ${result.unscoredFrameCount}/${result.logs.length - result.dropouts}`)
   if (result.deepest) {
     const cmp = isPlank ? `≥${result.threshold}°` : `≤${result.threshold}°`
     const labelPeak = isPlank ? 'Best alignment' : 'Deepest'
+    const verdict =
+      result.deepest.scoringState === 'good'
+        ? 'PASS'
+        : result.deepest.scoringState === 'unscored'
+          ? 'UNSCORED'
+          : 'FAIL'
     lines.push(
-      `- ${labelPeak}: ${result.deepest.angle}° @ ${result.deepest.timeSec}s (${cmp}) → ${result.deepest.good ? 'GOOD' : 'BAD'} — "${result.deepest.feedback}"`,
+      `- ${labelPeak}: ${result.deepest.formAngle}° @ ${result.deepest.timeSec}s (${cmp}) → ${verdict} — "${result.deepest.feedback}"`,
     )
+    if (result.deepest.useDepthProxy) {
+      lines.push(`- Depth-proxy active (raw 2D angle ${result.deepest.angle}°)`)
+    }
     lines.push(`- Bilateral at peak: L=${result.deepest.leftAngle}° R=${result.deepest.rightAngle}° (${result.deepest.bilateralMode})`)
   }
   if (isPlank) {

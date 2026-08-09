@@ -273,7 +273,7 @@ export default function LiveSessionsPage() {
         <div className="page-hero mb-6 px-6 py-8 sm:px-8">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="eyebrow mb-2">Elite Live</p>
+              <p className="eyebrow mb-2">Live Training</p>
               <h1 className="display-title text-3xl md:text-4xl">Live Training Sessions</h1>
               <p className="mt-2 text-muted-foreground">
                 Join real-time trainer-led workouts over Jitsi. Elite members and session trainers

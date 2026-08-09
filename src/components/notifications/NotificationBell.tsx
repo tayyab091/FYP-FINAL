@@ -84,13 +84,14 @@ export function NotificationBell() {
   }, [])
 
   useEffect(() => {
+    if (!user) return
     void fetchNotifications()
     const interval = setInterval(() => void fetchNotifications(), POLL_MS)
     return () => {
       clearInterval(interval)
       abortRef.current?.abort()
     }
-  }, [fetchNotifications])
+  }, [fetchNotifications, user])
 
   useEffect(() => {
     const userId = user?.id || user?._id

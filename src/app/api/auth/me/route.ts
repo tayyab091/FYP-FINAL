@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   try {
     const tokenUser = await getUser(req)
     if (!tokenUser) {
-      return NextResponse.json({ message: 'Not authenticated' }, { status: 401 })
+      return NextResponse.json({ user: null })
     }
 
     await connectDB()
