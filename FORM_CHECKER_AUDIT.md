@@ -494,3 +494,67 @@ npm run test-form-checker-offline   # all four clips at repo root
 ```
 
 Debug frame captures from this session: `scripts/form-checker-offline-output/debug-frames/` (gitignored).
+
+---
+
+## 14. P0 — Honest camera-angle detection & side-profile onboarding (2026-08-08)
+
+### 14.1 Root cause of false ~100° depth-proxy PASS
+
+Front-facing squat/lunge footage reports hip–knee–ankle angles near **170–179°** in 2D because sagittal knee flexion collapses when the camera faces the athlete. When `peakAngleSpan` stayed below **8°**, `getRepTrackingAngle()` activated the **depth proxy** (`applyDepthProxy` → `depthToPseudoAngle`).
+
+`depthToPseudoAngle` maps the observed min–max range of hip-drop or knee-depth Y-coordinates onto a pseudo-angle from **180°** down to `goodAngle` (**100°**). Any small vertical movement during a squat therefore produced a pseudo-angle near **100°**, and `processPoseFrame()` classified those frames as **GOOD** with *"Great squat depth!"* — even when raw 2D angles proved the camera could not see real flexion.
+
+This was a **confidence failure**, not a threshold error: the pipeline reported a confident PASS from a fallback signal that was never validated against side-profile geometry.
+
+### 14.2 Changes implemented
+
+**`src/lib/form-checker-pose.ts`**
+
+- Added `ScoringState` (`good` | `bad` | `unscored`) and `CameraQuality` (`side_ok` | `turn_90` | `step_back` | `unclear`).
+- `hasConfidentScoring()` — scoring only when `peakAngleSpan` meets per-exercise thresholds **and** depth proxy is **not** active. Plank uses alignment-based confidence (stable ≥160° reads). Squat/lunge allow confident scoring when real 2D flexion clearly shows depth without proxy.
+- Persistent **UNSCORED** feedback after **2.5 s** of low span with detected movement: *"Cannot score — camera angle unclear. Turn so your side faces the camera."*
+- Depth proxy may still assist rep FSM hints, but **`useDepthProxy` blocks confident good/bad** scoring.
+- Bilateral squat/lunge with real flexion ≤ threshold skips depth proxy even when cumulative span is low (side-view bottom hold).
+- `processPoseFrame` now updates `peakAngleSpan` for **plank** (previously only updated inside `getRepTrackingAngle`, which plank skipped).
+- `ProcessedPoseFrame` exposes `scoringState`, `cameraQuality`, `peakAngleSpan`.
+
+**`src/components/exercise/PoseDetector.tsx`**
+
+- Pre-camera **setup step** with inline SVG side-profile diagram and exercise-specific framing tips.
+- Live **camera quality badge**: Side view OK / Turn 90° / Step back.
+- Amber styling for **unscored** feedback (distinct from green good / red bad).
+
+**Harness / docs**
+
+- `scripts/test-form-checker-offline.ts` — logs `scoringState`, `unscoredFrameCount`; verdict PASS / FAIL / **UNSCORED**; removed debug agent log.
+- `scripts/generate-video-results.js` — UNSCORED verdict support.
+
+### 14.3 Before / after results (18 reference videos)
+
+| Exercise | Before (peak verdict) | After (peak verdict) |
+|----------|----------------------|----------------------|
+| **Squats (6)** | 6 PASS (all depth-proxy ~100°) | 5 UNSCORED, 1 PASS (`Squat_3` side-profile real 81°) |
+| **Push-ups (4)** | 4 FAIL | 4 UNSCORED (depth-proxy blocked from PASS) |
+| **Lunges (3)** | 1 PASS (`Lunges_3`), 2 FAIL | 1 PASS (`Lunges_3`), 2 UNSCORED |
+| **Planks (5)** | 4 PASS, 1 FAIL (`Plank_2`) | 4 PASS, 1 FAIL (`Plank_2`) |
+
+**Overall:** 11/18 PASS → **6 PASS, 11 UNSCORED, 1 FAIL** (honest reporting; front-facing squats no longer false PASS).
+
+### 14.4 P1 recommendation
+
+**Hold P1 for review** until stakeholders confirm P0 UX (setup diagram, amber unscored state, camera badge) on a real webcam. Next P1 candidates after sign-off:
+
+1. Rep counting from depth proxy with explicit "rep detected / form unscored" split.
+2. Lunge back-leg extension scoring when front knee is unscored due to angle.
+3. Push-up side-profile rep validation on real webcam clips (offline push-up videos remain unscored).
+
+Do **not** lower squat/push-up angle thresholds until side-profile human footage validates depth at measured angles.
+
+### 14.5 Reuse
+
+```bash
+npm run test-form-checker-analyze-new   # 18 videos at repo root
+node scripts/generate-video-results.js  # refresh FORM_CHECKER_VIDEO_RESULTS.md
+npx tsx scripts/verify-form-checker-rom.ts
+```

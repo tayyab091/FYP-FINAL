@@ -1,9 +1,9 @@
-import { getOrFetch, paginate } from '@/lib/server-cache'
+import { getCached, getOrFetch, paginate } from '@/lib/server-cache'
 
 const EXERCISEDB_BASE = 'https://oss.exercisedb.dev/api/v1'
 const CACHE_TTL = 60 * 60 * 1000 // 1 hour
 const PAGE_SIZE = 25
-const PAGE_DELAY_MS = 350
+const PAGE_DELAY_MS = 80
 const GIF_HEAD_BATCH = 12
 const GIF_HEAD_TIMEOUT_MS = 4000
 
@@ -172,27 +172,118 @@ async function gifUrlLoads(url: string): Promise<boolean> {
   }
 }
 
-async function filterExercisesWithValidGifs(
-  exercises: LibraryExercise[],
-): Promise<LibraryExercise[]> {
-  const patternValid = exercises.filter((e) => looksLikeValidGifUrl(e.gifUrl))
-  const valid: LibraryExercise[] = []
-
-  for (let i = 0; i < patternValid.length; i += GIF_HEAD_BATCH) {
-    const batch = patternValid.slice(i, i + GIF_HEAD_BATCH)
-    const results = await Promise.all(
-      batch.map(async (exercise) => ({
-        exercise,
-        ok: await gifUrlLoads(exercise.gifUrl),
-      })),
-    )
-    for (const { exercise, ok } of results) {
-      if (ok) valid.push(exercise)
-    }
-  }
-
+function filterExercisesByPattern(exercises: LibraryExercise[]): LibraryExercise[] {
+  const valid = exercises.filter((e) => looksLikeValidGifUrl(e.gifUrl))
   lastFilteredRemovedCount = exercises.length - valid.length
   return valid.length > 0 ? valid : FALLBACK_EXERCISES
+}
+
+function exerciseFiltersActive(options: {
+  search?: string
+  muscle?: string
+  bodyPart?: string
+  target?: string
+  equipment?: string
+}): boolean {
+  return !!(
+    options.search?.trim() ||
+    (options.muscle && options.muscle !== 'All') ||
+    (options.bodyPart && options.bodyPart !== 'All') ||
+    (options.target && options.target !== 'All') ||
+    (options.equipment && options.equipment !== 'All')
+  )
+}
+
+function applyExerciseFilters(
+  catalog: ExerciseCatalog,
+  options: {
+    search?: string
+    muscle?: string
+    bodyPart?: string
+    target?: string
+    equipment?: string
+    page?: number
+    limit?: number
+    includeMeta?: boolean
+  },
+): ExerciseQueryResult {
+  let filtered = catalog.exercises
+
+  if (options.search) {
+    const q = options.search.toLowerCase()
+    filtered = filtered.filter((e) => e.name.toLowerCase().includes(q))
+  }
+  if (options.muscle && options.muscle !== 'All') {
+    filtered = filtered.filter((e) => e.muscle.toLowerCase() === options.muscle!.toLowerCase())
+  }
+  if (options.bodyPart && options.bodyPart !== 'All') {
+    const bp = options.bodyPart.toLowerCase()
+    filtered = filtered.filter((e) => e.bodyParts.some((p) => p.toLowerCase() === bp))
+  }
+  if (options.target && options.target !== 'All') {
+    const t = options.target.toLowerCase()
+    filtered = filtered.filter((e) => e.targetMuscles.some((m) => m.toLowerCase() === t))
+  }
+  if (options.equipment && options.equipment !== 'All') {
+    const eq = options.equipment.toLowerCase()
+    filtered = filtered.filter((e) => e.equipment.toLowerCase() === eq)
+  }
+
+  const limit = Math.min(100, Math.max(1, options.limit ?? 24))
+  const page = Math.max(1, options.page ?? 1)
+  const paged = paginate(filtered, page, limit)
+
+  return {
+    exercises: paged.items,
+    total: paged.total,
+    page: paged.page,
+    limit: paged.limit,
+    totalPages: paged.totalPages,
+    ...(options.includeMeta ? { meta: catalog.meta } : {}),
+  }
+}
+
+async function fetchExercisePages(maxPages: number): Promise<LibraryExercise[]> {
+  const exercises: LibraryExercise[] = []
+  let cursor: string | null = null
+
+  for (let page = 0; page < maxPages; page++) {
+    const url: string = cursor
+      ? `${EXERCISEDB_BASE}/exercises?limit=${PAGE_SIZE}&after=${encodeURIComponent(cursor)}`
+      : `${EXERCISEDB_BASE}/exercises?limit=${PAGE_SIZE}`
+
+    const json = await fetchJson<{
+      data?: Parameters<typeof mapExercise>[0][]
+      meta?: { hasNextPage?: boolean; nextCursor?: string }
+    }>(url)
+
+    exercises.push(...(json.data || []).map(mapExercise))
+    if (!json.meta?.hasNextPage || !json.meta.nextCursor) break
+    cursor = json.meta.nextCursor
+    if (page < maxPages - 1) await new Promise((r) => setTimeout(r, PAGE_DELAY_MS))
+  }
+
+  return exercises
+}
+
+function warmExerciseCatalog(): void {
+  if (getCached<ExerciseCatalog>('exercise-catalog-v4')) return
+  void getExerciseCatalog()
+}
+
+function buildMetaFromLists(
+  exercises: LibraryExercise[],
+  lists: { bodyParts: string[]; equipment: string[]; muscles: string[] },
+  estimatedTotal?: number,
+): ExerciseCatalogMeta {
+  const meta = buildMeta(exercises)
+  if (lists.bodyParts.length) meta.bodyParts = uniqueSorted(lists.bodyParts)
+  if (lists.equipment.length) {
+    meta.equipment = uniqueSorted([...meta.equipment, ...lists.equipment])
+  }
+  if (lists.muscles.length) meta.muscles = uniqueSorted(lists.muscles)
+  if (estimatedTotal && estimatedTotal > meta.total) meta.total = estimatedTotal
+  return meta
 }
 
 function buildMeta(exercises: LibraryExercise[]): ExerciseCatalogMeta {
@@ -280,13 +371,9 @@ export async function getExerciseCatalog(): Promise<ExerciseCatalog> {
   return getOrFetch('exercise-catalog-v4', CACHE_TTL, async () => {
     try {
       const raw = await fetchAllExercisesFromApi()
-      const exercises = await filterExercisesWithValidGifs(raw)
+      const exercises = filterExercisesByPattern(raw)
       const lists = await fetchFilterLists()
-      const meta = buildMeta(exercises)
-      if (lists.bodyParts.length) meta.bodyParts = uniqueSorted(lists.bodyParts)
-      if (lists.equipment.length) {
-        meta.equipment = uniqueSorted([...meta.equipment, ...lists.equipment])
-      }
+      const meta = buildMetaFromLists(exercises, lists)
       return { exercises, meta }
     } catch {
       const exercises = FALLBACK_EXERCISES
@@ -295,7 +382,7 @@ export async function getExerciseCatalog(): Promise<ExerciseCatalog> {
   })
 }
 
-export async function queryExercises(options: {
+async function queryExercisesFast(options: {
   search?: string
   muscle?: string
   bodyPart?: string
@@ -305,9 +392,17 @@ export async function queryExercises(options: {
   limit?: number
   includeMeta?: boolean
 }): Promise<ExerciseQueryResult> {
-  const { exercises, meta } = await getExerciseCatalog()
-  let filtered = exercises
+  const limit = Math.min(100, Math.max(1, options.limit ?? 24))
+  const page = Math.max(1, options.page ?? 1)
+  const lists = await fetchFilterLists()
+  warmExerciseCatalog()
 
+  const previewPages = exerciseFiltersActive(options) ? Math.min(20, page + 2) : Math.max(1, Math.ceil((page * limit) / PAGE_SIZE))
+  const raw = await fetchExercisePages(previewPages)
+  const exercises = filterExercisesByPattern(raw)
+  const meta = buildMetaFromLists(exercises, lists, exercises.length < raw.length ? undefined : raw.length)
+
+  let filtered = exercises
   if (options.search) {
     const q = options.search.toLowerCase()
     filtered = filtered.filter((e) => e.name.toLowerCase().includes(q))
@@ -328,18 +423,31 @@ export async function queryExercises(options: {
     filtered = filtered.filter((e) => e.equipment.toLowerCase() === eq)
   }
 
-  const limit = Math.min(100, Math.max(1, options.limit ?? 24))
-  const page = Math.max(1, options.page ?? 1)
   const paged = paginate(filtered, page, limit)
 
   return {
-    exercises: paged.items,
+    exercises: paged.items.length > 0 ? paged.items : FALLBACK_EXERCISES,
     total: paged.total,
     page: paged.page,
     limit: paged.limit,
     totalPages: paged.totalPages,
     ...(options.includeMeta ? { meta } : {}),
   }
+}
+
+export async function queryExercises(options: {
+  search?: string
+  muscle?: string
+  bodyPart?: string
+  target?: string
+  equipment?: string
+  page?: number
+  limit?: number
+  includeMeta?: boolean
+}): Promise<ExerciseQueryResult> {
+  const cached = getCached<ExerciseCatalog>('exercise-catalog-v4')
+  if (cached) return applyExerciseFilters(cached, options)
+  return queryExercisesFast(options)
 }
 
 export async function fetchExercises(options?: {
@@ -368,7 +476,6 @@ export async function fetchExerciseById(id: string): Promise<LibraryExercise | n
     if (!json.data) return null
     const exercise = mapExercise(json.data)
     if (!looksLikeValidGifUrl(exercise.gifUrl)) return null
-    if (!(await gifUrlLoads(exercise.gifUrl))) return null
     return exercise
   } catch {
     return null

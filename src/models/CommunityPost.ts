@@ -1,4 +1,8 @@
 import mongoose, { Schema } from 'mongoose'
+import { COMMUNITY_POST_CATEGORIES } from '@/lib/community'
+
+export { COMMUNITY_POST_CATEGORIES }
+export type { CommunityPostCategory } from '@/lib/community'
 
 export const COMMUNITY_POST_CATEGORIES = [
   'Motivation',

@@ -25,6 +25,7 @@ export default function TrainerNutritionPage() {
       eyebrow="Coaching toolkit"
       title="Nutrition Library"
       description="Browse meal options you can recommend to clients for macros, cuisine preferences, and meal planning."
+      showTrainerPlans
     />
   )
 }

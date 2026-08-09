@@ -1,0 +1,1230 @@
+{
+  "generatedAt": "2026-08-07T15:01:16.335Z",
+  "auditLog": [
+    {
+      "category": "Infrastructure",
+      "test": "GET /api/health",
+      "status": "PASS",
+      "detail": "Status 200"
+    },
+    {
+      "category": "Infrastructure",
+      "test": "GET /api/trainers",
+      "status": "PASS",
+      "detail": "Status 200"
+    },
+    {
+      "category": "Public Pages",
+      "role": "guest",
+      "route": "/",
+      "test": "Page load: /",
+      "status": "PASS",
+      "detail": "Loaded OK — 3 buttons, 0 inputs, 36 links, 0 forms",
+      "metrics": {
+        "buttons": 3,
+        "inputs": 0,
+        "links": 36,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Public Pages",
+      "role": "guest",
+      "route": "/coaching",
+      "test": "Page load: /coaching",
+      "status": "PASS",
+      "detail": "Loaded OK — 17 buttons, 1 inputs, 14 links, 0 forms",
+      "metrics": {
+        "buttons": 17,
+        "inputs": 1,
+        "links": 14,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Public Pages",
+      "role": "guest",
+      "route": "/exercises",
+      "test": "Page load: /exercises",
+      "status": "PASS",
+      "detail": "Loaded OK — 9 buttons, 5 inputs, 14 links, 0 forms",
+      "metrics": {
+        "buttons": 9,
+        "inputs": 5,
+        "links": 14,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Public Pages",
+      "role": "guest",
+      "route": "/nutrition",
+      "test": "Page load: /nutrition",
+      "status": "PASS",
+      "detail": "Loaded OK — 31 buttons, 4 inputs, 15 links, 0 forms",
+      "metrics": {
+        "buttons": 31,
+        "inputs": 4,
+        "links": 15,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Public Pages",
+      "role": "guest",
+      "route": "/subscription",
+      "test": "Page load: /subscription",
+      "status": "PASS",
+      "detail": "Loaded OK — 6 buttons, 0 inputs, 15 links, 0 forms",
+      "metrics": {
+        "buttons": 6,
+        "inputs": 0,
+        "links": 15,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Public Pages",
+      "role": "guest",
+      "route": "/login",
+      "test": "Page load: /login",
+      "status": "PASS",
+      "detail": "Loaded OK — 4 buttons, 2 inputs, 5 links, 1 forms",
+      "metrics": {
+        "buttons": 4,
+        "inputs": 2,
+        "links": 5,
+        "forms": 1,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Public Pages",
+      "role": "guest",
+      "route": "/signup",
+      "test": "Page load: /signup",
+      "status": "PASS",
+      "detail": "Loaded OK — 4 buttons, 6 inputs, 2 links, 1 forms",
+      "metrics": {
+        "buttons": 4,
+        "inputs": 6,
+        "links": 2,
+        "forms": 1,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Public Pages",
+      "role": "guest",
+      "route": "/register-trainer",
+      "test": "Page load: /register-trainer",
+      "status": "PASS",
+      "detail": "Loaded OK — 12 buttons, 7 inputs, 1 links, 1 forms",
+      "metrics": {
+        "buttons": 12,
+        "inputs": 7,
+        "links": 1,
+        "forms": 1,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Public Pages",
+      "role": "guest",
+      "route": "/register-gym-owner",
+      "test": "Page load: /register-gym-owner",
+      "status": "PASS",
+      "detail": "Loaded OK — 4 buttons, 8 inputs, 1 links, 1 forms",
+      "metrics": {
+        "buttons": 4,
+        "inputs": 8,
+        "links": 1,
+        "forms": 1,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Public Pages",
+      "role": "guest",
+      "route": "/forgot-password",
+      "test": "Page load: /forgot-password",
+      "status": "PASS",
+      "detail": "Loaded OK — 3 buttons, 1 inputs, 1 links, 1 forms",
+      "metrics": {
+        "buttons": 3,
+        "inputs": 1,
+        "links": 1,
+        "forms": 1,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Public Pages",
+      "role": "guest",
+      "route": "/exercise-check",
+      "test": "Page load: /exercise-check",
+      "status": "PASS",
+      "detail": "Loaded OK — 3 buttons, 0 inputs, 15 links, 0 forms",
+      "metrics": {
+        "buttons": 3,
+        "inputs": 0,
+        "links": 15,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Security",
+      "test": "Unauthenticated /settings",
+      "status": "PASS",
+      "detail": "Redirected to login",
+      "route": "/settings"
+    },
+    {
+      "category": "Security",
+      "test": "Unauthenticated /admin",
+      "status": "PASS",
+      "detail": "Redirected to login",
+      "route": "/admin"
+    },
+    {
+      "category": "Security",
+      "test": "Unauthenticated /my-fitness",
+      "status": "PASS",
+      "detail": "Redirected to login",
+      "route": "/my-fitness"
+    },
+    {
+      "category": "Security",
+      "test": "Unauthenticated /trainer-dashboard",
+      "status": "PASS",
+      "detail": "Redirected to login",
+      "route": "/trainer-dashboard"
+    },
+    {
+      "category": "Security",
+      "test": "Unauthenticated /gym-owner",
+      "status": "PASS",
+      "detail": "Redirected to login",
+      "route": "/gym-owner"
+    },
+    {
+      "category": "Security",
+      "test": "Invalid password rejected",
+      "status": "PASS",
+      "detail": "Remains on login"
+    },
+    {
+      "category": "Auth Forms",
+      "route": "/login",
+      "test": "Form inventory /login",
+      "status": "PASS",
+      "detail": "2 fields, 1 submit button(s)",
+      "metrics": {
+        "inputs": 2,
+        "submit": 1
+      }
+    },
+    {
+      "category": "Auth Forms",
+      "route": "/signup",
+      "test": "Form inventory /signup",
+      "status": "PASS",
+      "detail": "6 fields, 1 submit button(s)",
+      "metrics": {
+        "inputs": 6,
+        "submit": 1
+      }
+    },
+    {
+      "category": "Auth Forms",
+      "route": "/register-trainer",
+      "test": "Form inventory /register-trainer",
+      "status": "PASS",
+      "detail": "7 fields, 1 submit button(s)",
+      "metrics": {
+        "inputs": 7,
+        "submit": 1
+      }
+    },
+    {
+      "category": "Auth Forms",
+      "route": "/register-gym-owner",
+      "test": "Form inventory /register-gym-owner",
+      "status": "PASS",
+      "detail": "8 fields, 1 submit button(s)",
+      "metrics": {
+        "inputs": 8,
+        "submit": 1
+      }
+    },
+    {
+      "category": "Auth Forms",
+      "route": "/forgot-password",
+      "test": "Form inventory /forgot-password",
+      "status": "PASS",
+      "detail": "1 fields, 1 submit button(s)",
+      "metrics": {
+        "inputs": 1,
+        "submit": 1
+      }
+    },
+    {
+      "category": "Role Access",
+      "role": "user (Pro)",
+      "test": "Login",
+      "status": "PASS",
+      "detail": "Landed on http://localhost:3000/dashboard"
+    },
+    {
+      "category": "Role Pages",
+      "role": "user (Pro)",
+      "route": "/dashboard",
+      "test": "Page load: /dashboard",
+      "status": "PASS",
+      "detail": "Loaded OK — 6 buttons, 0 inputs, 20 links, 0 forms",
+      "metrics": {
+        "buttons": 6,
+        "inputs": 0,
+        "links": 20,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "user (Pro)",
+      "route": "/my-fitness",
+      "test": "Page load: /my-fitness",
+      "status": "PASS",
+      "detail": "Loaded OK — 10 buttons, 0 inputs, 13 links, 0 forms",
+      "metrics": {
+        "buttons": 10,
+        "inputs": 0,
+        "links": 13,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "user (Pro)",
+      "route": "/meal-plans",
+      "test": "Page load: /meal-plans",
+      "status": "PASS",
+      "detail": "Loaded OK — 6 buttons, 0 inputs, 12 links, 0 forms",
+      "metrics": {
+        "buttons": 6,
+        "inputs": 0,
+        "links": 12,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "user (Pro)",
+      "route": "/community",
+      "test": "Page load: /community",
+      "status": "PASS",
+      "detail": "Loaded OK — 8 buttons, 2 inputs, 13 links, 1 forms",
+      "metrics": {
+        "buttons": 8,
+        "inputs": 2,
+        "links": 13,
+        "forms": 1,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "user (Pro)",
+      "route": "/chat",
+      "test": "Page load: /chat",
+      "status": "PASS",
+      "detail": "Loaded OK — 4 buttons, 0 inputs, 13 links, 0 forms",
+      "metrics": {
+        "buttons": 4,
+        "inputs": 0,
+        "links": 13,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "user (Pro)",
+      "route": "/leaderboard",
+      "test": "Page load: /leaderboard",
+      "status": "PASS",
+      "detail": "Loaded OK — 12 buttons, 0 inputs, 26 links, 0 forms",
+      "metrics": {
+        "buttons": 12,
+        "inputs": 0,
+        "links": 26,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "user (Pro)",
+      "route": "/analytics",
+      "test": "Page load: /analytics",
+      "status": "PASS",
+      "detail": "Loaded OK — 7 buttons, 0 inputs, 12 links, 0 forms",
+      "metrics": {
+        "buttons": 7,
+        "inputs": 0,
+        "links": 12,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "user (Pro)",
+      "route": "/live-sessions",
+      "test": "Page load: /live-sessions",
+      "status": "PASS",
+      "detail": "Loaded OK — 7 buttons, 0 inputs, 13 links, 0 forms",
+      "metrics": {
+        "buttons": 7,
+        "inputs": 0,
+        "links": 13,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "user (Pro)",
+      "route": "/notifications",
+      "test": "Page load: /notifications",
+      "status": "PASS",
+      "detail": "Loaded OK — 24 buttons, 0 inputs, 12 links, 0 forms",
+      "metrics": {
+        "buttons": 24,
+        "inputs": 0,
+        "links": 12,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "user (Pro)",
+      "route": "/settings",
+      "test": "Page load: /settings",
+      "status": "PASS",
+      "detail": "Loaded OK — 13 buttons, 5 inputs, 12 links, 0 forms",
+      "metrics": {
+        "buttons": 13,
+        "inputs": 5,
+        "links": 12,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "user (Pro)",
+      "route": "/exercise-check",
+      "test": "Page load: /exercise-check",
+      "status": "PASS",
+      "detail": "Loaded OK — 11 buttons, 0 inputs, 14 links, 0 forms",
+      "metrics": {
+        "buttons": 11,
+        "inputs": 0,
+        "links": 14,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Settings UI",
+      "role": "user (Pro)",
+      "route": "/settings",
+      "test": "Settings sidebar tabs",
+      "status": "PASS",
+      "detail": "5 tab buttons visible",
+      "metrics": {
+        "tabButtons": 5
+      }
+    },
+    {
+      "category": "Role Access",
+      "role": "user (Basic)",
+      "test": "Login",
+      "status": "PASS",
+      "detail": "Landed on http://localhost:3000/dashboard"
+    },
+    {
+      "category": "Role Pages",
+      "role": "user (Basic)",
+      "route": "/dashboard",
+      "test": "Page load: /dashboard",
+      "status": "PASS",
+      "detail": "Loaded OK — 6 buttons, 0 inputs, 21 links, 0 forms",
+      "metrics": {
+        "buttons": 6,
+        "inputs": 0,
+        "links": 21,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "user (Basic)",
+      "route": "/my-fitness",
+      "test": "Page load: /my-fitness",
+      "status": "PASS",
+      "detail": "Loaded OK — 10 buttons, 0 inputs, 14 links, 0 forms",
+      "metrics": {
+        "buttons": 10,
+        "inputs": 0,
+        "links": 14,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "user (Basic)",
+      "route": "/community",
+      "test": "Page load: /community",
+      "status": "PASS",
+      "detail": "Loaded OK — 8 buttons, 2 inputs, 14 links, 1 forms",
+      "metrics": {
+        "buttons": 8,
+        "inputs": 2,
+        "links": 14,
+        "forms": 1,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "user (Basic)",
+      "route": "/analytics",
+      "test": "Page load: /analytics",
+      "status": "PASS",
+      "detail": "Loaded OK — 6 buttons, 0 inputs, 14 links, 0 forms",
+      "metrics": {
+        "buttons": 6,
+        "inputs": 0,
+        "links": 14,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "user (Basic)",
+      "route": "/exercise-check",
+      "test": "Page load: /exercise-check",
+      "status": "PASS",
+      "detail": "Loaded OK — 6 buttons, 0 inputs, 15 links, 0 forms",
+      "metrics": {
+        "buttons": 6,
+        "inputs": 0,
+        "links": 15,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "user (Basic)",
+      "route": "/live-sessions",
+      "test": "Page load: /live-sessions",
+      "status": "PASS",
+      "detail": "Loaded OK — 6 buttons, 0 inputs, 14 links, 0 forms",
+      "metrics": {
+        "buttons": 6,
+        "inputs": 0,
+        "links": 14,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Access",
+      "role": "user (Elite)",
+      "test": "Login",
+      "status": "PASS",
+      "detail": "Landed on http://localhost:3000/dashboard"
+    },
+    {
+      "category": "Role Pages",
+      "role": "user (Elite)",
+      "route": "/dashboard",
+      "test": "Page load: /dashboard",
+      "status": "PASS",
+      "detail": "Loaded OK — 6 buttons, 0 inputs, 20 links, 0 forms",
+      "metrics": {
+        "buttons": 6,
+        "inputs": 0,
+        "links": 20,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "user (Elite)",
+      "route": "/live-sessions",
+      "test": "Page load: /live-sessions",
+      "status": "PASS",
+      "detail": "Loaded OK — 6 buttons, 0 inputs, 12 links, 0 forms",
+      "metrics": {
+        "buttons": 6,
+        "inputs": 0,
+        "links": 12,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "user (Elite)",
+      "route": "/exercise-check",
+      "test": "Page load: /exercise-check",
+      "status": "PASS",
+      "detail": "Loaded OK — 11 buttons, 0 inputs, 14 links, 0 forms",
+      "metrics": {
+        "buttons": 11,
+        "inputs": 0,
+        "links": 14,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "user (Elite)",
+      "route": "/analytics",
+      "test": "Page load: /analytics",
+      "status": "PASS",
+      "detail": "Loaded OK — 7 buttons, 0 inputs, 12 links, 0 forms",
+      "metrics": {
+        "buttons": 7,
+        "inputs": 0,
+        "links": 12,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Access",
+      "role": "trainer",
+      "test": "Login",
+      "status": "PASS",
+      "detail": "Landed on http://localhost:3000/trainer-dashboard"
+    },
+    {
+      "category": "Role Pages",
+      "role": "trainer",
+      "route": "/trainer-dashboard",
+      "test": "Page load: /trainer-dashboard",
+      "status": "PASS",
+      "detail": "Loaded OK — 12 buttons, 0 inputs, 12 links, 0 forms",
+      "metrics": {
+        "buttons": 12,
+        "inputs": 0,
+        "links": 12,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "trainer",
+      "route": "/trainer-dashboard/exercises",
+      "test": "Page load: /trainer-dashboard/exercises",
+      "status": "PASS",
+      "detail": "Loaded OK — 7 buttons, 3 inputs, 34 links, 0 forms",
+      "metrics": {
+        "buttons": 7,
+        "inputs": 3,
+        "links": 34,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "trainer",
+      "route": "/trainer-dashboard/nutrition",
+      "test": "Page load: /trainer-dashboard/nutrition",
+      "status": "PASS",
+      "detail": "Loaded OK — 7 buttons, 3 inputs, 10 links, 0 forms",
+      "metrics": {
+        "buttons": 7,
+        "inputs": 3,
+        "links": 10,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "trainer",
+      "route": "/meal-plans",
+      "test": "Page load: /meal-plans",
+      "status": "PASS",
+      "detail": "Loaded OK — 6 buttons, 0 inputs, 9 links, 0 forms",
+      "metrics": {
+        "buttons": 6,
+        "inputs": 0,
+        "links": 9,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "trainer",
+      "route": "/live-sessions",
+      "test": "Page load: /live-sessions",
+      "status": "PASS",
+      "detail": "Loaded OK — 7 buttons, 0 inputs, 9 links, 0 forms",
+      "metrics": {
+        "buttons": 7,
+        "inputs": 0,
+        "links": 9,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "trainer",
+      "route": "/chat",
+      "test": "Page load: /chat",
+      "status": "PASS",
+      "detail": "Loaded OK — 4 buttons, 0 inputs, 11 links, 0 forms",
+      "metrics": {
+        "buttons": 4,
+        "inputs": 0,
+        "links": 11,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "trainer",
+      "route": "/settings",
+      "test": "Page load: /settings",
+      "status": "PASS",
+      "detail": "Loaded OK — 14 buttons, 5 inputs, 9 links, 0 forms",
+      "metrics": {
+        "buttons": 14,
+        "inputs": 5,
+        "links": 9,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Settings UI",
+      "role": "trainer",
+      "route": "/settings",
+      "test": "Settings sidebar tabs",
+      "status": "PASS",
+      "detail": "6 tab buttons visible",
+      "metrics": {
+        "tabButtons": 6
+      }
+    },
+    {
+      "category": "Role Access",
+      "role": "gym_owner",
+      "test": "Login",
+      "status": "PASS",
+      "detail": "Landed on http://localhost:3000/gym-owner"
+    },
+    {
+      "category": "Role Pages",
+      "role": "gym_owner",
+      "route": "/gym-owner",
+      "test": "Page load: /gym-owner",
+      "status": "PASS",
+      "detail": "Loaded OK — 11 buttons, 8 inputs, 11 links, 2 forms",
+      "metrics": {
+        "buttons": 11,
+        "inputs": 8,
+        "links": 11,
+        "forms": 2,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "gym_owner",
+      "route": "/gym-owner/exercises",
+      "test": "Page load: /gym-owner/exercises",
+      "status": "PASS",
+      "detail": "Loaded OK — 7 buttons, 3 inputs, 33 links, 0 forms",
+      "metrics": {
+        "buttons": 7,
+        "inputs": 3,
+        "links": 33,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "gym_owner",
+      "route": "/gym-owner/nutrition",
+      "test": "Page load: /gym-owner/nutrition",
+      "status": "PASS",
+      "detail": "Loaded OK — 7 buttons, 3 inputs, 9 links, 0 forms",
+      "metrics": {
+        "buttons": 7,
+        "inputs": 3,
+        "links": 9,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "gym_owner",
+      "route": "/chat",
+      "test": "Page load: /chat",
+      "status": "PASS",
+      "detail": "Loaded OK — 4 buttons, 0 inputs, 9 links, 0 forms",
+      "metrics": {
+        "buttons": 4,
+        "inputs": 0,
+        "links": 9,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "gym_owner",
+      "route": "/settings",
+      "test": "Page load: /settings",
+      "status": "PASS",
+      "detail": "Loaded OK — 13 buttons, 5 inputs, 8 links, 0 forms",
+      "metrics": {
+        "buttons": 13,
+        "inputs": 5,
+        "links": 8,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Settings UI",
+      "role": "gym_owner",
+      "route": "/settings",
+      "test": "Settings sidebar tabs",
+      "status": "PASS",
+      "detail": "5 tab buttons visible",
+      "metrics": {
+        "tabButtons": 5
+      }
+    },
+    {
+      "category": "Role Access",
+      "role": "admin",
+      "test": "Login",
+      "status": "PASS",
+      "detail": "Landed on http://localhost:3000/admin"
+    },
+    {
+      "category": "Role Pages",
+      "role": "admin",
+      "route": "/admin",
+      "test": "Page load: /admin",
+      "status": "PASS",
+      "detail": "Loaded OK — 13 buttons, 0 inputs, 13 links, 0 forms",
+      "metrics": {
+        "buttons": 13,
+        "inputs": 0,
+        "links": 13,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "admin",
+      "route": "/admin?tab=users",
+      "test": "Page load: /admin?tab=users",
+      "status": "PASS",
+      "detail": "Loaded OK — 36 buttons, 0 inputs, 13 links, 0 forms",
+      "metrics": {
+        "buttons": 36,
+        "inputs": 0,
+        "links": 13,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "admin",
+      "route": "/admin?tab=trainers",
+      "test": "Page load: /admin?tab=trainers",
+      "status": "PASS",
+      "detail": "Loaded OK — 13 buttons, 0 inputs, 13 links, 0 forms",
+      "metrics": {
+        "buttons": 13,
+        "inputs": 0,
+        "links": 13,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "admin",
+      "route": "/admin?tab=gyms",
+      "test": "Page load: /admin?tab=gyms",
+      "status": "PASS",
+      "detail": "Loaded OK — 13 buttons, 0 inputs, 13 links, 0 forms",
+      "metrics": {
+        "buttons": 13,
+        "inputs": 0,
+        "links": 13,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "admin",
+      "route": "/admin?tab=verifications",
+      "test": "Page load: /admin?tab=verifications",
+      "status": "PASS",
+      "detail": "Loaded OK — 13 buttons, 0 inputs, 13 links, 0 forms",
+      "metrics": {
+        "buttons": 13,
+        "inputs": 0,
+        "links": 13,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "admin",
+      "route": "/admin?tab=audit",
+      "test": "Page load: /admin?tab=audit",
+      "status": "PASS",
+      "detail": "Loaded OK — 13 buttons, 0 inputs, 13 links, 0 forms",
+      "metrics": {
+        "buttons": 13,
+        "inputs": 0,
+        "links": 13,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "admin",
+      "route": "/admin?tab=subscriptions",
+      "test": "Page load: /admin?tab=subscriptions",
+      "status": "PASS",
+      "detail": "Loaded OK — 105 buttons, 23 inputs, 13 links, 0 forms",
+      "metrics": {
+        "buttons": 105,
+        "inputs": 23,
+        "links": 13,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "admin",
+      "route": "/admin/exercises",
+      "test": "Page load: /admin/exercises",
+      "status": "PASS",
+      "detail": "Loaded OK — 7 buttons, 3 inputs, 35 links, 0 forms",
+      "metrics": {
+        "buttons": 7,
+        "inputs": 3,
+        "links": 35,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "admin",
+      "route": "/admin/nutrition",
+      "test": "Page load: /admin/nutrition",
+      "status": "PASS",
+      "detail": "Loaded OK — 7 buttons, 3 inputs, 11 links, 0 forms",
+      "metrics": {
+        "buttons": 7,
+        "inputs": 3,
+        "links": 11,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "admin",
+      "route": "/settings",
+      "test": "Page load: /settings",
+      "status": "PASS",
+      "detail": "Loaded OK — 13 buttons, 5 inputs, 10 links, 0 forms",
+      "metrics": {
+        "buttons": 13,
+        "inputs": 5,
+        "links": 10,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Settings UI",
+      "role": "admin",
+      "route": "/settings",
+      "test": "Settings sidebar tabs",
+      "status": "PASS",
+      "detail": "5 tab buttons visible",
+      "metrics": {
+        "tabButtons": 5
+      }
+    },
+    {
+      "category": "Role Access",
+      "role": "super_admin",
+      "test": "Login",
+      "status": "PASS",
+      "detail": "Landed on http://localhost:3000/admin"
+    },
+    {
+      "category": "Role Pages",
+      "role": "super_admin",
+      "route": "/admin?tab=super",
+      "test": "Page load: /admin?tab=super",
+      "status": "PASS",
+      "detail": "Loaded OK — 24 buttons, 3 inputs, 13 links, 1 forms",
+      "metrics": {
+        "buttons": 24,
+        "inputs": 3,
+        "links": 13,
+        "forms": 1,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Role Pages",
+      "role": "super_admin",
+      "route": "/admin?tab=users",
+      "test": "Page load: /admin?tab=users",
+      "status": "PASS",
+      "detail": "Loaded OK — 40 buttons, 0 inputs, 13 links, 0 forms",
+      "metrics": {
+        "buttons": 40,
+        "inputs": 0,
+        "links": 13,
+        "forms": 0,
+        "switches": 0
+      }
+    },
+    {
+      "category": "Security",
+      "role": "user (Pro)",
+      "route": "/admin",
+      "test": "Cross-role access blocked",
+      "status": "PASS",
+      "detail": "Final URL: http://localhost:3000/dashboard"
+    },
+    {
+      "category": "Security",
+      "role": "user (Pro)",
+      "route": "/trainer-dashboard",
+      "test": "Cross-role access blocked",
+      "status": "PASS",
+      "detail": "Final URL: http://localhost:3000/dashboard"
+    },
+    {
+      "category": "Security",
+      "role": "user (Pro)",
+      "route": "/gym-owner",
+      "test": "Cross-role access blocked",
+      "status": "PASS",
+      "detail": "Final URL: http://localhost:3000/dashboard"
+    },
+    {
+      "category": "Security",
+      "role": "trainer",
+      "route": "/admin",
+      "test": "Cross-role access blocked",
+      "status": "PASS",
+      "detail": "Final URL: http://localhost:3000/trainer-dashboard"
+    },
+    {
+      "category": "Security",
+      "role": "trainer",
+      "route": "/my-fitness",
+      "test": "Cross-role access blocked",
+      "status": "PASS",
+      "detail": "Final URL: http://localhost:3000/trainer-dashboard"
+    },
+    {
+      "category": "Security",
+      "role": "gym_owner",
+      "route": "/admin",
+      "test": "Cross-role access blocked",
+      "status": "PASS",
+      "detail": "Final URL: http://localhost:3000/gym-owner"
+    },
+    {
+      "category": "Security",
+      "role": "gym_owner",
+      "route": "/trainer-dashboard",
+      "test": "Cross-role access blocked",
+      "status": "PASS",
+      "detail": "Final URL: http://localhost:3000/gym-owner"
+    },
+    {
+      "category": "Security",
+      "role": "admin",
+      "route": "/my-fitness",
+      "test": "Cross-role access blocked",
+      "status": "PASS",
+      "detail": "Final URL: http://localhost:3000/admin"
+    },
+    {
+      "category": "Plan Gates",
+      "role": "user (Basic)",
+      "route": "/exercise-check",
+      "test": "Subscription gate",
+      "status": "PASS",
+      "detail": "Gate/upgrade UI shown"
+    },
+    {
+      "category": "Plan Gates",
+      "role": "user (Pro)",
+      "route": "/exercise-check",
+      "test": "Subscription gate",
+      "status": "PASS",
+      "detail": "Feature appears accessible"
+    },
+    {
+      "category": "Plan Gates",
+      "role": "user (Basic)",
+      "route": "/analytics",
+      "test": "Subscription gate",
+      "status": "PASS",
+      "detail": "Gate/upgrade UI shown"
+    },
+    {
+      "category": "Plan Gates",
+      "role": "user (Pro)",
+      "route": "/analytics",
+      "test": "Subscription gate",
+      "status": "PASS",
+      "detail": "Feature appears accessible"
+    },
+    {
+      "category": "Plan Gates",
+      "role": "user (Pro)",
+      "route": "/live-sessions",
+      "test": "Subscription gate",
+      "status": "PASS",
+      "detail": "Gate/upgrade UI shown"
+    },
+    {
+      "category": "Plan Gates",
+      "role": "user (Elite)",
+      "route": "/live-sessions",
+      "test": "Subscription gate",
+      "status": "PASS",
+      "detail": "Feature appears accessible"
+    },
+    {
+      "category": "Trainer Dashboard",
+      "role": "trainer",
+      "test": "Tab: Overview",
+      "status": "PASS",
+      "detail": "Tab clickable"
+    },
+    {
+      "category": "Trainer Dashboard",
+      "role": "trainer",
+      "test": "Tab: Client Requests",
+      "status": "PASS",
+      "detail": "Tab clickable"
+    },
+    {
+      "category": "Trainer Dashboard",
+      "role": "trainer",
+      "test": "Tab: My Clients",
+      "status": "PASS",
+      "detail": "Tab clickable"
+    },
+    {
+      "category": "Trainer Dashboard",
+      "role": "trainer",
+      "test": "Tab: Meal Plans",
+      "status": "PASS",
+      "detail": "Tab clickable"
+    },
+    {
+      "category": "Trainer Dashboard",
+      "role": "trainer",
+      "test": "Tab: Availability",
+      "status": "PASS",
+      "detail": "Tab clickable"
+    },
+    {
+      "category": "Trainer Dashboard",
+      "role": "trainer",
+      "test": "Tab: chat",
+      "status": "PASS",
+      "detail": "Tab clickable"
+    },
+    {
+      "category": "Trainer Dashboard",
+      "role": "trainer",
+      "test": "Availability form",
+      "status": "PASS",
+      "detail": "10 time inputs, save visible: true",
+      "metrics": {
+        "timeInputs": 10
+      }
+    },
+    {
+      "category": "Admin UI",
+      "role": "admin",
+      "route": "/admin?tab=users",
+      "test": "Users table",
+      "status": "PASS",
+      "detail": "27 user rows, 23 suspend/reactivate buttons",
+      "metrics": {
+        "rows": 27,
+        "suspendBtns": 23
+      }
+    }
+  ],
+  "suggestions": [
+    "Add data-testid attributes on critical actions (Save, Suspend, Delete, Connect) for stable selectors across theme changes.",
+    "Run Playwright in CI on every PR with seeded test DB (Docker + mongo) for regression safety.",
+    "Add E2E tests for password reset and email verification flows when SMTP is configured.",
+    "Implement rate limiting tests on /api/auth/login and /api/auth/register to verify brute-force protection.",
+    "Add visual regression (Playwright screenshots) for landing, dashboard, and settings in light/dark mode.",
+    "Document super_admin bootstrap in README and include in seed for complete admin audit coverage."
+  ]
+}

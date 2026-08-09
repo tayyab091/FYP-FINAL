@@ -145,6 +145,34 @@ export default function AnalyticsPage() {
       { day: 'Sun', workouts: 0 },
     ]
 
+  const hasWorkoutData = workoutData.some((d) => d.workouts > 0)
+  const hasWeightData = weightData.length > 1
+  const hasMacroData = macroData.some((m) => m.value > 0)
+  const isCompletelyEmpty = totalWorkouts === 0 && !hasWeightData && !hasMacroData && !hasWorkoutData
+
+  if (isCompletelyEmpty) {
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-8 pb-28">
+        <BackButton />
+        <div className="mb-8">
+          <p className="section-eyebrow">Your Performance</p>
+          <h1 className="text-3xl font-black text-foreground">Analytics</h1>
+          <p className="mt-1 text-muted-foreground">Track every metric of your fitness journey</p>
+        </div>
+        <div className="tile flex flex-col items-center justify-center py-16 text-center">
+          <span className="mb-4 text-4xl">📊</span>
+          <p className="text-lg font-semibold text-foreground">Log workouts and meals to see your analytics here</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Complete workouts in My Fitness and log your meals to unlock charts and insights.
+          </p>
+          <Link href="/my-fitness" className="btn-accent mt-6 px-6 py-2.5 text-sm">
+            Go to My Fitness
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 pb-28">
       <BackButton />

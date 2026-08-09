@@ -32,13 +32,6 @@ export async function PUT(req: NextRequest) {
       runValidators: true,
     }).select('-password')
 
-    const avatarUrl = resolveAvatarUrl(user) || ''
-    const serialized = user?.toObject()
-    if (serialized) {
-      serialized.avatarUrl = avatarUrl
-      serialized.profileImage = avatarUrl || serialized.profileImage
-    }
-
     if (user?.role === 'trainer' && data.fullName) {
       const trainer = await Trainer.findOne({ userId: tokenUser.userId })
       if (trainer) {
@@ -49,6 +42,13 @@ export async function PUT(req: NextRequest) {
         }
         await Trainer.updateOne({ _id: trainer._id }, { $set: trainerUpdate })
       }
+    }
+
+    const avatarUrl = resolveAvatarUrl(user) || ''
+    const serialized = user?.toObject()
+    if (serialized) {
+      serialized.avatarUrl = avatarUrl
+      serialized.profileImage = avatarUrl || serialized.profileImage
     }
 
     return NextResponse.json({ user: serialized, message: 'Profile updated' })

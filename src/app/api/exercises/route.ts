@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { fetchExerciseById, getExerciseCatalog, getLastFilteredRemovedCount, queryExercises } from '@/lib/exercises-api'
+import { fetchExerciseById, getLastFilteredRemovedCount, queryExercises } from '@/lib/exercises-api'
 
 export async function GET(req: NextRequest) {
   try {
@@ -21,8 +21,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (metaOnly) {
-      const { meta } = await getExerciseCatalog()
-      const preview = await queryExercises({
+      const result = await queryExercises({
         search,
         muscle,
         bodyPart,
@@ -30,14 +29,18 @@ export async function GET(req: NextRequest) {
         equipment,
         page: 1,
         limit: Math.min(limit, 24),
+        includeMeta: true,
       })
+      // #region agent log
+      fetch('http://127.0.0.1:7893/ingest/3b5841b0-46ed-4652-9b9f-279e38a5ba27',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1483ff'},body:JSON.stringify({sessionId:'1483ff',hypothesisId:'H1-H2',location:'api/exercises/route.ts:meta',message:'exercises meta response',data:{exerciseCount:result.exercises.length,total:result.total},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       return NextResponse.json({
-        meta: { ...meta, filteredRemoved: getLastFilteredRemovedCount() },
-        exercises: preview.exercises,
-        total: preview.total,
-        page: preview.page,
-        limit: preview.limit,
-        totalPages: preview.totalPages,
+        meta: { ...result.meta!, filteredRemoved: getLastFilteredRemovedCount() },
+        exercises: result.exercises,
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: result.totalPages,
       })
     }
 

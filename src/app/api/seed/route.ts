@@ -86,8 +86,15 @@ export async function POST(req: NextRequest) {
     ]
 
     for (const u of usersData) {
-      if (!await User.findOne({ email: u.email })) {
-        const endDate = u.plan !== 'basic' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : undefined
+      const endDate = u.plan !== 'basic' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : undefined
+      const subscription = {
+        plan: u.plan,
+        status: 'active' as const,
+        startDate: new Date(),
+        ...(endDate && { endDate }),
+      }
+      const existing = await User.findOne({ email: u.email })
+      if (!existing) {
         await User.create({
           fullName: u.fullName,
           email: u.email,
@@ -97,15 +104,13 @@ export async function POST(req: NextRequest) {
           currentWeight: 70,
           fitnessGoal: 'general_fitness',
           activityLevel: 'moderate',
-          subscription: {
-            plan: u.plan,
-            status: 'active',
-            startDate: new Date(),
-            ...(endDate && { endDate }),
-          },
+          subscription,
         })
         results.push(`✓ User: ${u.email} / User@123 (${u.plan})`)
-      } else results.push(`→ User ${u.email} already exists`)
+      } else {
+        await User.updateOne({ email: u.email }, { $set: { subscription } })
+        results.push(`→ User ${u.email} subscription reset to ${u.plan}`)
+      }
     }
 
     return NextResponse.json({
