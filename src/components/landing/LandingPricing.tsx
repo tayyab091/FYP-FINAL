@@ -10,12 +10,12 @@ export function LandingPricing() {
   return (
     <LandingSection id="pricing" ariaLabel="Pricing plans">
       <LandingReveal className="landing-pricing__header">
-        <p className="eyebrow mb-4 text-center">Flexible plans</p>
+        <p className="eyebrow mb-4 text-center">Invest in your strongest self</p>
         <h2 className="display-title text-center text-3xl md:text-4xl lg:text-5xl">
-          Simple pricing
+          A Plan for Every Ambition
         </h2>
         <p className="mt-4 text-center text-muted-foreground">
-          Start free, upgrade when you&apos;re ready
+          Unlock personalized workouts, meal plans, and expert coaching.
         </p>
       </LandingReveal>
 
@@ -42,7 +42,10 @@ export function LandingPricing() {
                 </Badge>
               )}
               <h3 className="landing-pricing__name">{plan.name}</h3>
-              <div className="landing-pricing__price">{plan.price}</div>
+              <div className="landing-pricing__price">
+                {plan.priceLabel}
+                {plan.period ? <span className="landing-pricing__period">{plan.period}</span> : null}
+              </div>
               <ul className="landing-pricing__features">
                 {plan.features.map((feature) => (
                   <li key={feature} className="landing-pricing__feature">
@@ -60,7 +63,7 @@ export function LandingPricing() {
                   plan.highlight || plan.premium ? 'btn-accent' : 'btn-outline',
                 ].join(' ')}
               >
-                Choose {plan.name}
+                {plan.cta}
               </Link>
             </div>
           </LandingReveal>

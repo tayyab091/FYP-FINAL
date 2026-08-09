@@ -1,10 +1,14 @@
 'use client'
-import { useState, useRef, useEffect } from 'react'
+
+import { useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { Bot, Send, X } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 
-interface Message { role: 'user' | 'assistant'; content: string }
+interface Message {
+  role: 'user' | 'assistant'
+  content: string
+}
 
 const GUEST_OPENING =
   'Hi! I\'m your T.E.S.T. AI fitness coach 🤖\n\n'
@@ -25,10 +29,13 @@ export function AIChatbot() {
   const { user, isLoading } = useAuth()
   const isGuest = !isLoading && !user
   const [open, setOpen] = useState(false)
+  const [visible, setVisible] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const initializedRef = useRef(false)
 
   useEffect(() => {
@@ -44,14 +51,38 @@ export function AIChatbot() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
 
+  useEffect(() => {
+    return () => {
+      if (closeTimer.current) clearTimeout(closeTimer.current)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (open && visible) {
+      const id = requestAnimationFrame(() => inputRef.current?.focus())
+      return () => cancelAnimationFrame(id)
+    }
+  }, [open, visible])
+
   if (pathname.startsWith('/chat')) return null
-  if (pathname === '/' && !isLoading && !user) return null
+
+  const toggle = () => {
+    if (open) {
+      setOpen(false)
+      if (closeTimer.current) clearTimeout(closeTimer.current)
+      closeTimer.current = setTimeout(() => setVisible(false), 220)
+      return
+    }
+    if (closeTimer.current) clearTimeout(closeTimer.current)
+    setVisible(true)
+    requestAnimationFrame(() => setOpen(true))
+  }
 
   const send = async (text?: string) => {
     const msg = (text ?? input).trim()
     if (!msg || loading) return
     setInput('')
-    setMessages(m => [...m, { role: 'user', content: msg }])
+    setMessages((m) => [...m, { role: 'user', content: msg }])
     setLoading(true)
     try {
       const res = await fetch('/api/ai/chat', {
@@ -60,58 +91,80 @@ export function AIChatbot() {
         body: JSON.stringify({ message: msg, history: messages.slice(-6) }),
       })
       const data = await res.json()
-      setMessages(m => [...m, { role: 'assistant', content: data.reply || 'Sorry, try again.' }])
+      setMessages((m) => [...m, { role: 'assistant', content: data.reply || 'Sorry, try again.' }])
     } catch {
-      setMessages(m => [...m, { role: 'assistant', content: 'Connection error. Please try again.' }])
+      setMessages((m) => [...m, { role: 'assistant', content: 'Connection error. Please try again.' }])
     } finally {
       setLoading(false)
     }
   }
 
   const handleChipClick = (value: string) => {
-    setInput(value)
+    void send(value)
   }
 
   return (
     <>
-      <button onClick={() => setOpen(!open)} aria-label="AI Fitness Coach"
-        className="fixed z-50 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_16px_45px_color-mix(in_srgb,var(--primary)_26%,transparent)] transition-transform hover:-translate-y-1 right-5 md:right-6 dark:from-[#55ffb1] dark:shadow-[0_16px_45px_rgba(34,245,154,.26)]"
-        style={{ bottom: 160 }}>
-        {open ? <X className="size-5" /> : <Bot className="size-6" />}
+      <button
+        type="button"
+        onClick={toggle}
+        aria-label={open ? 'Close AI Fitness Coach' : 'Open AI Fitness Coach'}
+        aria-expanded={open}
+        className="ai-chatbot__fab"
+      >
+        <span className={`ai-chatbot__fab-icon ${open ? 'ai-chatbot__fab-icon--open' : ''}`}>
+          {open ? <X className="size-5" strokeWidth={2.25} /> : <Bot className="size-6" strokeWidth={2} />}
+        </span>
       </button>
 
-      {open && (
-        <div className="fixed right-3 md:right-6 z-50 flex w-[calc(100vw-1.5rem)] max-w-sm flex-col overflow-hidden rounded-3xl border border-border bg-card/95 shadow-[0_30px_100px_rgba(0,0,0,.5)] backdrop-blur-2xl"
-          style={{ height: 420, bottom: 230 }}>
-          <div className="px-4 py-3 border-b border-border flex items-center gap-3 flex-shrink-0">
-            <div className="flex size-9 items-center justify-center rounded-xl border border-primary/15 bg-primary/[.09] text-primary"><Bot className="size-4" /></div>
-            <div>
-              <div className="text-sm font-bold">AI Fitness Coach</div>
-              <div className="text-[10px] text-primary flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+      {visible && (
+        <div
+          className={`ai-chatbot__panel ${open ? 'ai-chatbot__panel--open' : 'ai-chatbot__panel--closing'}`}
+          role="dialog"
+          aria-label="AI Fitness Coach"
+          aria-modal="false"
+        >
+          <header className="ai-chatbot__header">
+            <div className="ai-chatbot__avatar" aria-hidden>
+              <Bot className="size-4" />
+            </div>
+            <div className="ai-chatbot__title-wrap">
+              <div className="ai-chatbot__title">AI Fitness Coach</div>
+              <div className="ai-chatbot__status">
+                <span className="ai-chatbot__status-dot" />
                 Online
               </div>
             </div>
-          </div>
+            <button
+              type="button"
+              onClick={toggle}
+              className="ai-chatbot__close"
+              aria-label="Close chat"
+            >
+              <X className="size-4" />
+            </button>
+          </header>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div className="ai-chatbot__messages">
             {messages.map((m, i) => (
-              <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] px-3 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-line ${
-                  m.role === 'user'
-                    ? 'bg-primary text-primary-foreground font-semibold rounded-br-sm'
-                    : 'bg-muted border border-border text-foreground rounded-bl-sm'
-                }`}>
+              <div
+                key={`${m.role}-${i}`}
+                className={`ai-chatbot__row ${m.role === 'user' ? 'ai-chatbot__row--user' : 'ai-chatbot__row--bot'}`}
+              >
+                <div
+                  className={`ai-chatbot__bubble ${
+                    m.role === 'user' ? 'ai-chatbot__bubble--user' : 'ai-chatbot__bubble--bot'
+                  }`}
+                >
                   {m.content}
                 </div>
               </div>
             ))}
             {loading && (
-              <div className="flex justify-start">
-                <div className="bg-muted px-4 py-3 rounded-2xl rounded-bl-sm flex gap-1">
-                  {[0,1,2].map(i => (
-                    <div key={i} className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce"
-                      style={{ animationDelay: `${i * 0.15}s` }} />
+              <div className="ai-chatbot__row ai-chatbot__row--bot">
+                <div className="ai-chatbot__bubble ai-chatbot__bubble--bot ai-chatbot__typing">
+                  {[0, 1, 2].map((i) => (
+                    <span key={i} style={{ animationDelay: `${i * 0.15}s` }} />
                   ))}
                 </div>
               </div>
@@ -120,13 +173,13 @@ export function AIChatbot() {
           </div>
 
           {isGuest && (
-            <div className="px-3 pb-2 flex gap-1.5 flex-shrink-0 overflow-x-auto">
-              {GUEST_CHIPS.map(chip => (
+            <div className="ai-chatbot__chips">
+              {GUEST_CHIPS.map((chip) => (
                 <button
                   key={chip.label}
                   type="button"
                   onClick={() => handleChipClick(chip.value)}
-                  className="flex-shrink-0 rounded-full border border-primary/25 bg-primary/10 px-3 py-1.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/20"
+                  className="ai-chatbot__chip"
                 >
                   {chip.label}
                 </button>
@@ -134,16 +187,31 @@ export function AIChatbot() {
             </div>
           )}
 
-          <div className="px-3 py-3 border-t border-border flex gap-2 flex-shrink-0">
-            <input value={input} onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && send()}
+          <form
+            className="ai-chatbot__composer"
+            onSubmit={(e) => {
+              e.preventDefault()
+              void send()
+            }}
+          >
+            <input
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
               placeholder="Ask about fitness, nutrition..."
-              className="flex-1 bg-muted/60 border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/40 transition-colors" />
-            <button onClick={() => send()} disabled={!input.trim() || loading}
-              className="flex size-9 flex-shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground disabled:opacity-40">
+              className="ai-chatbot__input"
+              disabled={loading}
+              autoComplete="off"
+            />
+            <button
+              type="submit"
+              disabled={!input.trim() || loading}
+              className="ai-chatbot__send"
+              aria-label="Send message"
+            >
               <Send className="size-3.5" />
             </button>
-          </div>
+          </form>
         </div>
       )}
     </>
