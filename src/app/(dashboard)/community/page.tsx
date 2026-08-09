@@ -204,39 +204,6 @@ export default function CommunityPage() {
     }
   }, [])
 
-  const loadLeaderboard = useCallback(async () => {
-    setLoadingLeaderboard(true)
-    try {
-      const res = await fetch('/api/gamification/me?leaderboard=true')
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.message || 'Failed to load leaderboard')
-      setLeaderboard(Array.isArray(data.leaderboard) ? data.leaderboard : [])
-    } catch {
-      setLeaderboard([])
-    } finally {
-      setLoadingLeaderboard(false)
-    }
-  }, [])
-
-  const loadStats = useCallback(async () => {
-    setLoadingStats(true)
-    try {
-      const res = await fetch('/api/community/stats')
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.message || 'Failed to load stats')
-      setStats({
-        totalPosts: data.totalPosts ?? 0,
-        totalMembers: data.totalMembers ?? 0,
-        mostActiveToday: data.mostActiveToday || '—',
-        mostActiveTodayPosts: data.mostActiveTodayPosts ?? 0,
-      })
-    } catch {
-      setStats(null)
-    } finally {
-      setLoadingStats(false)
-    }
-  }, [])
-
   useEffect(() => {
     if (user && canAccessCommunityForUser(user)) {
       loadPosts()
