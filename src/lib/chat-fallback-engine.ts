@@ -107,19 +107,22 @@ function formatCalorieTable(stats: ParsedStats): string {
   const protein = Math.round(weight * 2)
   const bmi = calcBMI(weight, height)
 
-  let reply = `Here's your personalized calorie plan:\n\n`
-  reply += `📊 Your Stats: ${weight}kg · ${height}cm · ${age} yrs · ${gender}\n`
-  reply += `BMR: ${Math.round(bmr)} kcal · TDEE (moderate activity): ${tdee} kcal\n`
-  reply += `BMI: ${bmi.toFixed(1)} (${bmiCategory(bmi)})\n`
-  reply += `Protein target: ${protein}g/day (2g per kg)\n\n`
-  reply += `🎯 Daily Calorie Targets:\n`
+  let reply = `### 📊 Your personalized calorie plan\n\n`
+  reply += `**Your Stats:** ${weight}kg · ${height}cm · ${age} yrs · ${gender}\n\n`
+  reply += `- **BMR:** ${Math.round(bmr)} kcal\n`
+  reply += `- **TDEE** (moderate activity): **${tdee} kcal**\n`
+  reply += `- **BMI:** ${bmi.toFixed(1)} (${bmiCategory(bmi)})\n`
+  reply += `- **Protein target:** ${protein}g/day (2g per kg)\n\n`
+  reply += `---\n\n`
+  reply += `### 🎯 Daily Calorie Targets\n\n`
 
   for (const target of CALORIE_TARGETS) {
     const cals = Math.round(tdee + target.offset)
-    reply += `• ${target.label}: ${cals} kcal/day\n`
+    reply += `- **${target.label}:** ${cals} kcal/day\n`
   }
 
-  reply += `\nTip: Start with Fat Loss (−500) if unsure. Track protein daily and adjust calories every 2 weeks based on progress.`
+  reply += `\n---\n\n`
+  reply += `> **Tip:** Start with **Fat Loss** (−500) if unsure. Track protein daily and adjust calories every 2 weeks based on progress.`
   return reply
 }
 
@@ -129,25 +132,25 @@ function formatBMI(weight: number, height: number): string {
   const idealLow = Math.round(18.5 * heightM * heightM)
   const idealHigh = Math.round(24.9 * heightM * heightM)
 
-  return `BMI for ${weight}kg at ${height}cm:\n\n`
-    + `BMI: ${bmi.toFixed(1)} — ${bmiCategory(bmi)}\n`
-    + `Healthy weight range for your height: ${idealLow}–${idealHigh} kg`
+  return `### 📏 BMI for ${weight}kg at ${height}cm\n\n`
+    + `- **BMI:** ${bmi.toFixed(1)} — ${bmiCategory(bmi)}\n`
+    + `- **Healthy weight range:** ${idealLow}–${idealHigh} kg`
 }
 
 function formatWater(weight: number): string {
   const liters = (weight * 0.033).toFixed(1)
-  return `Water intake for ${weight}kg:\n\n`
-    + `Recommended: ${liters} liters per day\n\n`
-    + `Tips: Drink a glass on waking, sip throughout workouts, and check urine color (pale yellow = hydrated).`
+  return `### 💧 Water intake for ${weight}kg\n\n`
+    + `- **Recommended:** ${liters} liters per day\n\n`
+    + `> Drink a glass on waking, sip throughout workouts, and check urine color (pale yellow = hydrated).`
 }
 
 function formatIdealWeight(height: number): string {
   const heightM = height / 100
   const low = Math.round(18.5 * heightM * heightM)
   const high = Math.round(24.9 * heightM * heightM)
-  return `Ideal weight for ${height}cm:\n\n`
-    + `Healthy BMI range (18.5–24.9): ${low}–${high} kg\n\n`
-    + `This is a general guide. Muscle mass, bone density, and activity level also matter.`
+  return `### 📏 Ideal weight for ${height}cm\n\n`
+    + `- **Healthy BMI range (18.5–24.9):** ${low}–${high} kg\n\n`
+    + `> This is a general guide. Muscle mass, bone density, and activity level also matter.`
 }
 
 function formatMacros(goal: string): string {
