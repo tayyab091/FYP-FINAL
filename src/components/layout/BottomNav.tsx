@@ -31,6 +31,7 @@ function BottomNavInner() {
     pathname.startsWith('/meal-plans') ||
     pathname.startsWith('/leaderboard') ||
     pathname.startsWith('/live-sessions') ||
+    pathname.startsWith('/exercise-check') ||
     pathname.startsWith('/notifications') ||
     pathname.startsWith('/settings')
 

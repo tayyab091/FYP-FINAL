@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next'
 import { connectDB } from '@/lib/mongodb'
 import Trainer from '@/models/Trainer'
 import { getExerciseCatalog } from '@/lib/exercises-api'
+import { mealDetailPath } from '@/lib/meal-slug'
 import { getMealCatalog } from '@/lib/meals'
 import { absoluteUrl, getSiteUrl } from '@/lib/seo'
 
@@ -56,7 +57,7 @@ async function getMealEntries(): Promise<MetadataRoute.Sitemap> {
   try {
     const { meals } = await getMealCatalog()
     return meals.map((m) => ({
-      url: absoluteUrl(`/nutrition/${m.id}`),
+      url: absoluteUrl(mealDetailPath(m.name, m.id)),
       changeFrequency: 'monthly' as const,
       priority: 0.4,
     }))
