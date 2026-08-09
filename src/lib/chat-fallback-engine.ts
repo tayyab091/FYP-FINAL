@@ -1,10 +1,18 @@
 type Gender = 'male' | 'female'
 
-interface ParsedStats {
+const LBS_TO_KG = 0.453592
+const WEIGHT_CONFLICT_TOLERANCE = 0.05
+
+export interface ParsedStats {
   weight?: number
   height?: number
   age?: number
   gender?: Gender
+}
+
+interface WeightResolution {
+  weightKg?: number
+  conflictMessage?: string
 }
 
 const CALORIE_TARGETS = [
@@ -16,12 +24,38 @@ const CALORIE_TARGETS = [
   { label: 'Bulk', offset: 500 },
 ] as const
 
+function resolveWeightKg(text: string): WeightResolution {
+  const lower = text.toLowerCase()
+  const kgMatches = [...lower.matchAll(/(\d+(?:\.\d+)?)\s*(?:kg|kgs|kilos?)/g)]
+  const lbsMatches = [...lower.matchAll(/(\d+(?:\.\d+)?)\s*(?:lbs?|pounds?)/g)]
+
+  const kgRaw = kgMatches.length ? parseFloat(kgMatches[kgMatches.length - 1][1]) : undefined
+  const lbsRaw = lbsMatches.length ? parseFloat(lbsMatches[lbsMatches.length - 1][1]) : undefined
+  const fromLbsKg = lbsRaw != null ? Math.round(lbsRaw * LBS_TO_KG * 10) / 10 : undefined
+
+  if (kgRaw != null && fromLbsKg != null) {
+    const diffRatio = Math.abs(kgRaw - fromLbsKg) / Math.max(kgRaw, fromLbsKg)
+    if (diffRatio > WEIGHT_CONFLICT_TOLERANCE) {
+      return {
+        conflictMessage:
+          `You gave ${kgRaw}kg and ${lbsRaw}lbs — those don't match (~${fromLbsKg}kg). `
+          + `Please send one weight only, e.g. "75kg, 178cm, 25, male".`,
+      }
+    }
+    return { weightKg: kgRaw }
+  }
+
+  if (kgRaw != null) return { weightKg: kgRaw }
+  if (fromLbsKg != null) return { weightKg: fromLbsKg }
+  return {}
+}
+
 function parseStats(text: string): ParsedStats {
   const lower = text.toLowerCase()
   const stats: ParsedStats = {}
 
-  const weightMatch = lower.match(/(\d+(?:\.\d+)?)\s*(?:kg|kgs|kilos?)/)
-  if (weightMatch) stats.weight = parseFloat(weightMatch[1])
+  const weight = resolveWeightKg(text)
+  if (weight.weightKg != null) stats.weight = weight.weightKg
 
   const heightMatch = lower.match(/(\d+(?:\.\d+)?)\s*(?:cm|centimeters?)/)
   if (heightMatch) stats.height = parseFloat(heightMatch[1])
@@ -183,35 +217,29 @@ const DEFAULT_REPLY = `I can help with:\n\n`
   + `What would you like to know?`
 
 const ASK_STATS = `I'd love to calculate your calories! Please share:\n\n`
-  + `• Weight (kg)\n`
+  + `• Weight (kg or lbs — one value only)\n`
   + `• Height (cm)\n`
   + `• Age\n`
   + `• Gender (male/female)\n\n`
   + `Example: "I am 25, 75kg, 178cm, male"`
 
-export function generateChatFallback(message: string): string {
+/** Weight unit conflict — must be shown before any calculator output. */
+export function getWeightConflictMessage(message: string): string | null {
+  return resolveWeightKg(message).conflictMessage ?? null
+}
+
+/**
+ * Deterministic replies for calorie/BMI/water/etc.
+ * Returns non-null when the fallback engine should answer instead of Gemini.
+ */
+export function getDeterministicCalculatorReply(message: string): string | null {
+  const conflict = getWeightConflictMessage(message)
+  if (conflict) return conflict
+
   const lower = message.toLowerCase().trim()
   const stats = parseStats(message)
 
-  if (/^(hi|hello|hey|salam|assalam|good\s*(morning|evening|afternoon)|howdy)\b/.test(lower)) {
-    return GREETING
-  }
-
-  if (/pakistani|biryani|daal|roti|paratha|karahi|nihari|haleem|chai|lassi|desi|local food/.test(lower)) {
-    return PAKISTANI_FOODS
-  }
-
-  if (
-    /calorie|calories|tdee|bmr|macro/.test(lower) ||
-    (hasAllStats(stats) && /calculate|plan|target|how much|eat/.test(lower))
-  ) {
-    if (hasAllStats(stats)) return formatCalorieTable(stats)
-    if (/calorie|calories|tdee|bmr|calculate/.test(lower)) return ASK_STATS
-  }
-
-  if (hasAllStats(stats) && stats.weight && stats.height && stats.age && stats.gender) {
-    return formatCalorieTable(stats)
-  }
+  if (hasAllStats(stats)) return formatCalorieTable(stats)
 
   if (/bmi/.test(lower)) {
     if (stats.weight && stats.height) return formatBMI(stats.weight, stats.height)
@@ -229,6 +257,30 @@ export function generateChatFallback(message: string): string {
   }
 
   if (/macro/.test(lower)) return formatMacros(lower)
+
+  if (
+    /calorie|calories|tdee|bmr|calculate/.test(lower) ||
+    (stats.weight != null && /plan|target|how much should i eat/.test(lower))
+  ) {
+    return ASK_STATS
+  }
+
+  return null
+}
+
+export function generateChatFallback(message: string): string {
+  const lower = message.toLowerCase().trim()
+
+  const deterministic = getDeterministicCalculatorReply(message)
+  if (deterministic) return deterministic
+
+  if (/^(hi|hello|hey|salam|assalam|good\s*(morning|evening|afternoon)|howdy)\b/.test(lower)) {
+    return GREETING
+  }
+
+  if (/pakistani|biryani|daal|roti|paratha|karahi|nihari|haleem|chai|lassi|desi|local food/.test(lower)) {
+    return PAKISTANI_FOODS
+  }
 
   const exerciseTip = matchExercise(lower)
   if (exerciseTip) return exerciseTip

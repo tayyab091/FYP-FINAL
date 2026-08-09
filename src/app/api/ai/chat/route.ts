@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { aiChatSchema, parseJsonBody } from '@/lib/validation'
 import { rateLimitAi } from '@/lib/rate-limit'
-import { generateChatFallback } from '@/lib/chat-fallback-engine'
+import { generateChatFallback, getDeterministicCalculatorReply } from '@/lib/chat-fallback-engine'
 
 interface ChatHistoryItem {
   role?: string
@@ -67,6 +67,11 @@ export async function POST(req: NextRequest) {
 
     const { message, history } = parsed.data
     const safeHistory = history.slice(-6)
+
+    const calculatorReply = getDeterministicCalculatorReply(message)
+    if (calculatorReply) {
+      return NextResponse.json({ reply: calculatorReply })
+    }
 
     const geminiKey = process.env.GEMINI_API_KEY
     if (isGeminiKeyConfigured() && geminiKey) {
