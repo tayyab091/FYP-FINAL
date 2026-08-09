@@ -56,6 +56,11 @@ function escapeRegex(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
+function postSortTime(value: string | Date | undefined): number {
+  if (!value) return 0
+  return new Date(value).getTime()
+}
+
 function shapePost(
   post: {
     _id: { toString(): string }
@@ -148,11 +153,15 @@ export async function GET(req: NextRequest) {
     )
 
     if (query.data.sort === 'liked') {
-      shaped.sort((a, b) => b.likeCount - a.likeCount || +new Date(b.createdAt) - +new Date(a.createdAt))
+      shaped.sort(
+        (a, b) =>
+          b.likeCount - a.likeCount || postSortTime(b.createdAt) - postSortTime(a.createdAt),
+      )
     } else if (query.data.sort === 'commented') {
       shaped.sort(
         (a, b) =>
-          b.commentCount - a.commentCount || +new Date(b.createdAt) - +new Date(a.createdAt),
+          b.commentCount - a.commentCount ||
+          postSortTime(b.createdAt) - postSortTime(a.createdAt),
       )
     }
 
