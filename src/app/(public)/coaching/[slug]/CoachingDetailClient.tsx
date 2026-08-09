@@ -27,6 +27,13 @@ import {
   Zap,
   type LucideIcon,
 } from 'lucide-react'
+import {
+  connectStatusFromRelationship,
+  fetchUserTrainerRelationships,
+  relationshipTrainerId,
+  type ConnectUiStatus,
+  type RelationshipRecordStatus,
+} from '@/lib/relationship-ui'
 
 interface TrainerDetail {
   _id: string
@@ -64,8 +71,6 @@ interface ReviewsData {
   reviewCount: number
   currentUserReview: Pick<ReviewItem, '_id' | 'rating' | 'comment' | 'createdAt'> | null
 }
-
-type ConnectStatus = 'idle' | 'loading' | 'sent' | 'pending' | 'connected'
 
 const SPECIALTY_ICONS: Record<string, LucideIcon> = {
   'strength training': Dumbbell,
@@ -144,7 +149,7 @@ function ConnectButton({
   onClick,
   className = '',
 }: {
-  status: ConnectStatus
+  status: ConnectUiStatus
   onClick: () => void
   className?: string
 }) {
@@ -175,12 +180,12 @@ function ConnectButton({
 }
 
 export function CoachingDetailClient({ slug }: { slug: string }) {
-  const { user } = useAuth()
+  const { user, isLoading: authLoading } = useAuth()
   const router = useRouter()
   const [trainer, setTrainer] = useState<TrainerDetail | null>(null)
   const [reviewsData, setReviewsData] = useState<ReviewsData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [connectStatus, setConnectStatus] = useState<ConnectStatus>('idle')
+  const [connectStatus, setConnectStatus] = useState<ConnectUiStatus>('idle')
   const [hasActiveRelationship, setHasActiveRelationship] = useState(false)
   const [submittingReview, setSubmittingReview] = useState(false)
   const [reviewRating, setReviewRating] = useState(5)
@@ -200,38 +205,25 @@ export function CoachingDetailClient({ slug }: { slug: string }) {
   const loadRelationshipState = useCallback(async (trainerId: string) => {
     if (!user || user.role !== 'user') {
       setHasActiveRelationship(false)
+      setConnectStatus('idle')
       return
     }
-    try {
-      const res = await fetch('/api/relationships', { credentials: 'include' })
-      if (!res.ok) return
-      const relationships = await res.json() as Array<{
-        status?: string
-        trainerId?: string | { _id?: string }
-      }>
-      if (!Array.isArray(relationships)) return
 
-      const match = relationships.find(rel => {
-        const tid = typeof rel.trainerId === 'string'
-          ? rel.trainerId
-          : rel.trainerId?._id
-        return tid?.toString() === trainerId
-      })
+    try {
+      const relationships = await fetchUserTrainerRelationships()
+      const match = relationships.find(
+        rel => relationshipTrainerId(rel.trainerId) === trainerId.toString(),
+      )
 
       if (!match) {
         setHasActiveRelationship(false)
+        setConnectStatus('idle')
         return
       }
 
-      if (match.status === 'active') {
-        setHasActiveRelationship(true)
-        setConnectStatus(prev => (prev === 'idle' || prev === 'pending' || prev === 'sent' ? 'connected' : prev))
-      } else if (match.status === 'pending') {
-        setHasActiveRelationship(false)
-        setConnectStatus(prev => (prev === 'idle' ? 'pending' : prev))
-      } else {
-        setHasActiveRelationship(false)
-      }
+      const uiStatus = connectStatusFromRelationship(match.status as RelationshipRecordStatus)
+      setConnectStatus(uiStatus === 'idle' ? 'idle' : uiStatus)
+      setHasActiveRelationship(match.status === 'active')
     } catch {
       // non-blocking
     }
@@ -264,12 +256,14 @@ export function CoachingDetailClient({ slug }: { slug: string }) {
 
   useEffect(() => {
     const trainerId = trainer?._id
-    if (!trainerId || !user) {
+    if (authLoading || !trainerId) return
+    if (!user || user.role !== 'user') {
       setHasActiveRelationship(false)
+      setConnectStatus('idle')
       return
     }
-    loadRelationshipState(trainerId)
-  }, [trainer?._id, user, loadRelationshipState])
+    void loadRelationshipState(trainerId.toString())
+  }, [trainer?._id, user, authLoading, loadRelationshipState])
 
   const handleConnect = async () => {
     if (!user) {
@@ -298,7 +292,8 @@ export function CoachingDetailClient({ slug }: { slug: string }) {
         return
       }
       toast.success('Connection request sent!')
-      setConnectStatus('sent')
+      setConnectStatus('pending')
+      await loadRelationshipState(trainer._id.toString())
     } catch {
       toast.error('Failed to send request')
       setConnectStatus('idle')
