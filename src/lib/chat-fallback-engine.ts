@@ -1,3 +1,5 @@
+import { apaBullets, apaNumbered, apaParagraph, apaReply } from '@/lib/chat-apa-format'
+
 type Gender = 'male' | 'female'
 
 const LBS_TO_KG = 0.453592
@@ -37,9 +39,14 @@ function resolveWeightKg(text: string): WeightResolution {
     const diffRatio = Math.abs(kgRaw - fromLbsKg) / Math.max(kgRaw, fromLbsKg)
     if (diffRatio > WEIGHT_CONFLICT_TOLERANCE) {
       return {
-        conflictMessage:
-          `You gave ${kgRaw}kg and ${lbsRaw}lbs — those don't match (~${fromLbsKg}kg). `
-          + `Please send one weight only, e.g. "75kg, 178cm, 25, male".`,
+        conflictMessage: apaReply([
+          'Weight Entry Clarification Needed',
+          apaParagraph(
+            `You entered ${kgRaw} kg and ${lbsRaw} lbs, which do not match (approximately ${fromLbsKg} kg from pounds).`,
+            'Please send one body-weight value only.',
+          ),
+          apaParagraph('Example: "75 kg, 178 cm, 25, male."'),
+        ], { disclaimer: false }),
       }
     }
     return { weightKg: kgRaw }
@@ -107,23 +114,26 @@ function formatCalorieTable(stats: ParsedStats): string {
   const protein = Math.round(weight * 2)
   const bmi = calcBMI(weight, height)
 
-  let reply = `### 📊 Your personalized calorie plan\n\n`
-  reply += `**Your Stats:** ${weight}kg · ${height}cm · ${age} yrs · ${gender}\n\n`
-  reply += `- **BMR:** ${Math.round(bmr)} kcal\n`
-  reply += `- **TDEE** (moderate activity): **${tdee} kcal**\n`
-  reply += `- **BMI:** ${bmi.toFixed(1)} (${bmiCategory(bmi)})\n`
-  reply += `- **Protein target:** ${protein}g/day (2g per kg)\n\n`
-  reply += `---\n\n`
-  reply += `### 🎯 Daily Calorie Targets\n\n`
-
-  for (const target of CALORIE_TARGETS) {
+  const targets = CALORIE_TARGETS.map(target => {
     const cals = Math.round(tdee + target.offset)
-    reply += `- **${target.label}:** ${cals} kcal/day\n`
-  }
+    return `${target.label}: ${cals} kcal per day`
+  })
 
-  reply += `\n---\n\n`
-  reply += `> **Tip:** Start with **Fat Loss** (−500) if unsure. Track protein daily and adjust calories every 2 weeks based on progress.`
-  return reply
+  return apaReply([
+    'Personalized Calorie Plan',
+    apaParagraph(
+      `Body weight: ${weight} kg. Height: ${height} cm. Age: ${age} years. Sex: ${gender}.`,
+      `Basal metabolic rate (BMR): ${Math.round(bmr)} kcal per day.`,
+      `Total daily energy expenditure (TDEE; moderate activity): ${tdee} kcal per day.`,
+      `Body mass index (BMI): ${bmi.toFixed(1)} (${bmiCategory(bmi)}).`,
+      `Protein target: ${protein} g per day (2 g per kg body weight).`,
+    ),
+    apaNumbered('Recommended Daily Calorie Targets', targets),
+    'Recommendation',
+    apaParagraph(
+      'Start with a fat-loss target (−500 kcal) if you are unsure. Track protein daily and reassess calories every 2 weeks based on progress.',
+    ),
+  ])
 }
 
 function formatBMI(weight: number, height: number): string {
@@ -132,58 +142,160 @@ function formatBMI(weight: number, height: number): string {
   const idealLow = Math.round(18.5 * heightM * heightM)
   const idealHigh = Math.round(24.9 * heightM * heightM)
 
-  return `### 📏 BMI for ${weight}kg at ${height}cm\n\n`
-    + `- **BMI:** ${bmi.toFixed(1)} — ${bmiCategory(bmi)}\n`
-    + `- **Healthy weight range:** ${idealLow}–${idealHigh} kg`
+  return apaReply([
+    'Body Mass Index (BMI) Estimate',
+    apaParagraph(
+      `For ${weight} kg at ${height} cm, BMI is ${bmi.toFixed(1)} (${bmiCategory(bmi)}).`,
+      `Healthy weight range for this height: ${idealLow}–${idealHigh} kg.`,
+    ),
+  ])
 }
 
 function formatWater(weight: number): string {
   const liters = (weight * 0.033).toFixed(1)
-  return `### 💧 Water intake for ${weight}kg\n\n`
-    + `- **Recommended:** ${liters} liters per day\n\n`
-    + `> Drink a glass on waking, sip throughout workouts, and check urine color (pale yellow = hydrated).`
+  return apaReply([
+    'Daily Hydration Recommendation',
+    apaParagraph(`For ${weight} kg body weight, aim for ${liters} liters of water per day.`),
+    apaBullets('Hydration Strategies', [
+      'Drink a glass of water upon waking.',
+      'Sip water throughout workouts.',
+      'Use pale-yellow urine as a simple hydration check.',
+    ]),
+  ])
 }
 
 function formatIdealWeight(height: number): string {
   const heightM = height / 100
   const low = Math.round(18.5 * heightM * heightM)
   const high = Math.round(24.9 * heightM * heightM)
-  return `### 📏 Ideal weight for ${height}cm\n\n`
-    + `- **Healthy BMI range (18.5–24.9):** ${low}–${high} kg\n\n`
-    + `> This is a general guide. Muscle mass, bone density, and activity level also matter.`
+  return apaReply([
+    'Healthy Weight Range',
+    apaParagraph(
+      `For ${height} cm, a healthy BMI range (18.5–24.9) corresponds to ${low}–${high} kg.`,
+      'Muscle mass, bone density, and activity level also influence an appropriate target weight.',
+    ),
+  ])
 }
 
 function formatMacros(goal: string): string {
-  const guides: Record<string, string> = {
-    fat: 'Fat Loss Macros:\n• Protein: 35% — preserve muscle during deficit\n• Carbs: 35% — fuel workouts, manage hunger\n• Fat: 30% — hormones and satiety\n\nPrioritize protein at every meal. Reduce carbs on rest days.',
-    muscle: 'Muscle Gain Macros:\n• Protein: 30% — build and repair muscle\n• Carbs: 45% — fuel intense training\n• Fat: 25% — recovery and hormones\n\nEat in a 250–500 kcal surplus with progressive overload training.',
-    maintain: 'Maintenance Macros:\n• Protein: 30% — maintain muscle mass\n• Carbs: 40% — daily energy\n• Fat: 30% — overall health\n\nAdjust portions if weight drifts ±1kg over 2 weeks.',
+  if (/fat|loss|cut|lose/.test(goal)) {
+    return apaReply([
+      'Macronutrient Targets for Fat Loss',
+      apaBullets('Recommended Split', [
+        'Protein: 35% — preserve lean mass during a calorie deficit.',
+        'Carbohydrates: 35% — support training and manage hunger.',
+        'Fat: 30% — support hormones and satiety.',
+      ]),
+      apaParagraph('Include protein at each meal and reduce carbohydrates on rest days.'),
+    ])
   }
-
-  if (/fat|loss|cut|lose/.test(goal)) return guides.fat
-  if (/muscle|gain|bulk|build/.test(goal)) return guides.muscle
-  return guides.maintain
+  if (/muscle|gain|bulk|build/.test(goal)) {
+    return apaReply([
+      'Macronutrient Targets for Muscle Gain',
+      apaBullets('Recommended Split', [
+        'Protein: 30% — support muscle repair and growth.',
+        'Carbohydrates: 45% — fuel intense training sessions.',
+        'Fat: 25% — support recovery and hormonal health.',
+      ]),
+      apaParagraph('Maintain a 250–500 kcal surplus with progressive overload training.'),
+    ])
+  }
+  return apaReply([
+    'Macronutrient Targets for Weight Maintenance',
+    apaBullets('Recommended Split', [
+      'Protein: 30% — maintain muscle mass.',
+      'Carbohydrates: 40% — provide daily energy.',
+      'Fat: 30% — support overall health.',
+    ]),
+    apaParagraph('Adjust portions if body weight drifts more than 1 kg over 2 weeks.'),
+  ])
 }
 
-const PAKISTANI_FOODS = `Pakistani Food Calorie Guide (per serving):\n\n`
-  + `🍚 Chicken Biryani: ~450–550 kcal\n`
-  + `🫘 Daal (1 cup): ~180 kcal · high protein\n`
-  + `🫓 Roti (1 piece): ~70–90 kcal\n`
-  + `🥞 Paratha: ~250–300 kcal\n`
-  + `🍗 Chicken Karahi: ~350–450 kcal\n`
-  + `🍲 Nihari: ~400–500 kcal\n`
-  + `🥣 Haleem: ~300–400 kcal\n`
-  + `☕ Chai (with milk): ~80–120 kcal\n`
-  + `🥛 Lassi: ~150–200 kcal\n\n`
-  + `Tip: Pair roti with daal for a balanced meal. Limit paratha to 1–2x per week for fat loss goals.`
+const PAKISTANI_FOODS = apaReply([
+  'Pakistani Food Calorie Guide',
+  apaParagraph('Approximate calories per typical serving:'),
+  apaBullets('Common Dishes', [
+    'Chicken biryani: 450–550 kcal',
+    'Daal (1 cup): ~180 kcal; high in protein',
+    'Roti (1 piece): 70–90 kcal',
+    'Paratha: 250–300 kcal',
+    'Chicken karahi: 350–450 kcal',
+    'Nihari: 400–500 kcal',
+    'Haleem: 300–400 kcal',
+    'Chai with milk: 80–120 kcal',
+    'Lassi: 150–200 kcal',
+  ]),
+  apaParagraph('Pair roti with daal for a balanced meal. Limit paratha to 1–2 times per week during fat loss.'),
+])
 
 const EXERCISE_TIPS: Record<string, string> = {
-  squat: 'Squat Form & Programming:\n• Feet shoulder-width, toes slightly out\n• Brace core, push hips back and down\n• Thighs parallel to floor, drive through heels\n• Sets/Reps: 3×8–12 for strength, 4×15 for endurance\n• Warm up with bodyweight squats first',
-  deadlift: 'Deadlift Form & Programming:\n• Feet hip-width, bar over mid-foot\n• Hinge at hips, flat back, chest up\n• Drive through floor, lock hips at top\n• Sets/Reps: 3×5–8 for strength\n• Start light — form beats weight every time',
-  bench: 'Bench Press Form & Programming:\n• Grip slightly wider than shoulders\n• Feet flat, slight arch, retract shoulder blades\n• Lower bar to mid-chest, press up in arc\n• Sets/Reps: 3×8–12\n• Use a spotter or safety bars when pushing heavy',
-  pushup: 'Push-Up Form & Programming:\n• Hands shoulder-width, body in straight line\n• Lower chest to floor, elbows 45°\n• Push through palms to full extension\n• Sets/Reps: 3×10–20 (or to failure)\n• Progress: incline → standard → decline → weighted',
-  pullup: 'Pull-Up Form & Programming:\n• Hang with full extension, engage lats\n• Pull chin above bar, avoid swinging\n• Lower with control to full hang\n• Sets/Reps: 3×5–10 (use bands if needed)\n• Great for back width and grip strength',
-  plank: 'Plank Form & Programming:\n• Forearms on floor, elbows under shoulders\n• Body straight from head to heels\n• Brace core, don\'t let hips sag or pike\n• Hold: 3×30–60 seconds\n• Progress to side planks and RKC planks',
+  squat: apaReply([
+    'Squat Technique and Programming',
+    apaBullets('Form Cues', [
+      'Feet shoulder-width apart; toes slightly turned out.',
+      'Brace the core; sit hips back and down.',
+      'Thighs parallel to the floor; drive through the heels.',
+    ]),
+    apaNumbered('Programming', [
+      '3 sets of 8–12 reps for strength.',
+      '4 sets of 15 reps for muscular endurance.',
+      'Warm up with bodyweight squats before loading.',
+    ]),
+  ]),
+  deadlift: apaReply([
+    'Deadlift Technique and Programming',
+    apaBullets('Form Cues', [
+      'Feet hip-width; bar over mid-foot.',
+      'Hinge at the hips; maintain a flat back and lifted chest.',
+      'Drive through the floor; lock hips at the top.',
+    ]),
+    apaNumbered('Programming', ['3 sets of 5–8 reps for strength.', 'Prioritize form over load when learning the lift.']),
+  ]),
+  bench: apaReply([
+    'Bench Press Technique and Programming',
+    apaBullets('Form Cues', [
+      'Grip slightly wider than shoulder width.',
+      'Feet flat; slight arch; retract shoulder blades.',
+      'Lower the bar to mid-chest; press upward in a slight arc.',
+    ]),
+    apaNumbered('Programming', ['3 sets of 8–12 reps.', 'Use a spotter or safety bars for heavy sets.']),
+  ]),
+  pushup: apaReply([
+    'Push-Up Technique and Programming',
+    apaBullets('Form Cues', [
+      'Hands shoulder-width apart; body in a straight line.',
+      'Lower the chest toward the floor; elbows at roughly 45°.',
+      'Press through the palms to full extension.',
+    ]),
+    apaNumbered('Programming', [
+      '3 sets of 10–20 reps, or to technical failure.',
+      'Progress from incline to standard, decline, and weighted variations.',
+    ]),
+  ]),
+  pullup: apaReply([
+    'Pull-Up Technique and Programming',
+    apaBullets('Form Cues', [
+      'Start from a full hang with active lats.',
+      'Pull until the chin clears the bar without swinging.',
+      'Lower under control to a full hang.',
+    ]),
+    apaNumbered('Programming', [
+      '3 sets of 5–10 reps; use bands for assistance if needed.',
+      'Effective for back width and grip strength.',
+    ]),
+  ]),
+  plank: apaReply([
+    'Plank Technique and Programming',
+    apaBullets('Form Cues', [
+      'Forearms on the floor; elbows under shoulders.',
+      'Maintain a straight line from head to heels.',
+      'Brace the core; avoid sagging hips or piking.',
+    ]),
+    apaNumbered('Programming', [
+      'Hold for 30–60 seconds across 3 sets.',
+      'Progress to side planks and RKC planks.',
+    ]),
+  ]),
 }
 
 function matchExercise(lower: string): string | null {
@@ -200,31 +312,41 @@ function matchExercise(lower: string): string | null {
   return null
 }
 
-const GREETING = `Welcome to T.E.S.T. AI Coach! 🤖\n\n`
-  + `I can help you with:\n`
-  + `• Calorie & BMI calculators\n`
-  + `• Pakistani food calorie guide\n`
-  + `• Exercise form tips (squat, deadlift, bench, etc.)\n`
-  + `• Fat loss, muscle gain, and nutrition advice\n`
-  + `• Water intake and macro recommendations\n\n`
-  + `Try: "I am 25, 75kg, 178cm, male" for a full calorie plan!`
+const GREETING = apaReply([
+  'Welcome to the T.E.S.T. AI Fitness Coach',
+  apaBullets('I Can Help With', [
+    'Calorie and BMI estimates',
+    'Pakistani food calorie guide',
+    'Exercise technique (squat, deadlift, bench press, and more)',
+    'Fat loss, muscle gain, and nutrition guidance',
+    'Hydration and macronutrient recommendations',
+  ]),
+  apaParagraph('Example prompt: "I am 25, 75 kg, 178 cm, male."'),
+], { disclaimer: false })
 
-const DEFAULT_REPLY = `I can help with:\n\n`
-  + `📊 Calorie calculator — tell me weight, height, age & gender\n`
-  + `📏 BMI calculator — e.g. "BMI for 75kg 178cm"\n`
-  + `💧 Water intake — e.g. "water intake for 80kg"\n`
-  + `🍽️ Pakistani food calories — biryani, daal, roti, karahi, etc.\n`
-  + `🏋️ Exercise tips — squat, deadlift, bench press, push-ups\n`
-  + `🔥 Fat loss & muscle gain strategies\n`
-  + `🏃 Cardio, beginner guides, sleep & recovery\n\n`
-  + `What would you like to know?`
+const DEFAULT_REPLY = apaReply([
+  'How I Can Help',
+  apaBullets('Popular Topics', [
+    'Calorie calculator — share weight, height, age, and sex',
+    'BMI calculator — e.g., "BMI for 75 kg and 178 cm"',
+    'Water intake — e.g., "water intake for 80 kg"',
+    'Pakistani food calories — biryani, daal, roti, karahi, and more',
+    'Exercise technique — squat, deadlift, bench press, push-ups',
+    'Fat loss, muscle gain, cardio, sleep, and recovery',
+  ]),
+  apaParagraph('What would you like to explore?'),
+], { disclaimer: false })
 
-const ASK_STATS = `I'd love to calculate your calories! Please share:\n\n`
-  + `• Weight (kg or lbs — one value only)\n`
-  + `• Height (cm)\n`
-  + `• Age\n`
-  + `• Gender (male/female)\n\n`
-  + `Example: "I am 25, 75kg, 178cm, male"`
+const ASK_STATS = apaReply([
+  'Calorie Estimate — Information Needed',
+  apaBullets('Please Provide', [
+    'Body weight (kg or lbs; one value only)',
+    'Height (cm)',
+    'Age (years)',
+    'Sex (male or female)',
+  ]),
+  apaParagraph('Example: "I am 25, 75 kg, 178 cm, male."'),
+], { disclaimer: false })
 
 /** Weight unit conflict — must be shown before any calculator output. */
 export function getWeightConflictMessage(message: string): string | null {
@@ -246,17 +368,29 @@ export function getDeterministicCalculatorReply(message: string): string | null 
 
   if (/bmi/.test(lower)) {
     if (stats.weight && stats.height) return formatBMI(stats.weight, stats.height)
-    return 'For BMI calculation, tell me your weight and height.\nExample: "BMI for 75kg 178cm"'
+    return apaReply([
+      'BMI Calculator',
+      apaParagraph('Share your weight and height to calculate BMI.'),
+      apaParagraph('Example: "BMI for 75 kg and 178 cm."'),
+    ], { disclaimer: false })
   }
 
   if (/water|hydrat|drink/.test(lower)) {
     if (stats.weight) return formatWater(stats.weight)
-    return 'Tell me your weight for a water intake recommendation.\nExample: "water intake for 80kg"'
+    return apaReply([
+      'Hydration Estimate',
+      apaParagraph('Share your body weight for a daily water intake recommendation.'),
+      apaParagraph('Example: "water intake for 80 kg."'),
+    ], { disclaimer: false })
   }
 
   if (/ideal\s*weight|healthy\s*weight/.test(lower)) {
     if (stats.height) return formatIdealWeight(stats.height)
-    return 'Tell me your height for an ideal weight range.\nExample: "ideal weight for 178cm"'
+    return apaReply([
+      'Healthy Weight Range',
+      apaParagraph('Share your height to estimate a healthy weight range.'),
+      apaParagraph('Example: "ideal weight for 178 cm."'),
+    ], { disclaimer: false })
   }
 
   if (/macro/.test(lower)) return formatMacros(lower)
@@ -289,63 +423,86 @@ export function generateChatFallback(message: string): string {
   if (exerciseTip) return exerciseTip
 
   if (/fat\s*loss|lose\s*(fat|weight)|cutting|deficit/.test(lower)) {
-    return 'Fat Loss Tips:\n'
-      + '• Create a 300–500 kcal daily deficit\n'
-      + '• Protein: 2g per kg bodyweight to preserve muscle\n'
-      + '• Strength train 3–4x/week — don\'t just cardio\n'
-      + '• Aim for 0.5–1kg loss per week (sustainable)\n'
-      + '• Sleep 7–9 hours — poor sleep raises cortisol and hunger\n'
-      + '• Pakistani tip: swap paratha for roti, add daal for protein'
+    return apaReply([
+      'Fat Loss Strategies',
+      apaNumbered('Evidence-Based Recommendations', [
+        'Create a daily calorie deficit of 300–500 kcal.',
+        'Consume about 2 g of protein per kg body weight to preserve lean mass.',
+        'Strength train 3–4 times per week; do not rely on cardio alone.',
+        'Aim for 0.5–1 kg of weight loss per week for sustainability.',
+        'Sleep 7–9 hours per night; poor sleep increases hunger and cortisol.',
+      ]),
+      apaParagraph('Pakistani tip: choose roti over paratha and add daal for protein.'),
+    ])
   }
 
   if (/muscle\s*gain|bulk|build\s*muscle|hypertrophy/.test(lower)) {
-    return 'Muscle Gain Tips:\n'
-      + '• Eat 250–500 kcal above maintenance\n'
-      + '• Protein: 2g per kg bodyweight daily\n'
-      + '• Progressive overload — add weight or reps each week\n'
-      + '• Focus on compound lifts: squat, deadlift, bench, rows\n'
-      + '• Rest 48h between training same muscle group\n'
-      + '• Pakistani sources: chicken, eggs, daal, paneer, Greek yogurt'
+    return apaReply([
+      'Muscle Gain Strategies',
+      apaNumbered('Evidence-Based Recommendations', [
+        'Eat 250–500 kcal above maintenance daily.',
+        'Consume about 2 g of protein per kg body weight.',
+        'Apply progressive overload by adding weight or reps each week.',
+        'Prioritize compound lifts: squat, deadlift, bench press, and rows.',
+        'Allow 48 hours of recovery before training the same muscle group again.',
+      ]),
+      apaParagraph('Pakistani protein sources include chicken, eggs, daal, paneer, and Greek yogurt.'),
+    ])
   }
 
   if (/cardio|running|stamina|endurance|hiit/.test(lower)) {
-    return 'Cardio Guide:\n'
-      + '• Start: 20–30 min moderate cardio 3x/week\n'
-      + '• HIIT: 20s sprint + 40s rest × 8 rounds — great for fat loss\n'
-      + '• Steady-state: 30–45 min jog/cycle — builds endurance\n'
-      + '• Mix both for best results\n'
-      + '• Don\'t skip strength training — cardio alone won\'t build muscle\n'
-      + '• Post-workout: hydrate and eat protein within 1 hour'
+    return apaReply([
+      'Cardiovascular Training Guide',
+      apaNumbered('Programming Options', [
+        'Begin with 20–30 minutes of moderate cardio 3 times per week.',
+        'HIIT: 20 s sprint + 40 s rest for 8 rounds to support fat loss.',
+        'Steady-state cardio: 30–45 minutes of jogging or cycling for endurance.',
+        'Combine both modalities for balanced conditioning.',
+        'Continue resistance training; cardio alone does not build muscle.',
+      ]),
+      apaParagraph('Rehydrate and consume protein within 1 hour after training.'),
+    ])
   }
 
   if (/beginner|start|new\s*to\s*(gym|fitness|workout)|getting\s*started/.test(lower)) {
-    return 'Beginner Guide:\n'
-      + '• Start 3x/week: full body workouts\n'
-      + '• Master form before adding weight\n'
-      + '• Key moves: squat, push-up, row, plank, lunge\n'
-      + '• Track workouts in My Fitness to build consistency\n'
-      + '• Don\'t compare — focus on your own progress\n'
-      + '• Rest days are training days for recovery'
+    return apaReply([
+      'Beginner Training Guide',
+      apaNumbered('Getting Started', [
+        'Train 3 times per week with full-body sessions.',
+        'Master technique before increasing load.',
+        'Learn squat, push-up, row, plank, and lunge patterns.',
+        'Log workouts in My Fitness to build consistency.',
+        'Schedule rest days for recovery and adaptation.',
+      ]),
+    ])
   }
 
   if (/sleep|recover|rest\s*day|overtrain/.test(lower)) {
-    return 'Sleep & Recovery:\n'
-      + '• Aim for 7–9 hours of sleep nightly\n'
-      + '• Muscles grow during rest, not during workouts\n'
-      + '• Consistent sleep schedule (same bedtime)\n'
-      + '• Dark, cool room; no screens 1 hour before bed\n'
-      + '• Active recovery: light walk, stretching, foam rolling\n'
-      + '• Signs of overtraining: persistent fatigue, poor performance, mood changes'
+    return apaReply([
+      'Sleep and Recovery',
+      apaNumbered('Recovery Principles', [
+        'Aim for 7–9 hours of sleep each night.',
+        'Muscle repair occurs during rest, not during the workout itself.',
+        'Keep a consistent sleep schedule.',
+        'Use a dark, cool room and limit screens 1 hour before bed.',
+        'Use active recovery: walking, stretching, or foam rolling.',
+      ]),
+      apaParagraph('Signs of overtraining include persistent fatigue, poor performance, and mood changes.'),
+    ])
   }
 
   if (/protein|diet|eat|nutrition|meal/.test(lower)) {
-    return 'Nutrition Basics:\n'
-      + '• Protein: 1.6–2.2g per kg bodyweight daily\n'
-      + '• Spread protein across 4–5 meals\n'
-      + '• Pakistani sources: chicken, fish, eggs, daal, paneer\n'
-      + '• Eat vegetables with every meal for micronutrients\n'
-      + '• Stay hydrated — 0.033L per kg bodyweight\n'
-      + '• Log meals in My Fitness to track your intake'
+    return apaReply([
+      'Nutrition Fundamentals',
+      apaNumbered('Daily Habits', [
+        'Consume 1.6–2.2 g of protein per kg body weight.',
+        'Distribute protein across 4–5 meals.',
+        'Include chicken, fish, eggs, daal, and paneer when possible.',
+        'Add vegetables to each meal for micronutrients.',
+        'Drink about 0.033 L of water per kg body weight.',
+      ]),
+      apaParagraph('Track meals in My Fitness to monitor intake.'),
+    ])
   }
 
   return DEFAULT_REPLY

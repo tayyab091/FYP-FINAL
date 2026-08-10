@@ -6,6 +6,7 @@ import { Bot, Send, X } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { ChatMessageContent } from '@/components/shared/ChatMessageContent'
 import { isAuthPath } from '@/lib/shell-routes'
+import { apaParagraph, apaReply } from '@/lib/chat-apa-format'
 
 const MOBILE_MAX_WIDTH = 767
 
@@ -44,13 +45,20 @@ interface Message {
   content: string
 }
 
-const GUEST_OPENING =
-  'Hi! I\'m your T.E.S.T. AI fitness coach 🤖\n\n'
-  + 'I can calculate your daily calories! Tell me your weight, height, age and gender.\n\n'
-  + 'Example: "I am 25, 75kg, 178cm, male"'
+const GUEST_OPENING = apaReply([
+  apaParagraph(
+    'Welcome to the T.E.S.T. AI Fitness Coach.',
+    'I can estimate your daily calorie needs from your weight, height, age, and sex.',
+  ),
+  apaParagraph('Example prompt: "I am 25, 75 kg, 178 cm, male."'),
+], { disclaimer: false })
 
-const LOGGED_IN_OPENING =
-  'Hi! I\'m your T.E.S.T. AI fitness coach 🤖 Ask me anything about workouts, nutrition, or your fitness goals!'
+const LOGGED_IN_OPENING = apaReply([
+  apaParagraph(
+    'Welcome to the T.E.S.T. AI Fitness Coach.',
+    'Ask about workouts, nutrition, recovery, or your fitness goals.',
+  ),
+], { disclaimer: false })
 
 const GUEST_CHIPS = [
   { label: 'Calculate my calories', value: 'Calculate my calories' },

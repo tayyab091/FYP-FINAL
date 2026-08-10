@@ -11,9 +11,18 @@ interface ChatMessageContentProps {
 const STAT_LABEL_PATTERN =
   /^(BMR|TDEE|BMI|Protein(?:\s+target)?|Recommended|Healthy\s+weight\s+range)(?::|\s*\()/i
 
-/** Normalize fallback-engine bullets and enrich plain text for markdown rendering. */
+/** Normalize APA-style and fallback-engine text for markdown rendering. */
 function normalizeContent(content: string): string {
   let text = content.replace(/\r\n/g, '\n').replace(/^(\s*)•\s+/gm, '$1- ')
+
+  // APA Note / Reference disclaimers -> blockquote
+  text = text.replace(/^(Note|Reference)\.\s+(.+)$/gim, '> **$1.** $2')
+
+  // Promote short standalone title lines (APA heading) when followed by a blank line
+  text = text.replace(
+    /^([A-Z][^\n.!?]{2,68})\n\n(?=[A-Za-z])/gm,
+    '### $1\n\n',
+  )
 
   // Promote emoji section headers to markdown headings when not already formatted.
   text = text.replace(

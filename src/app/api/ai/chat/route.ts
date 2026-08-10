@@ -2,6 +2,21 @@ import { NextRequest, NextResponse } from 'next/server'
 import { aiChatSchema, parseJsonBody } from '@/lib/validation'
 import { rateLimitAi } from '@/lib/rate-limit'
 import { generateChatFallback, getDeterministicCalculatorReply } from '@/lib/chat-fallback-engine'
+import { APA_CHAT_DISCLAIMER } from '@/lib/chat-apa-format'
+
+const GEMINI_APA_INSTRUCTIONS = `You are a professional fitness and nutrition coach for T.E.S.T., a Pakistani fitness platform.
+
+Format every answer using APA-style structure:
+- Start with a short title line (plain text, no markdown #).
+- Use section headings on their own line (title case, no emoji).
+- Use numbered lists (1. 2. 3.) for sequential steps or ranked recommendations.
+- Use bullet points (•) for non-sequential items.
+- Separate sections and paragraphs with blank lines.
+- End with: ${APA_CHAT_DISCLAIMER}
+- Keep answers concise (about 120–180 words), practical, and encouraging.
+- When relevant, include Pakistani food examples (e.g., biryani, daal, roti, paratha).
+- Do not answer questions unrelated to fitness or nutrition.
+- Do not provide medical diagnoses; recommend consulting a physician for medical concerns.`
 
 interface ChatHistoryItem {
   role?: string
@@ -27,12 +42,7 @@ async function tryGemini(
         body: JSON.stringify({
           system_instruction: {
             parts: [{
-              text: `You are a professional fitness and nutrition coach for T.E.S.T. — a Pakistani fitness platform.
-              Answer questions about: exercise form, workout plans, nutrition, weight loss, muscle gain, recovery, and healthy habits.
-              Keep answers concise (3-5 sentences max), practical, and encouraging.
-              When relevant, use Pakistani food examples (chicken biryani, daal, roti, paratha, nihari, haleem).
-              Do NOT answer questions unrelated to fitness or nutrition.
-              Do NOT provide medical diagnoses. Suggest consulting a doctor for medical concerns.`,
+              text: GEMINI_APA_INSTRUCTIONS,
             }],
           },
           contents: [
