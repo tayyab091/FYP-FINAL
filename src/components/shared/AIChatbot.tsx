@@ -3,16 +3,25 @@ import { useState, useRef, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { Bot, Send, X } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
+import { ChatMessageContent } from '@/components/shared/ChatMessageContent'
+import { apaParagraph, apaBullets, apaNumbered, apaReply } from '@/lib/chat-apa-format'
 
 interface Message { role: 'user' | 'assistant'; content: string }
 
-const GUEST_OPENING =
-  'Hi! I\'m your T.E.S.T. AI fitness coach 🤖\n\n'
-  + 'I can calculate your daily calories! Tell me your weight, height, age and gender.\n\n'
-  + 'Example: "I am 25, 75kg, 178cm, male"'
+const GUEST_OPENING = apaReply([
+  apaParagraph(
+    'Welcome to the T.E.S.T. AI Fitness Coach.',
+    'I can estimate your daily calorie needs from your weight, height, age, and sex.',
+  ),
+  apaParagraph('Example prompt: "I am 25, 75 kg, 178 cm, male."'),
+], { disclaimer: false })
 
-const LOGGED_IN_OPENING =
-  'Hi! I\'m your T.E.S.T. AI fitness coach 🤖 Ask me anything about workouts, nutrition, or your fitness goals!'
+const LOGGED_IN_OPENING = apaReply([
+  apaParagraph(
+    'Welcome to the T.E.S.T. AI Fitness Coach.',
+    'Ask about workouts, nutrition, recovery, or your fitness goals.',
+  ),
+], { disclaimer: false })
 
 const GUEST_CHIPS = [
   { label: 'Calculate my calories', value: 'Calculate my calories' },
@@ -97,12 +106,16 @@ export function AIChatbot() {
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {messages.map((m, i) => (
               <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] px-3 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-line ${
+                <div className={`max-w-[85%] px-3 py-2.5 rounded-2xl text-sm ${
                   m.role === 'user'
-                    ? 'bg-primary text-primary-foreground font-semibold rounded-br-sm'
+                    ? 'bg-primary text-primary-foreground font-semibold rounded-br-sm leading-relaxed whitespace-pre-line'
                     : 'bg-muted border border-border text-foreground rounded-bl-sm'
                 }`}>
-                  {m.content}
+                  {m.role === 'assistant' ? (
+                    <ChatMessageContent content={m.content} />
+                  ) : (
+                    m.content
+                  )}
                 </div>
               </div>
             ))}
