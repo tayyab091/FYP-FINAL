@@ -23,7 +23,7 @@ export function GamificationBar({ data }: { data: GamificationMeResponse | null 
   const streak = data?.streak || 0
 
   return (
-    <div className="tile min-h-0 w-full max-w-full flex-col gap-4 overflow-hidden py-5 md:flex-row md:flex-nowrap md:items-center md:gap-6">
+    <div className="tile !h-auto min-h-0 w-full max-w-full flex-col gap-4 overflow-hidden py-5 md:!flex-row md:flex-nowrap md:items-center md:gap-6">
       <div className="flex flex-shrink-0 items-center gap-3">
         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#00ff87] to-[#00d4ff]">
           <span className="text-xl font-black text-black">{level}</span>

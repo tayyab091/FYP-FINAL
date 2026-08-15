@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { aiChatSchema, parseJsonBody } from '@/lib/validation'
 import { rateLimitAi } from '@/lib/rate-limit'
-import { generateChatFallback, getDeterministicCalculatorReply } from '@/lib/chat-fallback-engine'
+import { generateChatFallback, getWeightConflictMessage } from '@/lib/chat-fallback-engine'
 import { APA_CHAT_DISCLAIMER } from '@/lib/chat-apa-format'
 
 const GEMINI_APA_INSTRUCTIONS = `You are a professional fitness and nutrition coach for T.E.S.T., a Pakistani fitness platform.
@@ -78,9 +78,9 @@ export async function POST(req: NextRequest) {
     const { message, history } = parsed.data
     const safeHistory = history.slice(-6)
 
-    const calculatorReply = getDeterministicCalculatorReply(message)
-    if (calculatorReply) {
-      return NextResponse.json({ reply: calculatorReply })
+    const conflict = getWeightConflictMessage(message)
+    if (conflict) {
+      return NextResponse.json({ reply: conflict })
     }
 
     const geminiKey = process.env.GEMINI_API_KEY

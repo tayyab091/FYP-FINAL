@@ -222,11 +222,11 @@ export default function SubscriptionPage() {
       <Dialog open={modalOpen} onOpenChange={(open) => !processing && setModalOpen(open)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{stripeReady ? 'Secure Checkout' : 'Payment Simulation'}</DialogTitle>
+            <DialogTitle>Confirm your plan</DialogTitle>
             <DialogDescription>
               {stripeReady
                 ? 'You will be redirected to Stripe to complete your payment securely.'
-                : 'This is a demo payment. Click confirm to activate your plan instantly.'}
+                : 'Click confirm to activate your plan.'}
             </DialogDescription>
           </DialogHeader>
 

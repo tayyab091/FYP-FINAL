@@ -355,7 +355,7 @@ export function getWeightConflictMessage(message: string): string | null {
 
 /**
  * Deterministic replies for calorie/BMI/water/etc.
- * Returns non-null when the fallback engine should answer instead of Gemini.
+ * Used only as a fallback when Gemini is unavailable — never to override Gemini.
  */
 export function getDeterministicCalculatorReply(message: string): string | null {
   const conflict = getWeightConflictMessage(message)
@@ -365,6 +365,10 @@ export function getDeterministicCalculatorReply(message: string): string | null 
   const stats = parseStats(message)
 
   if (hasAllStats(stats)) return formatCalorieTable(stats)
+
+  if (/pakistani|biryani|daal|roti|paratha|karahi|nihari|haleem|chai|lassi|desi|local food/.test(lower)) {
+    return null
+  }
 
   if (/bmi/.test(lower)) {
     if (stats.weight && stats.height) return formatBMI(stats.weight, stats.height)

@@ -210,7 +210,8 @@ export function AIChatbot() {
   }
 
   const handleChipClick = (value: string) => {
-    void send(value)
+    setInput(value)
+    requestAnimationFrame(() => inputRef.current?.focus())
   }
 
   const panelClassName = [
