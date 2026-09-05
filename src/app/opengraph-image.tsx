@@ -1,9 +1,8 @@
 import { ImageResponse } from 'next/og'
-import { SITE_NAME, SITE_TAGLINE } from '@/lib/seo'
 
 export const runtime = 'edge'
 
-export const alt = `${SITE_NAME} — ${SITE_TAGLINE}`
+export const alt = 'T.E.S.T. — Train. Eat. Sleep. Thrive.'
 export const size = {
   width: 1200,
   height: 630,
@@ -38,7 +37,7 @@ export default async function Image() {
             marginBottom: 20,
           }}
         >
-          {SITE_NAME}
+          T.E.S.T.
         </h1>
         <p
           style={{
@@ -50,7 +49,7 @@ export default async function Image() {
             maxWidth: '80%',
           }}
         >
-          {SITE_TAGLINE}
+          Train. Eat. Sleep. Thrive.
         </p>
       </div>
     ),

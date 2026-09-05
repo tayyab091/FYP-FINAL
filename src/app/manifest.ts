@@ -1,11 +1,10 @@
 import { MetadataRoute } from 'next'
-import { SITE_NAME, DEFAULT_DESCRIPTION } from '@/lib/seo'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: SITE_NAME,
+    name: 'T.E.S.T.',
     short_name: 'TEST',
-    description: DEFAULT_DESCRIPTION,
+    description: "Pakistan's first AI-powered fitness coaching platform. Connect with verified trainers, track nutrition, and achieve your fitness goals.",
     start_url: '/',
     display: 'standalone',
     background_color: '#000000',
