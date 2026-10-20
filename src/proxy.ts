@@ -22,7 +22,7 @@ async function getRoleFromToken(token: string | undefined): Promise<string> {
   }
 }
 
-/** Edge-safe route protection — jose JWT only (no Node fs / Mongoose). */
+/** Lightweight Next.js 16 request proxy; route handlers still enforce authorization. */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const role = await getRoleFromToken(request.cookies.get('token')?.value)

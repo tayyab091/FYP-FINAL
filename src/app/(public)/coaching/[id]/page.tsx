@@ -135,6 +135,7 @@ export default function TrainerDetailPage() {
   }, [id, loadReviews])
 
   const handleConnect = async () => {
+    if (!trainer) return
     if (!user) {
       toast.error('Please sign in to connect')
       router.push('/login')
@@ -142,7 +143,7 @@ export default function TrainerDetailPage() {
     }
     setConnecting(true)
     try {
-      const res = await fetch(`/api/relationships/request/${id}`, { method: 'POST', credentials: 'include' })
+      const res = await fetch(`/api/relationships/request/${trainer._id}`, { method: 'POST', credentials: 'include' })
       if (res.status === 409) { toast('Request already sent'); return }
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))

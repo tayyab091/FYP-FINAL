@@ -6,6 +6,7 @@ import { Activity } from 'lucide-react'
 
 const links = [
   { label: 'Trainers', href: '/coaching' },
+  { label: 'Gyms', href: '/gyms' },
   { label: 'Exercises', href: '/exercises' },
   { label: 'Form Checker', href: '/exercise-check' },
   { label: 'Nutrition', href: '/nutrition' },

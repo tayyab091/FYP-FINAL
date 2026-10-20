@@ -19,6 +19,7 @@ export default function SignupPage() {
   const router = useRouter()
   const [form, setForm] = useState({ fullName: '', email: '', password: '', confirmPassword: '', country: 'Pakistan' })
   const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [agreed, setAgreed] = useState(false)
@@ -105,6 +106,7 @@ export default function SignupPage() {
               label="Full Name"
               value={form.fullName}
               onChange={set('fullName')}
+              autoCapitalize="words"
               placeholder="Ali Hassan"
               required
               error={errors.fullName}
@@ -114,6 +116,9 @@ export default function SignupPage() {
               type="email"
               value={form.email}
               onChange={set('email')}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               placeholder="you@example.com"
               required
               error={errors.email}
@@ -139,12 +144,17 @@ export default function SignupPage() {
             />
             <AuthField
               label="Confirm Password"
-              type="password"
+              type={showConfirm ? 'text' : 'password'}
               value={form.confirmPassword}
               onChange={set('confirmPassword')}
               placeholder="Repeat password"
               required
               error={errors.confirmPassword}
+              trailing={
+                <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground" aria-label={showConfirm ? 'Hide confirm password' : 'Show confirm password'}>
+                  {showConfirm ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              }
             />
 
             <div>
@@ -199,6 +209,10 @@ export default function SignupPage() {
             Already have an account?{' '}
             <Link href="/login" className="font-medium text-primary hover:text-primary/80">Sign in</Link>
           </p>
+          <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+            <Link href="/register-trainer" className="hover:text-primary">Register as trainer</Link>
+            <Link href="/register-gym-owner" className="hover:text-primary">Register a gym</Link>
+          </div>
         </motion.div>
       </motion.div>
     </div>

@@ -98,8 +98,15 @@ export function NotificationBell() {
         setOpen(false)
       }
     }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
     document.addEventListener('mousedown', onClickOutside)
-    return () => document.removeEventListener('mousedown', onClickOutside)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onClickOutside)
+      document.removeEventListener('keydown', onKeyDown)
+    }
   }, [open])
 
   const handleOpen = async () => {
@@ -137,8 +144,10 @@ export function NotificationBell() {
       <button
         type="button"
         onClick={() => void handleOpen()}
-        aria-label="Notifications"
+        aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
         aria-expanded={open}
+        aria-controls="notifications-panel"
+        aria-haspopup="dialog"
         className="relative rounded-xl border border-white/[.09] bg-white/[.03] p-2 text-[#aaa] transition-colors hover:text-white"
       >
         <Bell className="h-5 w-5" />
@@ -150,7 +159,7 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-[calc(100%+.5rem)] z-50 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-white/[.09] bg-[#0b0e0c]/98 shadow-2xl backdrop-blur-2xl">
+        <div id="notifications-panel" role="dialog" aria-label="Notifications" className="fixed left-3 right-3 top-20 z-[80] w-auto max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl border border-white/[.09] bg-[#0b0e0c]/98 shadow-2xl backdrop-blur-2xl sm:absolute sm:left-auto sm:right-0 sm:top-[calc(100%+.5rem)] sm:w-[22rem]">
           <div className="flex items-center justify-between border-b border-white/[.06] px-4 py-3">
             <p className="text-sm font-bold text-white">Notifications</p>
             {unreadCount > 0 && (

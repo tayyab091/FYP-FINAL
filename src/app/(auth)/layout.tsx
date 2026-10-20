@@ -1,4 +1,6 @@
 import { Activity, BrainCircuit, ShieldCheck, Sparkles } from 'lucide-react'
+import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 
 const benefits = [
   { icon: BrainCircuit, label: 'AI-powered coaching and form analysis' },
@@ -42,7 +44,12 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
         <p className="relative text-xs text-[#59655e]">Built for ambitious people who want measurable progress.</p>
       </aside>
-      <div className="relative min-w-0">{children}</div>
+      <div className="relative min-w-0">
+        <Link href="/" className="absolute left-4 top-4 z-20 inline-flex items-center gap-1.5 rounded-full border border-white/[.08] bg-black/20 px-3 py-2 text-xs font-semibold text-muted-foreground backdrop-blur-xl hover:border-primary/25 hover:text-primary sm:left-6 sm:top-6">
+          <ArrowLeft className="size-3.5" /> Return home
+        </Link>
+        {children}
+      </div>
     </div>
   )
 }

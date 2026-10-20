@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { Camera, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -23,6 +24,19 @@ interface ProfileData {
   currentWeight: string
   targetWeight: string
   profileImage: string
+  goalMetricCurrent: string
+  goalMetricTarget: string
+  goalMetricUnit: string
+}
+
+const GOAL_METRICS: Record<string, { current: string; target: string; unit: string; help: string }> = {
+  weight_loss: { current: 'Current weight', target: 'Target weight', unit: 'kg', help: 'A steady, sustainable reduction in body weight.' },
+  muscle_gain: { current: 'Current weight', target: 'Target weight', unit: 'kg', help: 'Track weight alongside strength and performance gains.' },
+  fat_loss: { current: 'Current body fat', target: 'Target body fat', unit: '%', help: 'Focus on fat reduction while preserving lean muscle.' },
+  body_recomposition: { current: 'Current body fat', target: 'Target body fat', unit: '%', help: 'Reduce fat while building or maintaining muscle.' },
+  endurance: { current: 'Current 5K time', target: 'Target 5K time', unit: 'minutes', help: 'Use a consistent benchmark to measure cardiovascular progress.' },
+  flexibility: { current: 'Mobility sessions now', target: 'Weekly session target', unit: 'sessions/week', help: 'Measure consistency with mobility and flexibility work.' },
+  general_fitness: { current: 'Active minutes now', target: 'Weekly active-minute target', unit: 'minutes/week', help: 'Build a balanced movement habit you can sustain.' },
 }
 
 interface TrainerProfileData {
@@ -37,7 +51,7 @@ export default function SettingsPage() {
   const { user, isLoading: authLoading, logout, refreshUser } = useAuth()
   const [profile, setProfile] = useState<ProfileData>({
     fullName: '', email: '', country: '', bio: '', fitnessGoal: '', activityLevel: 'moderate',
-    currentWeight: '', targetWeight: '', profileImage: '',
+    currentWeight: '', targetWeight: '', profileImage: '', goalMetricCurrent: '', goalMetricTarget: '', goalMetricUnit: '',
   })
   const [passwords, setPasswords] = useState({ current: '', newPass: '', confirm: '' })
   const [loading, setLoading] = useState(true)
@@ -47,6 +61,9 @@ export default function SettingsPage() {
     specialty: '', bio: '', certifications: '', hourlyRate: '', experience: '',
   })
   const [savingTrainer, setSavingTrainer] = useState(false)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [photoPreview, setPhotoPreview] = useState('')
+  const photoInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!user) return
@@ -65,7 +82,11 @@ export default function SettingsPage() {
             currentWeight: u.currentWeight?.toString() || '',
             targetWeight: u.targetWeight?.toString() || '',
             profileImage: u.profileImage || '',
+            goalMetricCurrent: u.goalMetricCurrent?.toString() || '',
+            goalMetricTarget: u.goalMetricTarget?.toString() || '',
+            goalMetricUnit: u.goalMetricUnit || '',
           })
+          setPhotoPreview(u.profileImage || '')
         }
       })
       .finally(() => setLoading(false))
@@ -88,6 +109,44 @@ export default function SettingsPage() {
     }
   }, [user])
 
+  useEffect(() => () => {
+    if (photoPreview.startsWith('blob:')) URL.revokeObjectURL(photoPreview)
+  }, [photoPreview])
+
+  const uploadPhoto = async (file?: File) => {
+    if (!file) return
+    if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
+      toast.error('Choose a JPEG, PNG, WebP, or GIF image')
+      return
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error('Profile image must be 4MB or smaller')
+      return
+    }
+
+    const preview = URL.createObjectURL(file)
+    setPhotoPreview((current) => {
+      if (current.startsWith('blob:')) URL.revokeObjectURL(current)
+      return preview
+    })
+    setUploadingPhoto(true)
+    try {
+      const formData = new FormData()
+      formData.append('image', file)
+      const response = await fetch('/api/user/profile/image', { method: 'POST', body: formData })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.message || 'Upload failed')
+      setProfile((current) => ({ ...current, profileImage: data.url }))
+      setPhotoPreview(data.url)
+      toast.success('Photo uploaded. Save your profile to apply it.')
+    } catch (error) {
+      setPhotoPreview(profile.profileImage)
+      toast.error(error instanceof Error ? error.message : 'Photo upload failed')
+    } finally {
+      setUploadingPhoto(false)
+    }
+  }
+
   const saveProfile = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
@@ -104,13 +163,17 @@ export default function SettingsPage() {
           activityLevel: profile.activityLevel,
           currentWeight: profile.currentWeight ? parseFloat(profile.currentWeight) : undefined,
           targetWeight: profile.targetWeight ? parseFloat(profile.targetWeight) : undefined,
+          goalMetricCurrent: profile.goalMetricCurrent ? parseFloat(profile.goalMetricCurrent) : undefined,
+          goalMetricTarget: profile.goalMetricTarget ? parseFloat(profile.goalMetricTarget) : undefined,
+          goalMetricUnit: profile.goalMetricUnit,
         }),
       })
-      if (!res.ok) throw new Error()
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || 'Failed to update profile')
       toast.success('Profile updated!')
       await refreshUser()
-    } catch {
-      toast.error('Failed to update profile')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update profile')
     } finally {
       setSaving(false)
     }
@@ -154,10 +217,13 @@ export default function SettingsPage() {
           experience: trainerProfile.experience,
         }),
       })
-      if (!res.ok) throw new Error()
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || 'Failed to update trainer profile')
       toast.success('Trainer profile updated!')
-    } catch {
-      toast.error('Failed to update trainer profile')
+      setProfile((current) => ({ ...current, bio: trainerProfile.bio }))
+      await refreshUser()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update trainer profile')
     } finally {
       setSavingTrainer(false)
     }
@@ -170,6 +236,8 @@ export default function SettingsPage() {
     : user.role === 'trainer'
       ? ['profile', 'trainer', 'account']
       : ['profile', 'account']
+  const goalMetric = GOAL_METRICS[profile.fitnessGoal]
+  const usesWeightMetric = goalMetric?.unit === 'kg'
 
   return (
     <div className="min-h-screen pt-6 pb-28 px-4 sm:px-6">
@@ -184,7 +252,7 @@ export default function SettingsPage() {
           <TabsList className="mb-8">
             {settingsTabs.map(t => (
               <TabsTrigger key={t} value={t} className="capitalize">
-                {t === 'fitness' ? 'Fitness Goals' : t === 'account' ? 'Account' : t === 'trainer' ? 'Coach Profile' : 'Profile'}
+                {t === 'fitness' ? 'Fitness Goals' : t === 'account' ? 'Account' : t === 'trainer' ? 'Trainer Profile' : 'Profile'}
               </TabsTrigger>
             ))}
           </TabsList>
@@ -195,10 +263,34 @@ export default function SettingsPage() {
                 <CardHeader><CardTitle>Profile Information</CardTitle></CardHeader>
                 <CardContent>
                   <form onSubmit={saveProfile} className="space-y-4">
+                    <div className="flex flex-col gap-4 rounded-2xl border border-white/[.07] bg-white/[.025] p-4 sm:flex-row sm:items-center">
+                      <div
+                        className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-primary/15 bg-primary/[.08] bg-cover bg-center text-xl font-black text-primary"
+                        style={photoPreview ? { backgroundImage: `url(${photoPreview})` } : undefined}
+                        aria-label="Profile photo preview"
+                      >
+                        {!photoPreview && (profile.fullName.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase() || <Camera className="size-6" />)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold">Profile photo</p>
+                        <p className="mt-1 text-xs text-muted-foreground">JPEG, PNG, WebP, or GIF · maximum 4MB</p>
+                        <input
+                          ref={photoInputRef}
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/gif"
+                          className="sr-only"
+                          onChange={(event) => void uploadPhoto(event.target.files?.[0])}
+                        />
+                        <Button type="button" variant="outline" size="sm" className="mt-3 gap-2" disabled={uploadingPhoto} onClick={() => photoInputRef.current?.click()}>
+                          <Upload className="size-3.5" /> {uploadingPhoto ? 'Uploading…' : 'Choose photo'}
+                        </Button>
+                      </div>
+                    </div>
                     <div>
                       <Label htmlFor="fullName">Full Name</Label>
                       <Input id="fullName" value={profile.fullName}
                         onChange={e => setProfile(p => ({ ...p, fullName: e.target.value }))}
+                        autoCapitalize="words"
                         className="mt-1 bg-background border-border" />
                     </div>
                     <div>
@@ -212,18 +304,17 @@ export default function SettingsPage() {
                         onChange={e => setProfile(p => ({ ...p, country: e.target.value }))}
                         className="mt-1 bg-background border-border" />
                     </div>
-                    <div>
-                      <Label htmlFor="bio">Bio</Label>
-                      <Input id="bio" value={profile.bio}
-                        onChange={e => setProfile(p => ({ ...p, bio: e.target.value }))}
-                        className="mt-1 bg-background border-border" placeholder="Tell us about yourself" />
-                    </div>
-                    <div>
-                      <Label htmlFor="profileImage">Profile Image URL</Label>
-                      <Input id="profileImage" value={profile.profileImage}
-                        onChange={e => setProfile(p => ({ ...p, profileImage: e.target.value }))}
-                        className="mt-1 bg-background border-border" />
-                    </div>
+                    {user.role !== 'trainer' && (
+                      <div>
+                        <div className="flex items-center justify-between gap-3">
+                          <Label htmlFor="bio">{user.role === 'gym_owner' ? 'Gym Owner Bio' : 'Bio'}</Label>
+                          <span className="text-[11px] text-muted-foreground">{profile.bio.length}/500 characters</span>
+                        </div>
+                        <textarea id="bio" value={profile.bio} maxLength={500} rows={4}
+                          onChange={e => setProfile(p => ({ ...p, bio: e.target.value }))}
+                          className="mt-1 w-full resize-y rounded-xl border border-white/[.09] bg-black/20 px-3.5 py-3 text-sm outline-none focus:border-primary/45 focus:ring-3 focus:ring-primary/10" placeholder="Tell the community about yourself" />
+                      </div>
+                    )}
                     <Button type="submit" disabled={saving} className="bg-primary text-black hover:brightness-95 w-full">
                       {saving ? 'Saving...' : 'Save Profile'}
                     </Button>
@@ -242,10 +333,15 @@ export default function SettingsPage() {
                     <div>
                       <Label htmlFor="fitnessGoal">Primary Goal</Label>
                       <FormSelect id="fitnessGoal" value={profile.fitnessGoal}
-                        onChange={e => setProfile(p => ({ ...p, fitnessGoal: e.target.value }))}
+                        onChange={e => {
+                          const fitnessGoal = e.target.value
+                          setProfile(p => ({ ...p, fitnessGoal, goalMetricUnit: GOAL_METRICS[fitnessGoal]?.unit || '' }))
+                        }}
                         className="mt-1">
                         <option value="">Select a goal</option>
                         <option value="weight_loss">Weight Loss</option>
+                        <option value="fat_loss">Fat Loss</option>
+                        <option value="body_recomposition">Body Recomposition</option>
                         <option value="muscle_gain">Muscle Gain</option>
                         <option value="endurance">Endurance</option>
                         <option value="flexibility">Flexibility</option>
@@ -263,20 +359,33 @@ export default function SettingsPage() {
                         <option value="very_active">Very Active</option>
                       </FormSelect>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="currentWeight">Current Weight (kg)</Label>
-                        <Input id="currentWeight" type="number" step="0.1" value={profile.currentWeight}
-                          onChange={e => setProfile(p => ({ ...p, currentWeight: e.target.value }))}
-                          className="mt-1 bg-background border-border" />
+                    {goalMetric ? (
+                      <div className="rounded-2xl border border-primary/15 bg-primary/[.035] p-4">
+                        <p className="mb-4 text-xs leading-relaxed text-muted-foreground">{goalMetric.help}</p>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div>
+                            <Label htmlFor="goalMetricCurrent">{goalMetric.current} ({goalMetric.unit})</Label>
+                            <Input id="goalMetricCurrent" type="number" min="0" step="0.1"
+                              value={usesWeightMetric ? profile.currentWeight : profile.goalMetricCurrent}
+                              onChange={e => setProfile(p => usesWeightMetric
+                                ? ({ ...p, currentWeight: e.target.value })
+                                : ({ ...p, goalMetricCurrent: e.target.value, goalMetricUnit: goalMetric.unit }))}
+                              className="mt-1 bg-background border-border" />
+                          </div>
+                          <div>
+                            <Label htmlFor="goalMetricTarget">{goalMetric.target} ({goalMetric.unit})</Label>
+                            <Input id="goalMetricTarget" type="number" min="0" step="0.1"
+                              value={usesWeightMetric ? profile.targetWeight : profile.goalMetricTarget}
+                              onChange={e => setProfile(p => usesWeightMetric
+                                ? ({ ...p, targetWeight: e.target.value })
+                                : ({ ...p, goalMetricTarget: e.target.value, goalMetricUnit: goalMetric.unit }))}
+                              className="mt-1 bg-background border-border" />
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <Label htmlFor="targetWeight">Target Weight (kg)</Label>
-                        <Input id="targetWeight" type="number" step="0.1" value={profile.targetWeight}
-                          onChange={e => setProfile(p => ({ ...p, targetWeight: e.target.value }))}
-                          className="mt-1 bg-background border-border" />
-                      </div>
-                    </div>
+                    ) : (
+                      <p className="rounded-xl border border-dashed border-white/[.09] px-4 py-3 text-xs text-muted-foreground">Choose a goal to see the most relevant progress measurements.</p>
+                    )}
                     <Button type="submit" disabled={saving} className="bg-primary text-black hover:brightness-95 w-full">
                       {saving ? 'Saving...' : 'Save Goals'}
                     </Button>
@@ -289,7 +398,7 @@ export default function SettingsPage() {
           {user.role === 'trainer' && <TabsContent value="trainer">
             {loading ? <Skeleton className="h-64 bg-muted" /> : (
               <Card>
-                <CardHeader><CardTitle>Coach Profile</CardTitle></CardHeader>
+                <CardHeader><CardTitle>Trainer Profile</CardTitle></CardHeader>
                 <CardContent>
                   <form onSubmit={saveTrainerProfile} className="space-y-4">
                     <div>
@@ -298,12 +407,17 @@ export default function SettingsPage() {
                         onChange={e => setTrainerProfile(p => ({ ...p, specialty: e.target.value }))}
                         className="mt-1 bg-background border-border"
                         placeholder="Strength Training, HIIT, Nutrition" />
+                      <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">Specialties help clients find you in marketplace filters. Add only services you actively coach.</p>
                     </div>
                     <div>
-                      <Label htmlFor="trainerBio">Bio</Label>
-                      <Input id="trainerBio" value={trainerProfile.bio}
+                      <div className="flex items-center justify-between gap-3">
+                        <Label htmlFor="trainerBio">Trainer Bio</Label>
+                        <span className="text-[11px] text-muted-foreground">{trainerProfile.bio.length}/500 characters</span>
+                      </div>
+                      <textarea id="trainerBio" value={trainerProfile.bio} maxLength={500} rows={5}
                         onChange={e => setTrainerProfile(p => ({ ...p, bio: e.target.value }))}
-                        className="mt-1 bg-background border-border" />
+                        className="mt-1 w-full resize-y rounded-xl border border-white/[.09] bg-black/20 px-3.5 py-3 text-sm outline-none focus:border-primary/45 focus:ring-3 focus:ring-primary/10"
+                        placeholder="Share your coaching philosophy, experience, and the clients you help." />
                     </div>
                     <div>
                       <Label htmlFor="certifications">Certifications (comma-separated)</Label>
@@ -328,7 +442,7 @@ export default function SettingsPage() {
                       </div>
                     </div>
                     <Button type="submit" disabled={savingTrainer} className="bg-primary text-black hover:brightness-95 w-full">
-                      {savingTrainer ? 'Saving...' : 'Save Coach Profile'}
+                      {savingTrainer ? 'Saving...' : 'Save Trainer Profile'}
                     </Button>
                   </form>
                 </CardContent>

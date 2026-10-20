@@ -16,6 +16,7 @@ interface ExerciseDetail {
   equipment: string
   difficulty: string
   gifUrl: string
+  media?: string[]
   instructions: string
   sets: number | string
   reps: string
@@ -61,6 +62,14 @@ export default function ExerciseDetailPage() {
       </div>
     )
   }
+
+  const media = [...new Set([exercise.gifUrl, ...(exercise.media || [])].filter(Boolean))]
+  const visualSource = media[0]
+  const techniqueViews = [
+    { title: 'Full movement', note: 'Watch the complete rep and tempo.', source: media[0], fit: 'contain' as const, imageClassName: '' },
+    { title: 'Setup & alignment', note: 'Check posture before every repetition.', source: media[1] || visualSource, fit: 'cover' as const, imageClassName: 'scale-110 object-top' },
+    { title: 'Range of motion', note: 'Control the working phase from start to finish.', source: media[2] || visualSource, fit: 'cover' as const, imageClassName: 'scale-110 object-bottom' },
+  ]
 
   return (
     <div className="min-h-screen pt-28 pb-24 px-4 sm:px-6">
@@ -108,6 +117,37 @@ export default function ExerciseDetailPage() {
               <div className="flex flex-wrap gap-3">
                 <FitnessBadge variant="sets">{exercise.sets} sets</FitnessBadge>
                 <FitnessBadge variant="reps">{exercise.reps}</FitnessBadge>
+              </div>
+
+              <div>
+                <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+                  <div>
+                    <h2 className="font-bold text-white">Technique views</h2>
+                    <p className="mt-1 text-xs text-muted-foreground">Use the animated angles to check setup, alignment, and range.</p>
+                  </div>
+                  <span className="workout-label text-primary">Form first</span>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {techniqueViews.map(view => (
+                    <div key={view.title} className="overflow-hidden rounded-xl border border-border bg-black/20">
+                      <CatalogImageFrame
+                        src={view.source}
+                        alt={`${exercise.name}: ${view.title}`}
+                        variant="card"
+                        fit={view.fit}
+                        hasError={imgError}
+                        onError={() => setImgError(true)}
+                        className="h-36 max-h-36 aspect-[4/3]"
+                        imageClassName={view.imageClassName}
+                        fallback={<Dumbbell className="size-8 text-primary/50" />}
+                      />
+                      <div className="p-3">
+                        <p className="text-sm font-semibold text-white">{view.title}</p>
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{view.note}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {exercise.bodyParts && exercise.bodyParts.length > 0 && (

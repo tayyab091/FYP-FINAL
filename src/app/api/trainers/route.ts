@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { connectDB } from '@/lib/mongodb'
+import { connectDBWithTimeout } from '@/lib/mongodb'
 import Trainer from '@/models/Trainer'
+import { createPublicSlug } from '@/lib/slug'
 
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
@@ -11,11 +12,15 @@ const FALLBACK_TRAINERS = [
   { _id: 'f4', name: 'Fatima Rizvi', specialty: ['HIIT', 'Cardio', 'Postnatal'], country: 'Pakistan', rating: 4.9, bio: 'Specializing in HIIT and postnatal fitness. Online sessions available.', isFullyVerified: true, isFeatured: false, profileImage: 'https://randomuser.me/api/portraits/women/4.jpg', gymName: 'Ladies Fitness Club' },
   { _id: 'f5', name: 'Bilal Ahmed', specialty: ['CrossFit'], country: 'Pakistan', rating: 4.6, bio: 'CrossFit Level 2 certified. Training athletes and beginners since 2019.', isFullyVerified: true, isFeatured: false, profileImage: 'https://randomuser.me/api/portraits/men/5.jpg', gymName: 'CrossFit Lahore' },
   { _id: 'f6', name: 'Zara Malik', specialty: ['Yoga', 'Meditation', 'Wellness'], country: 'Pakistan', rating: 4.8, bio: '300-hour certified yoga instructor and wellness coach. Mind-body connection specialist.', isFullyVerified: true, isFeatured: false, profileImage: 'https://randomuser.me/api/portraits/women/6.jpg', gymName: 'Zen Wellness Studio' },
-].map((trainer) => ({ ...trainer, isFallback: true }))
+].map((trainer) => ({
+  ...trainer,
+  slug: createPublicSlug(trainer.name, trainer._id),
+  isFallback: true,
+}))
 
 export async function GET(req: NextRequest) {
   try {
-    await connectDB()
+    await connectDBWithTimeout(4000)
     const { searchParams } = req.nextUrl
     const specialty = searchParams.get('specialty')
     const country = searchParams.get('country')
@@ -52,7 +57,10 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({
-      trainers,
+      trainers: trainers.map(trainer => ({
+        ...trainer,
+        slug: createPublicSlug(trainer.name, trainer._id.toString()),
+      })),
       meta: { source: 'database', connectable: true },
     })
   } catch (error) {

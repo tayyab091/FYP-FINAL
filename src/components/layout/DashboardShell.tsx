@@ -38,6 +38,7 @@ interface NavItem {
 
 const consumerExtras: NavItem[] = [
   { label: 'Find Trainers', href: '/coaching', icon: Users },
+  { label: 'Find Gyms', href: '/gyms', icon: Building2 },
   { label: 'Exercise Library', href: '/exercises', icon: Dumbbell },
   { label: 'AI Form Checker', href: '/exercise-check', icon: ScanLine },
 ]
@@ -107,6 +108,7 @@ const pageTitles: Record<string, string> = {
   '/exercises': 'Exercise Library',
   '/exercise-check': 'AI Form Checker',
   '/coaching': 'Find Trainers',
+  '/gyms': 'Find Gyms',
   '/chat': 'Messages',
   '/live-sessions': 'Live Sessions',
   '/notifications': 'Notifications',
@@ -156,7 +158,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           Workspace
         </p>
       </div>
-      <nav className="mt-3 flex-1 space-y-1 overflow-y-auto px-3">
+      <nav className="mt-3 flex-1 space-y-1 overflow-y-auto overscroll-contain px-3">
         {items.map((item) => {
           const active = isNavActive(pathname, item, currentTab)
           const Icon = item.icon
@@ -224,6 +226,20 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
   useEffect(() => setMobileOpen(false), [pathname])
 
+  useEffect(() => {
+    if (!mobileOpen) return
+    const previousOverflow = document.body.style.overflow
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileOpen(false)
+    }
+    document.body.style.overflow = 'hidden'
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [mobileOpen])
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -249,6 +265,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             onClick={() => setMobileOpen(true)}
             className="rounded-xl border border-white/[.09] bg-white/[.03] p-2 text-[#aaa] hover:text-white lg:hidden"
             aria-label="Open dashboard navigation"
+            aria-expanded={mobileOpen}
+            aria-controls="dashboard-mobile-navigation"
           >
             <Menu className="h-5 w-5" />
           </button>
@@ -274,7 +292,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="absolute inset-y-0 left-0 w-[86%] max-w-sm border-r border-white/10 shadow-2xl">
+          <aside id="dashboard-mobile-navigation" aria-label="Dashboard navigation" className="absolute inset-y-0 left-0 w-[86%] max-w-sm border-r border-white/10 shadow-2xl">
             <button
               type="button"
               onClick={() => setMobileOpen(false)}

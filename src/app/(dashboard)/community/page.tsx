@@ -220,7 +220,7 @@ export default function CommunityPage() {
                       {new Date(post.createdAt).toLocaleString()}
                     </time>
                   </div>
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-[#c8d0cb]">
+                  <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-sm leading-relaxed text-[#c8d0cb]">
                     {post.content}
                   </p>
                   <div className="mt-4 flex items-center gap-3">

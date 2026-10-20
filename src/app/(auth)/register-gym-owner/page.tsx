@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { toast } from 'sonner'
+import { Eye, EyeOff } from 'lucide-react'
 
 const COUNTRIES = ['Pakistan', 'UAE', 'Saudi Arabia', 'UK', 'USA', 'Canada', 'Australia', 'Germany', 'France', 'India']
 
@@ -21,6 +22,7 @@ export default function RegisterGymOwnerPage() {
     gymDescription: '',
   })
   const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -102,6 +104,7 @@ export default function RegisterGymOwnerPage() {
               <div key={field}>
                 <label className="block text-sm font-medium text-muted-foreground mb-1.5">{label}</label>
                 <input type={type} value={form[field]} onChange={set(field)} placeholder={placeholder} required
+                  autoCapitalize={field === 'email' ? 'none' : 'words'} autoCorrect={field === 'email' ? 'off' : undefined} spellCheck={field === 'email' ? false : undefined}
                   className="w-full bg-background border border-border rounded-xl px-4 py-3 text-white text-sm placeholder:text-muted-foreground outline-none focus:border-primary transition-colors" />
                 {errors[field] && <p className="text-red-400 text-xs mt-1">{errors[field]}</p>}
               </div>
@@ -112,15 +115,18 @@ export default function RegisterGymOwnerPage() {
               <div className="relative">
                 <input type={showPassword ? 'text' : 'password'} value={form.password} onChange={set('password')} placeholder="Min. 8 characters" required
                   className="w-full bg-background border border-border rounded-xl px-4 py-3 pr-12 text-white text-sm placeholder:text-muted-foreground outline-none focus:border-primary transition-colors" />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-lg">{showPassword ? '🙈' : '👁️'}</button>
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-label={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}</button>
               </div>
               {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password}</p>}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-muted-foreground mb-1.5">Confirm Password</label>
-              <input type="password" value={form.confirmPassword} onChange={set('confirmPassword')} placeholder="Repeat password" required
-                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-white text-sm placeholder:text-muted-foreground outline-none focus:border-primary transition-colors" />
+              <div className="relative">
+                <input type={showConfirm ? 'text' : 'password'} value={form.confirmPassword} onChange={set('confirmPassword')} placeholder="Repeat password" required
+                  className="w-full bg-background border border-border rounded-xl px-4 py-3 pr-12 text-white text-sm placeholder:text-muted-foreground outline-none focus:border-primary transition-colors" />
+                <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-label={showConfirm ? 'Hide confirm password' : 'Show confirm password'}>{showConfirm ? <EyeOff className="size-4" /> : <Eye className="size-4" />}</button>
+              </div>
               {errors.confirmPassword && <p className="text-red-400 text-xs mt-1">{errors.confirmPassword}</p>}
             </div>
 

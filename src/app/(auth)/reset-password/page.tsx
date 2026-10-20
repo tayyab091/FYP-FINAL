@@ -7,7 +7,7 @@ import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import { AuthField } from '@/components/auth/AuthField'
 import { Button } from '@/components/ui/button'
-import { KeyRound } from 'lucide-react'
+import { Eye, EyeOff, KeyRound } from 'lucide-react'
 import { easeTransition, fadeUp } from '@/lib/motion'
 import { Suspense } from 'react'
 import { PageLoader } from '@/components/shared/PageLoader'
@@ -19,6 +19,8 @@ function ResetPasswordForm() {
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -92,19 +94,21 @@ function ResetPasswordForm() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <AuthField
                 label="New password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Min. 8 characters"
                 required
+                trailing={<button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-label={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}</button>}
               />
               <AuthField
                 label="Confirm password"
-                type="password"
+                type={showConfirm ? 'text' : 'password'}
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 placeholder="Repeat password"
                 required
+                trailing={<button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-label={showConfirm ? 'Hide confirm password' : 'Show confirm password'}>{showConfirm ? <EyeOff className="size-4" /> : <Eye className="size-4" />}</button>}
               />
               <Button type="submit" disabled={loading} className="w-full py-3 text-sm font-bold">
                 {loading ? 'Saving…' : 'Reset password'}

@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/mongodb'
 import { getUser } from '@/lib/auth'
 import Gym from '@/models/Gym'
 import { gymUpdateSchema, parseJsonBody } from '@/lib/validation'
+import { createPublicSlug } from '@/lib/slug'
 
 export async function GET(req: NextRequest) {
   try {
@@ -38,12 +39,19 @@ export async function PUT(req: NextRequest) {
       { ownerId: tokenUser.userId },
       {
         name: body.name,
+        slug: createPublicSlug(body.name, tokenUser.userId),
         address: body.address,
+        city: body.city || '',
         country: body.country || 'Pakistan',
         description: body.description || '',
         phone: body.phone || '',
         email: body.email || '',
         logo: body.logo || '',
+        facilities: body.facilities || [],
+        images: body.images || [],
+        ...(body.latitude !== undefined && body.longitude !== undefined
+          ? { location: { type: 'Point', coordinates: [body.longitude, body.latitude] } }
+          : {}),
       },
       { new: true, runValidators: true },
     )

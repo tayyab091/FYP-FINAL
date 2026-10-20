@@ -28,13 +28,13 @@ const nextConfig: NextConfig = {
       "frame-ancestors 'self'",
       "form-action 'self'",
       // Next.js / MediaPipe / Daily need inline + eval in places; tighten further with nonces later.
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.daily.co",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.daily.co https://maps.googleapis.com https://maps.gstatic.com",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
       "connect-src 'self' https: wss: ws:",
       "media-src 'self' blob: https:",
-      "frame-src 'self' https://js.stripe.com https://*.daily.co https://*.stripe.com",
+      "frame-src 'self' https://js.stripe.com https://*.daily.co https://*.stripe.com https://www.google.com https://maps.google.com",
       "worker-src 'self' blob:",
     ].join('; ')
 
@@ -46,7 +46,7 @@ const nextConfig: NextConfig = {
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-          { key: 'Permissions-Policy', value: 'camera=(self), microphone=(self), geolocation=()' },
+          { key: 'Permissions-Policy', value: 'camera=(self), microphone=(self), geolocation=(self)' },
         ],
       },
       {

@@ -22,11 +22,16 @@ import { StaggerChildren } from '@/components/motion'
 interface GymDetails {
   name: string
   address: string
+  city: string
   country: string
   description: string
   phone: string
   email: string
   logo: string
+  latitude: string
+  longitude: string
+  facilities: string
+  images: string
   verificationStatus?: string
 }
 
@@ -40,11 +45,16 @@ export default function GymOwnerPage() {
   const [gym, setGym] = useState<GymDetails>({
     name: '',
     address: '',
+    city: '',
     country: 'Pakistan',
     description: '',
     phone: '',
     email: '',
     logo: '',
+    latitude: '',
+    longitude: '',
+    facilities: '',
+    images: '',
   })
 
   const loadTrainers = () => {
@@ -63,11 +73,16 @@ export default function GymOwnerPage() {
         setGym({
           name: data.name || '',
           address: data.address || '',
+          city: data.city || '',
           country: data.country || 'Pakistan',
           description: data.description || '',
           phone: data.phone || '',
           email: data.email || '',
           logo: data.logo || '',
+          latitude: data.location?.coordinates?.[1]?.toString() || '',
+          longitude: data.location?.coordinates?.[0]?.toString() || '',
+          facilities: Array.isArray(data.facilities) ? data.facilities.join(', ') : '',
+          images: Array.isArray(data.images) ? data.images.join(', ') : '',
           verificationStatus: data.verificationStatus,
         })
       })
@@ -121,11 +136,17 @@ export default function GymOwnerPage() {
       const res = await fetch('/api/gym-owner/gym', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(gym),
+        body: JSON.stringify({
+          ...gym,
+          latitude: gym.latitude ? Number(gym.latitude) : undefined,
+          longitude: gym.longitude ? Number(gym.longitude) : undefined,
+          facilities: gym.facilities.split(',').map((item) => item.trim()).filter(Boolean),
+          images: gym.images.split(',').map((item) => item.trim()).filter(Boolean),
+        }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.message)
-      setGym((current) => ({ ...current, ...data.gym }))
+      loadGym()
       toast.success('Gym details updated')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to update gym')
@@ -203,10 +224,13 @@ export default function GymOwnerPage() {
                   {[
                     { key: 'name', label: 'Gym Name', required: true },
                     { key: 'address', label: 'Address', required: true },
+                    { key: 'city', label: 'City', required: false },
                     { key: 'country', label: 'Country', required: false },
                     { key: 'phone', label: 'Phone', required: false },
                     { key: 'email', label: 'Email', required: false },
                     { key: 'logo', label: 'Logo URL', required: false },
+                    { key: 'latitude', label: 'Latitude', required: false },
+                    { key: 'longitude', label: 'Longitude', required: false },
                   ].map((field) => (
                     <div key={field.key}>
                       <Label htmlFor={`gym-${field.key}`}>{field.label}</Label>
@@ -232,6 +256,15 @@ export default function GymOwnerPage() {
                       rows={4}
                       className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
                     />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Label htmlFor="gym-facilities">Facilities (comma-separated)</Label>
+                    <Input id="gym-facilities" value={gym.facilities} onChange={(event) => setGym((current) => ({ ...current, facilities: event.target.value }))} placeholder="Strength floor, Cardio zone, Showers" className="mt-1 bg-background border-border" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Label htmlFor="gym-images">Gallery image URLs (comma-separated)</Label>
+                    <textarea id="gym-images" value={gym.images} onChange={(event) => setGym((current) => ({ ...current, images: event.target.value }))} rows={2} placeholder="https://…/gym-floor.jpg, https://…/studio.jpg" className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary" />
+                    <p className="mt-1 text-[11px] text-muted-foreground">Add coordinates and HTTPS images to improve your Google Map and public marketplace listing.</p>
                   </div>
                   <div className="sm:col-span-2 flex items-center justify-between gap-3">
                     <Badge variant="outline" className="capitalize">

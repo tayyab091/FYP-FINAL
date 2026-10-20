@@ -17,9 +17,18 @@ export function Navbar() {
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
-    window.addEventListener('scroll', onScroll)
+    window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenuOpen(false)
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [menuOpen])
 
   useEffect(() => {
     setMenuOpen(false)
@@ -35,6 +44,7 @@ export function Navbar() {
 
   const navLinks = [
     { label: 'Find Trainers', href: '/coaching' },
+    { label: 'Find Gyms', href: '/gyms' },
     { label: 'Exercises', href: '/exercises' },
     { label: 'Form Checker', href: '/exercise-check' },
     { label: 'Nutrition', href: '/nutrition' },
@@ -52,7 +62,7 @@ export function Navbar() {
   }
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-4 sm:px-6 ${
+    <nav aria-label="Primary navigation" className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-4 sm:px-6 ${
       scrolled ? 'py-3' : 'py-5'
     }`}>
       <div className={`max-w-6xl mx-auto flex items-center justify-between rounded-2xl px-4 transition-all duration-300 ${
@@ -73,6 +83,7 @@ export function Navbar() {
             const active = pathname.startsWith(l.href)
             return (
               <Link key={l.href} href={l.href}
+                aria-current={active ? 'page' : undefined}
                 className={`relative rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
                   active ? 'text-primary' : 'text-muted-foreground hover:bg-white/[.04] hover:text-white'
                 }`}>
@@ -125,6 +136,7 @@ export function Navbar() {
           type="button"
           aria-label={menuOpen ? 'Close navigation' : 'Open navigation'}
           aria-expanded={menuOpen}
+          aria-controls="mobile-navigation"
           className="flex size-10 items-center justify-center rounded-xl border border-white/[.08] bg-white/[.035] text-white md:hidden"
           onClick={() => setMenuOpen(!menuOpen)}
         >
@@ -135,6 +147,7 @@ export function Navbar() {
       <AnimatePresence>
         {menuOpen && (
           <motion.div
+            id="mobile-navigation"
             initial={reduceMotion ? false : { opacity: 0, y: -12, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={reduceMotion ? undefined : { opacity: 0, y: -8, scale: 0.98 }}
@@ -149,6 +162,7 @@ export function Navbar() {
                 transition={{ ...easeTransition, delay: i * 0.04 }}
               >
                 <Link href={l.href} onClick={() => setMenuOpen(false)}
+                  aria-current={pathname.startsWith(l.href) ? 'page' : undefined}
                   className={`block rounded-xl px-3 py-2.5 text-sm font-bold ${
                     pathname.startsWith(l.href) ? 'bg-primary/[.1] text-primary' : 'text-[#a0aaa4] hover:bg-white/[.04] hover:text-white'
                   }`}>

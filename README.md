@@ -15,6 +15,7 @@ Full-stack fitness coaching platform built as a Final Year Project. Members conn
 | Uploads | **Vercel Blob** (chat images) |
 | UI | Tailwind CSS 4, shadcn/ui, Recharts, Framer Motion |
 | AI | Google Gemini (chatbot, nutrition hints) |
+| Maps | Google Maps Embed + Places Nearby Search |
 | Pose | MediaPipe Pose (exercise form checker) |
 | Payments | Stripe Checkout (test mode) with simulated fallback when keys unset |
 | Email | SMTP via nodemailer (console link fallback in development) |
@@ -23,6 +24,7 @@ Full-stack fitness coaching platform built as a Final Year Project. Members conn
 ## Features
 
 - **Trainer marketplace** — Browse, filter, and connect with verified coaches
+- **Gym marketplace** — Search gyms, browse profiles, and discover nearby places on Google Maps
 - **Coaching relationships** — Request / accept flow with permission flags
 - **Workout plans** — Trainers create weekly schedules; clients complete sessions with history & streaks
 - **Nutrition tracking** — Food search, meal logging, personalized calorie targets
@@ -77,8 +79,10 @@ Optional integrations (see `.env.example`):
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth |
 | `PUSHER_*` / `NEXT_PUBLIC_PUSHER_*` | Realtime chat + notifications |
 | `DAILY_API_KEY` | Elite live video rooms |
-| `BLOB_READ_WRITE_TOKEN` | Chat image uploads (Vercel Blob) |
-| `GEMINI_API_KEY` | AI chatbot |
+| `BLOB_READ_WRITE_TOKEN` | Chat + profile image uploads (Vercel Blob) |
+| `GEMINI_API_KEY` / `GEMINI_MODEL` | Goal-aware AI chatbot (local fallback when unset) |
+| `GOOGLE_MAPS_API_KEY` | Server-side Google Places nearby-gym search |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Google Maps embeds in the browser |
 | `SPOONACULAR_API_KEY` | Enhanced food search |
 
 3. **Run development server**
@@ -140,6 +144,7 @@ Additional trainers: `sarah@test.com`, `usman@test.com`, `fatima@test.com`, `bil
 | Path | Description |
 |------|-------------|
 | `/coaching` | Trainer marketplace |
+| `/gyms` | Gym marketplace, profiles, map, and nearby search |
 | `/my-fitness` | Member hub (workout, history, nutrition, progress) |
 | `/meal-plans` | Personalized meal plans (Pro+) |
 | `/analytics` | Advanced analytics (Pro+) |

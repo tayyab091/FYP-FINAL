@@ -14,7 +14,7 @@ export function isBlobConfigured(): boolean {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN)
 }
 
-export async function uploadChatImage(file: File): Promise<{ url: string }> {
+async function uploadImage(file: File, folder: 'chat' | 'profiles'): Promise<{ url: string }> {
   if (!ALLOWED_MIME.has(file.type)) {
     throw new Error('Only JPEG, PNG, WebP, and GIF images are allowed')
   }
@@ -26,11 +26,19 @@ export async function uploadChatImage(file: File): Promise<{ url: string }> {
   }
 
   const ext = EXT_BY_MIME[file.type] || 'jpg'
-  const filename = `chat/${crypto.randomUUID()}.${ext}`
+  const filename = `${folder}/${crypto.randomUUID()}.${ext}`
   const blob = await put(filename, file, {
     access: 'public',
     contentType: file.type,
   })
 
   return { url: blob.url }
+}
+
+export function uploadChatImage(file: File): Promise<{ url: string }> {
+  return uploadImage(file, 'chat')
+}
+
+export function uploadProfileImage(file: File): Promise<{ url: string }> {
+  return uploadImage(file, 'profiles')
 }
