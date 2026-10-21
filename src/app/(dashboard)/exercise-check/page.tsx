@@ -1,5 +1,4 @@
-import { ExerciseCheckGate } from '@/components/exercise/ExerciseCheckGate'
-import { ExerciseCheckSteps } from '@/components/exercise/ExerciseCheckSteps'
+import { ExerciseCheckContent } from '@/components/exercise/ExerciseCheckGate'
 import { PageHero, PageShell } from '@/components/layout/PageShell'
 
 export default function ExerciseCheckPage() {
@@ -12,8 +11,7 @@ export default function ExerciseCheckPage() {
         tagline="REP BY REP · ANGLE BY ANGLE"
         className="text-center"
       />
-      <ExerciseCheckGate />
-      <ExerciseCheckSteps />
+      <ExerciseCheckContent />
     </PageShell>
   )
 }

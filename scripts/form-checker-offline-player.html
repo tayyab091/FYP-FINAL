@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+  <head><meta charset="utf-8" /><title>offline video</title></head>
+  <body>
+    <video id="v" muted playsinline crossorigin="anonymous"></video>
+    <script>
+      const params = new URLSearchParams(location.search)
+      const src = params.get('src')
+      const v = document.getElementById('v')
+      v.src = src
+      v.addEventListener('loadedmetadata', () => {
+        window.__videoReady = { duration: v.duration, width: v.videoWidth, height: v.videoHeight }
+      }, { once: true })
+      v.addEventListener('error', () => { window.__videoError = true }, { once: true })
+      v.load()
+    </script>
+  </body>
+</html>

@@ -17,7 +17,7 @@
 | Trainer reviews | ✅ Working | |
 | Relationships / coaching requests | ✅ Working | |
 | Chat (REST + optional Pusher) | ✅ Working | Send/list/typing OK; poll fallback without Pusher |
-| Chat image upload (Vercel Blob) | 🧩 Cannot run | Needs `BLOB_READ_WRITE_TOKEN` |
+| Chat image upload (Cloudinary) | ⚠️ Partial | Needs `CLOUDINARY_*` for end-to-end upload |
 | Notifications | ✅ Working | List/read; push needs Pusher |
 | Nutrition logging / meals | ✅ Working | |
 | Nutrition analyze | ✅ Working | `GET ?query=` |
@@ -29,11 +29,11 @@
 | Personalized meal plans | ✅ Working | Generate + list (Pro+) |
 | Advanced analytics | ✅ Working | Summary charts (Pro+) |
 | Community feed | ✅ Working | Posts create/list (Basic+) |
-| Live training sessions | ⚠️ Partial | List/UI/gating OK; **create/join video** needs `DAILY_API_KEY` |
+| Live training sessions | ✅ Working | List/UI/gating OK; create/join use **Jitsi Meet** |
 | Gamification | ✅ Working | |
 | Seed / admin setup | ✅ Working | Env-gated |
 | MongoDB connectivity (Windows) | ✅ Working | SRV workaround in `mongodb.ts` |
-| Vercel realtime stack docs | ✅ Working | Pusher / Daily / Blob — see `docs/REALTIME_CHAT.md` |
+| Vercel realtime stack docs | ✅ Working | Pusher / Jitsi / Cloudinary — see `docs/REALTIME_CHAT.md` |
 
 ## Legend
 
@@ -59,12 +59,12 @@
 2. ~~Client Mongoose leak via `subscription.ts`~~ — **fixed**  
 3. ~~Dual middleware + proxy~~ — **fixed** (proxy only)  
 4. ~~Legacy `/progress` & `/workout-plans` 404~~ — **redirected** to `/my-fitness`  
-5. Optional SaaS keys (Pusher, Daily, Blob, Google, SMTP, live Stripe) — **documented**, not inventable  
+5. Optional SaaS keys (Pusher, Cloudinary, Google, SMTP, live Stripe) — **documented**, not inventable  
 6. Recurring Stripe Subscriptions vs one-time Checkout — still one-time payment model (known product limit)
 
 ## Priority if continuing
 
-1. Provision Pusher / Daily / Blob for production Vercel demos  
+1. Provision Pusher / Cloudinary for production Vercel demos  
 2. Wire real SMTP for reset/verify  
 3. Enable Google OAuth credentials  
 4. **Payments PAUSED** — defer live Stripe Checkout + webhook until payments resume  

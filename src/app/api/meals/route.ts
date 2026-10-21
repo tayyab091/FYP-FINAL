@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import {
   getMealById,
-  getMealCatalog,
   getRandomMeals,
   listAreas,
   listCategories,
@@ -41,7 +40,6 @@ export async function GET(req: NextRequest) {
     }
 
     if (metaOnly) {
-      const { meta } = await getMealCatalog()
       const preview = await queryMeals({
         search,
         category,
@@ -49,9 +47,10 @@ export async function GET(req: NextRequest) {
         letter,
         page: 1,
         limit: Math.min(limit, 24),
+        includeMeta: true,
       })
       return NextResponse.json({
-        meta,
+        meta: preview.meta,
         meals: preview.meals,
         total: preview.total,
         page: preview.page,

@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
 import { Trainer } from '@/types'
@@ -18,6 +20,7 @@ import { AccessGate } from '@/components/shared/AccessGate'
 import { PageLoader } from '@/components/shared/PageLoader'
 import { StatCard } from '@/components/shared/StatCard'
 import { StaggerChildren } from '@/components/motion'
+import { Avatar } from '@/components/shared/Avatar'
 
 interface GymDetails {
   name: string
@@ -35,13 +38,45 @@ interface GymDetails {
   verificationStatus?: string
 }
 
+const GYM_TABS = ['gym', 'trainers', 'analytics'] as const
+type GymTab = (typeof GYM_TABS)[number]
+
+function isGymTab(value: string | null): value is GymTab {
+  return GYM_TABS.includes(value as GymTab)
+}
+
+interface GymAnalytics {
+  totals: {
+    trainers: number
+    verifiedTrainers: number
+    activeClients: number
+    liveSessions: number
+    featuredTrainers: number
+  }
+  trainers: {
+    trainerId: string
+    name: string
+    email: string
+    activeClients: number
+    totalClients: number
+    sessionCount: number
+    rating?: number
+    verification: { gym: string; admin: string; isFullyVerified?: boolean }
+  }[]
+}
+
 export default function GymOwnerPage() {
   const { user, isLoading: authLoading } = useAuth()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const tabParam = searchParams.get('tab')
+  const activeTab: GymTab = isGymTab(tabParam) ? tabParam : 'gym'
   const [trainers, setTrainers] = useState<Trainer[]>([])
   const [loading, setLoading] = useState(true)
   const [trainerEmail, setTrainerEmail] = useState('')
   const [adding, setAdding] = useState(false)
   const [savingGym, setSavingGym] = useState(false)
+  const [analytics, setAnalytics] = useState<GymAnalytics | null>(null)
   const [gym, setGym] = useState<GymDetails>({
     name: '',
     address: '',
@@ -56,6 +91,15 @@ export default function GymOwnerPage() {
     facilities: '',
     images: '',
   })
+
+  const setTab = (value: string) => {
+    const next = isGymTab(value) ? value : 'gym'
+    const params = new URLSearchParams(searchParams.toString())
+    if (next === 'gym') params.delete('tab')
+    else params.set('tab', next)
+    const qs = params.toString()
+    router.replace(qs ? `/gym-owner?${qs}` : '/gym-owner', { scroll: false })
+  }
 
   const loadTrainers = () => {
     setLoading(true)
@@ -88,10 +132,17 @@ export default function GymOwnerPage() {
       })
   }
 
+  const loadAnalytics = () => {
+    fetch('/api/gym-owner/analytics')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => setAnalytics(data))
+  }
+
   useEffect(() => {
     if (user?.role === 'gym_owner') {
       loadTrainers()
       loadGym()
+      loadAnalytics()
     }
   }, [user])
 
@@ -101,9 +152,10 @@ export default function GymOwnerPage() {
     ? (trainers.reduce((s, t) => s + (t.rating || 0), 0) / trainers.length).toFixed(1)
     : '—'
 
-  const chartData = trainers.map(t => ({
-    name: t.name.split(' ')[0],
-    clients: t.totalClients || 0,
+  const chartData = (analytics?.trainers ?? trainers).map((t) => ({
+    name: ('name' in t ? t.name : '').split(' ')[0],
+    clients: 'activeClients' in t ? t.activeClients : (t.totalClients || 0),
+    sessions: 'sessionCount' in t ? t.sessionCount : 0,
     rating: t.rating || 0,
   }))
 
@@ -122,6 +174,7 @@ export default function GymOwnerPage() {
       toast.success('Trainer added to gym!')
       setTrainerEmail('')
       loadTrainers()
+      loadAnalytics()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to add trainer')
     } finally {
@@ -166,6 +219,7 @@ export default function GymOwnerPage() {
       if (!res.ok) throw new Error(data.message)
       toast.success(data.message)
       loadTrainers()
+      loadAnalytics()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Trainer action failed')
     }
@@ -181,19 +235,36 @@ export default function GymOwnerPage() {
   )
 
   return (
-    <div className="min-h-screen pt-6 pb-12 px-4 sm:px-6">
+    <div className="dashboard-fab-reserve min-h-screen px-4 pt-6 sm:px-6">
       <div className="max-w-7xl mx-auto">
-        <div className="page-hero flex items-center justify-between mb-6 px-6 py-8 sm:px-8">
+        <div className="page-hero mb-6 flex flex-wrap items-start justify-between gap-4 px-6 py-8 sm:px-8">
           <div>
             <p className="eyebrow mb-2">Facility Workspace</p>
             <h1 className="display-title text-3xl md:text-4xl">{gymName}</h1>
             <p className="mt-2 text-muted-foreground">Manage your facility, trainers, and business performance.</p>
           </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/gym-owner/exercises" className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-foreground hover:border-primary/40">
+              Exercises
+            </Link>
+            <Link href="/gym-owner/nutrition" className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-foreground hover:border-primary/40">
+              Nutrition
+            </Link>
+            <Link href="/settings" className="rounded-xl border border-primary/30 px-4 py-2 text-sm font-bold text-primary hover:bg-primary/10">
+              Gym Settings
+            </Link>
+          </div>
         </div>
 
-        <Tabs defaultValue="gym">
+        <StaggerChildren className="dashboard-grid cols-3 mb-8">
+          <StatCard label="Total Trainers" value={trainers.length} icon={Users} variant="primary" />
+          <StatCard label="Verified" value={verifiedCount} icon={Building2} variant="sky" />
+          <StatCard label="Avg Rating" value={avgRating} icon={Star} variant="amber" />
+        </StaggerChildren>
+
+        <Tabs value={activeTab} onValueChange={setTab}>
           <TabsList className="mb-8">
-            {['gym', 'trainers', 'analytics'].map(t => (
+            {GYM_TABS.map((t) => (
               <TabsTrigger key={t} value={t} className="capitalize">
                 {t === 'gym' ? 'My Gym' : t === 'trainers' ? 'My Trainers' : 'Analytics'}
               </TabsTrigger>
@@ -270,7 +341,7 @@ export default function GymOwnerPage() {
                     <Badge variant="outline" className="capitalize">
                       {gym.verificationStatus || 'pending'}
                     </Badge>
-                    <Button type="submit" disabled={savingGym} className="bg-primary text-black hover:brightness-95">
+                    <Button type="submit" disabled={savingGym} className="bg-primary text-primary-foreground hover:brightness-95">
                       {savingGym ? 'Saving...' : 'Save Gym Details'}
                     </Button>
                   </div>
@@ -284,7 +355,7 @@ export default function GymOwnerPage() {
                         onChange={e => setTrainerEmail(e.target.value)}
                         className="bg-background border-border" />
                     </div>
-                    <Button type="submit" disabled={adding} className="bg-primary text-black hover:brightness-95">
+                    <Button type="submit" disabled={adding} className="bg-primary text-primary-foreground hover:brightness-95">
                       {adding ? 'Adding...' : 'Add Trainer'}
                     </Button>
                   </form>
@@ -302,9 +373,7 @@ export default function GymOwnerPage() {
                   <Card key={t._id}>
                     <CardContent className="pt-6">
                       <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-primary font-bold">
-                          {t.name[0]}
-                        </div>
+                        <Avatar name={t.name} avatarUrl={t.profileImage} size="md" />
                         <div className="flex-1">
                           <div className="font-bold">{t.name}</div>
                           <div className="text-muted-foreground text-sm">{t.email}</div>
@@ -324,7 +393,7 @@ export default function GymOwnerPage() {
                               <Button
                                 size="sm"
                                 onClick={() => updateTrainer(t._id, 'approve')}
-                                className="bg-primary text-black hover:brightness-95"
+                                className="bg-primary text-primary-foreground hover:brightness-95"
                               >
                                 Approve
                               </Button>
@@ -352,9 +421,24 @@ export default function GymOwnerPage() {
             ) : (
               <div className="space-y-8">
                 <StaggerChildren className="dashboard-grid cols-3">
-                  <StatCard label="Total Clients" value={trainers.reduce((s, t) => s + (t.totalClients || 0), 0)} icon={Users} variant="primary" />
-                  <StatCard label="Active Trainers" value={trainers.filter(t => t.isActive).length} icon={Building2} variant="sky" />
-                  <StatCard label="Featured Trainers" value={trainers.filter(t => t.isFeatured).length} icon={Star} variant="amber" />
+                  <StatCard
+                    label="Active Clients"
+                    value={analytics?.totals.activeClients ?? trainers.reduce((s, t) => s + (t.totalClients || 0), 0)}
+                    icon={Users}
+                    variant="primary"
+                  />
+                  <StatCard
+                    label="Live Sessions"
+                    value={analytics?.totals.liveSessions ?? 0}
+                    icon={Building2}
+                    variant="sky"
+                  />
+                  <StatCard
+                    label="Verified Trainers"
+                    value={analytics?.totals.verifiedTrainers ?? verifiedCount}
+                    icon={Star}
+                    variant="amber"
+                  />
                 </StaggerChildren>
                 <Card>
                   <CardHeader><CardTitle>Trainer Performance</CardTitle></CardHeader>
@@ -366,7 +450,7 @@ export default function GymOwnerPage() {
                         <YAxis stroke={chartTheme.axis} fontSize={12} />
                         <Tooltip contentStyle={{ background: chartTheme.tooltip.background, border: `1px solid ${chartTheme.tooltip.border}`, borderRadius: chartTheme.tooltip.borderRadius }} />
                         <Bar dataKey="clients" fill={chartTheme.primary} radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="rating" fill={chartTheme.secondary} radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="sessions" fill={chartTheme.secondary} radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </CardContent>

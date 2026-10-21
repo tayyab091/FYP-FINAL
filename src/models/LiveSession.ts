@@ -3,6 +3,8 @@ import mongoose, { Schema } from 'mongoose'
 const LiveSessionSchema = new Schema(
   {
     trainerId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    /** Assigned client for 1:1 sessions (optional for legacy group sessions). */
+    clientId: { type: Schema.Types.ObjectId, ref: 'User', index: true, default: null },
     title: { type: String, required: true, trim: true },
     scheduledAt: { type: Date, required: true, index: true },
     durationMinutes: { type: Number, required: true, min: 15, max: 240, default: 60 },
@@ -14,11 +16,17 @@ const LiveSessionSchema = new Schema(
       default: 'scheduled',
       index: true,
     },
-    /** Local identifier used when creating the Daily room name. */
+    /** Local identifier used when creating the meeting room name. */
     roomId: { type: String, required: true, unique: true },
-    /** Daily.co room name returned by the Daily API. */
+    /** Current meeting provider; Jitsi is the default for new sessions. */
+    meetingProvider: { type: String, default: 'jitsi' },
+    /** Provider room name used in the join URL. */
+    meetingRoomName: { type: String, default: '' },
+    /** Provider join URL for the embedded room / fallback open-in-new-tab flow. */
+    meetingUrl: { type: String, default: '' },
+    /** Legacy Daily.co room name kept for older records during migration. */
     dailyRoomName: { type: String, default: '' },
-    /** Daily.co join URL for the Prebuilt / iframe client. */
+    /** Legacy Daily.co join URL kept for older records during migration. */
     dailyRoomUrl: { type: String, default: '' },
   },
   { timestamps: true },

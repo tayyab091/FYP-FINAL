@@ -4,9 +4,22 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Pusher from 'pusher-js'
-import { Bell, CheckCheck, MessageCircle, UserPlus, Info } from 'lucide-react'
+import {
+  Bell,
+  CheckCheck,
+  CreditCard,
+  Dumbbell,
+  Info,
+  MessageCircle,
+  Settings,
+  UserPlus,
+} from 'lucide-react'
 import type { AppNotification } from '@/types'
 import { useAuth } from '@/hooks/useAuth'
+
+const FETCH_LIMIT = 10
+const POLL_MS = 60_000
+const FETCH_TIMEOUT_MS = 8_000
 
 function formatTime(dateStr: string) {
   const date = new Date(dateStr)
@@ -24,8 +37,14 @@ function typeIcon(type: AppNotification['type']) {
   switch (type) {
     case 'chat':
       return MessageCircle
+    case 'workout':
+      return Dumbbell
     case 'trainer':
       return UserPlus
+    case 'payment':
+      return CreditCard
+    case 'system':
+      return Settings
     case 'community':
       return MessageCircle
     default:
@@ -41,24 +60,38 @@ export function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+  const abortRef = useRef<AbortController | null>(null)
 
   const fetchNotifications = useCallback(async () => {
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+
     try {
-      const res = await fetch('/api/notifications?limit=8')
+      const res = await fetch(`/api/notifications?limit=${FETCH_LIMIT}`, {
+        signal: controller.signal,
+      })
       if (!res.ok) return
       const data = await res.json()
       setNotifications(Array.isArray(data.notifications) ? data.notifications : [])
       setUnreadCount(typeof data.unreadCount === 'number' ? data.unreadCount : 0)
     } catch {
-      // ignore fetch errors silently for bell polling
+      // ignore fetch errors / aborts silently for bell polling
+    } finally {
+      clearTimeout(timeoutId)
     }
   }, [])
 
   useEffect(() => {
+    if (!user) return
     void fetchNotifications()
-    const interval = setInterval(() => void fetchNotifications(), 30000)
-    return () => clearInterval(interval)
-  }, [fetchNotifications])
+    const interval = setInterval(() => void fetchNotifications(), POLL_MS)
+    return () => {
+      clearInterval(interval)
+      abortRef.current?.abort()
+    }
+  }, [fetchNotifications, user])
 
   useEffect(() => {
     const userId = user?.id || user?._id
@@ -77,7 +110,7 @@ export function NotificationBell() {
       if (!notification?._id) return
       setNotifications((prev) => {
         if (prev.some((item) => item._id === notification._id)) return prev
-        return [notification, ...prev].slice(0, 8)
+        return [notification, ...prev].slice(0, FETCH_LIMIT)
       })
       if (!notification.isRead) {
         setUnreadCount((prev) => prev + 1)
@@ -148,20 +181,20 @@ export function NotificationBell() {
         aria-expanded={open}
         aria-controls="notifications-panel"
         aria-haspopup="dialog"
-        className="relative rounded-xl border border-white/[.09] bg-white/[.03] p-2 text-[#aaa] transition-colors hover:text-white"
+        className="relative rounded-xl border border-border bg-muted/40 p-2 text-muted-foreground transition-colors hover:text-foreground"
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-black">
+          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
 
       {open && (
-        <div id="notifications-panel" role="dialog" aria-label="Notifications" className="fixed left-3 right-3 top-20 z-[80] w-auto max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl border border-white/[.09] bg-[#0b0e0c]/98 shadow-2xl backdrop-blur-2xl sm:absolute sm:left-auto sm:right-0 sm:top-[calc(100%+.5rem)] sm:w-[22rem]">
-          <div className="flex items-center justify-between border-b border-white/[.06] px-4 py-3">
-            <p className="text-sm font-bold text-white">Notifications</p>
+        <div id="notifications-panel" role="dialog" aria-label="Notifications" className="absolute right-0 top-[calc(100%+.5rem)] z-50 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-border bg-card/98 shadow-2xl backdrop-blur-2xl">
+          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <p className="text-sm font-bold text-foreground">Notifications</p>
             {unreadCount > 0 && (
               <button
                 type="button"
@@ -178,7 +211,7 @@ export function NotificationBell() {
           <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
               <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                No notifications yet
+                You&apos;re all caught up!
               </div>
             ) : (
               notifications.map((notification) => {
@@ -188,7 +221,7 @@ export function NotificationBell() {
                     key={notification._id}
                     type="button"
                     onClick={() => void handleNotificationClick(notification)}
-                    className={`flex w-full items-start gap-3 border-b border-white/[.04] px-4 py-3 text-left transition-colors hover:bg-white/[.03] ${
+                    className={`flex w-full items-start gap-3 border-b border-border px-4 py-3 text-left transition-colors hover:bg-muted/40 ${
                       !notification.isRead ? 'bg-primary/[.04]' : ''
                     }`}
                   >
@@ -199,13 +232,13 @@ export function NotificationBell() {
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center gap-2">
-                        <span className="truncate text-sm font-semibold text-white">{notification.title}</span>
+                        <span className="truncate text-sm font-semibold text-foreground">{notification.title}</span>
                         {!notification.isRead && (
                           <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary" />
                         )}
                       </span>
                       <span className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{notification.message}</span>
-                      <span className="mt-1 block text-[10px] text-[#666]">{formatTime(notification.createdAt)}</span>
+                      <span className="mt-1 block text-[10px] text-muted-foreground">{formatTime(notification.createdAt)}</span>
                     </span>
                   </button>
                 )
@@ -213,7 +246,7 @@ export function NotificationBell() {
             )}
           </div>
 
-          <div className="border-t border-white/[.06] px-4 py-2.5">
+          <div className="border-t border-border px-4 py-2.5">
             <Link
               href="/notifications"
               onClick={() => setOpen(false)}

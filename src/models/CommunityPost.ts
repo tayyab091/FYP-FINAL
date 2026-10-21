@@ -1,9 +1,18 @@
 import mongoose, { Schema } from 'mongoose'
+import { COMMUNITY_POST_CATEGORIES } from '@/lib/community'
+
+export { COMMUNITY_POST_CATEGORIES }
+export type { CommunityPostCategory } from '@/lib/community'
 
 const CommunityPostSchema = new Schema({
   authorId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   authorName: { type: String, required: true },
   content: { type: String, required: true, maxlength: 2000 },
+  category: {
+    type: String,
+    enum: COMMUNITY_POST_CATEGORIES,
+    default: 'Motivation',
+  },
   likes: [{ type: Schema.Types.ObjectId, ref: 'User' }],
 }, { timestamps: true })
 

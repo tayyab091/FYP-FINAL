@@ -1,10 +1,12 @@
 import { Resolver } from 'dns/promises'
 import mongoose from 'mongoose'
 
-const MONGODB_URI = process.env.MONGODB_URI!
-
-if (!MONGODB_URI) {
-  throw new Error('Please define MONGODB_URI in .env.local')
+function getMongoUri(): string {
+  const uri = process.env.MONGODB_URI
+  if (!uri) {
+    throw new Error('Please define MONGODB_URI in environment variables')
+  }
+  return uri
 }
 
 declare global {
@@ -85,7 +87,7 @@ export async function connectDB() {
 
   if (!global.mongooseCache.promise) {
     global.mongooseCache.promise = (async () => {
-      const uri = await toDirectMongoUri(MONGODB_URI)
+      const uri = await toDirectMongoUri(getMongoUri())
       return mongoose.connect(uri, { bufferCommands: false })
     })().catch((err) => {
       global.mongooseCache.promise = null

@@ -5,6 +5,7 @@ import bcrypt from 'bcryptjs'
 import { createToken, cookieOptions } from '@/lib/auth'
 import { loginBodySchema, parseJsonBody } from '@/lib/validation'
 import { rateLimitAuth } from '@/lib/rate-limit'
+import { resolveAvatarUrl } from '@/lib/avatar'
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,13 +40,15 @@ export async function POST(req: NextRequest) {
     const token = createToken({ userId: user._id.toString(), role: user.role, email: user.email })
     const response = NextResponse.json({
       message: 'Logged in successfully',
+      token,
       user: {
         id: user._id,
         fullName: user.fullName,
         email: user.email,
         role: user.role,
         country: user.country,
-        profileImage: user.profileImage,
+        profileImage: resolveAvatarUrl(user) || user.profileImage,
+        avatarUrl: resolveAvatarUrl(user) || '',
         subscription: user.subscription,
       },
     })

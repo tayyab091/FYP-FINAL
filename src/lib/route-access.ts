@@ -1,4 +1,4 @@
-import type { UserRole } from '@/lib/access'
+type UserRole = 'user' | 'trainer' | 'gym_owner' | 'admin' | 'super_admin'
 
 /** Dashboard routes that require a valid JWT cookie (complements client AccessGate/SignInGate). */
 export const PROTECTED_ROUTES = [
@@ -14,6 +14,7 @@ export const PROTECTED_ROUTES = [
   '/analytics',
   '/live-sessions',
   '/notifications',
+  '/leaderboard',
 ] as const
 
 /** Auth pages that redirect authenticated users to their workspace. */
@@ -34,6 +35,7 @@ export const ROLE_ROUTE_RESTRICTIONS: ReadonlyArray<{
   { prefix: '/trainer-dashboard', roles: ['trainer'] },
   { prefix: '/gym-owner', roles: ['gym_owner'] },
   { prefix: '/my-fitness', roles: ['user'] },
+  { prefix: '/dashboard', roles: ['user'] },
 ]
 
 export function getRoleDashboardPath(role: string): string {
@@ -46,7 +48,7 @@ export function getRoleDashboardPath(role: string): string {
     case 'super_admin':
       return '/admin'
     case 'user':
-      return '/my-fitness'
+      return '/dashboard'
     default:
       return '/dashboard'
   }

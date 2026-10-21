@@ -3,11 +3,12 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
-import { Salad, ClipboardList, UtensilsCrossed, ChevronDown, ChevronUp, Globe } from 'lucide-react'
+import { Salad, ClipboardList, UtensilsCrossed, ChevronDown, ChevronUp, Globe, Trash2 } from 'lucide-react'
 import { SectionHeading } from '@/components/shared/SectionHeading'
 import { CatalogImageFrame } from '@/components/shared/CatalogImageFrame'
 import { ExpandableCardPanel } from '@/components/shared/ExpandableCardPanel'
 import { DishMoreInfoPanel } from '@/components/nutrition/DishMoreInfoPanel'
+import { mealDetailPath } from '@/lib/meal-slug'
 import { FadeIn, CountUp } from '@/components/motion'
 import { calculateDailyCalories } from '@/lib/nutrition'
 
@@ -91,11 +92,12 @@ export default function NutritionPage() {
   const [mealCatalogTotal, setMealCatalogTotal] = useState(0)
   const [mealPage, setMealPage] = useState(1)
   const [mealTotalPages, setMealTotalPages] = useState(1)
+  const [deletingMealId, setDeletingMealId] = useState<string | null>(null)
 
   const fetchTodayMeals = useCallback(async () => {
     if (!user) return
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 8000)
+    const timeout = setTimeout(() => controller.abort(), 6000)
     setSummaryLoading(true)
 
     try {
@@ -182,7 +184,9 @@ export default function NutritionPage() {
         if (!controller.signal.aborted) setRecipeMeals([])
       })
       .finally(() => {
-        if (!controller.signal.aborted) setMealsLoading(false)
+        if (!controller.signal.aborted) {
+          setMealsLoading(false)
+        }
       })
 
     return () => controller.abort()
@@ -246,7 +250,7 @@ export default function NutritionPage() {
     setSearching(true)
     setSearchResults([])
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 8000)
+    const timeout = setTimeout(() => controller.abort(), 6000)
 
     try {
       const res = await fetch(`/api/nutrition/analyze?query=${encodeURIComponent(query)}`, {
@@ -290,7 +294,7 @@ export default function NutritionPage() {
 
     setSubmittingLog(true)
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 8000)
+    const timeout = setTimeout(() => controller.abort(), 6000)
 
     try {
       const res = await fetch('/api/tracking/meal-logs/today', {
@@ -321,22 +325,48 @@ export default function NutritionPage() {
     }
   }
 
+  const handleDeleteMeal = async (mealId: string) => {
+    if (!user || deletingMealId) return
+    setDeletingMealId(mealId)
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 6000)
+
+    try {
+      const res = await fetch(`/api/tracking/meal-logs/today/${mealId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+        signal: controller.signal,
+      })
+      if (res.ok) {
+        toast.success('Meal deleted')
+        await fetchTodayMeals()
+      } else {
+        const data = await res.json().catch(() => ({}))
+        toast.error(data.message || 'Failed to delete meal')
+      }
+    } catch {
+      toast.error('Failed to delete meal')
+    } finally {
+      clearTimeout(timeout)
+      setDeletingMealId(null)
+    }
+  }
+
   const calorieProgress = Math.min(100, Math.round((totals.calories / calorieGoal) * 100))
   const todayLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 
   return (
-    <div className="min-h-screen pt-28 pb-28 px-4 lg:px-8">
+    <div className="min-h-screen pt-8 pb-28 px-4 lg:px-8">
       <div className="max-w-4xl mx-auto space-y-8">
         <FadeIn>
           <div className="page-hero px-6 py-10 sm:px-10 md:py-14 gym-floor">
             <span className="eyebrow">Nutrition Intelligence</span>
-            <h1 className="display-title text-4xl md:text-6xl text-white mt-3">Fuel Every Ambition</h1>
+            <h1 className="display-title text-4xl md:text-6xl text-foreground mt-3">Fuel Every Ambition</h1>
             <p className="mt-3 text-muted-foreground">Track meals, understand your macros, and stay aligned with your goals · {todayLabel}</p>
             <p className="workout-label mt-3 text-primary/70">Macros · Meals · Momentum</p>
           </div>
         </FadeIn>
 
-        <FadeIn delay={0.1}>
         <section>
           <SectionHeading title="Daily Summary" />
 
@@ -349,7 +379,7 @@ export default function NutritionPage() {
               <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl border border-primary/20 bg-primary/[.08] text-primary">
                 <Salad className="size-7" />
               </div>
-              <p className="text-white font-semibold mb-2">Sign in to track nutrition</p>
+              <p className="text-foreground font-semibold mb-2">Sign in to track nutrition</p>
               <p className="text-muted-foreground text-sm mb-6">Log meals, monitor macros, and hit your daily goals.</p>
               <Link href="/login" className="btn-accent px-6 py-3 text-sm">Sign In</Link>
             </div>
@@ -359,7 +389,7 @@ export default function NutritionPage() {
                 <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-xl border border-primary/20 bg-primary/[.08] text-primary">
                   <ClipboardList className="size-6" />
                 </div>
-                <p className="text-white font-medium">No meals logged today</p>
+                <p className="text-foreground font-medium">No meals logged today</p>
                 <p className="text-muted-foreground text-sm mt-1">Search for a food below and log your first meal.</p>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -409,7 +439,7 @@ export default function NutritionPage() {
               <div className="glass rounded-2xl p-5">
                 <div className="flex justify-between text-sm mb-2">
                   <span className="text-muted-foreground">Calorie progress</span>
-                  <span className="text-white font-medium">{Math.round(totals.calories)} / {calorieGoal} cal</span>
+                  <span className="text-foreground font-medium">{Math.round(totals.calories)} / {calorieGoal} cal</span>
                 </div>
                 <div className="h-3 bg-muted rounded-full overflow-hidden">
                   <div className="h-full bg-gradient-to-r from-primary to-sky-400 rounded-full transition-all duration-500"
@@ -420,9 +450,7 @@ export default function NutritionPage() {
             </div>
           )}
         </section>
-        </FadeIn>
 
-        <FadeIn delay={0.15}>
         <section>
           <SectionHeading title="Food Search" description="Search Pakistani and international foods to log meals" />
           <div className="glass rounded-2xl p-5 space-y-4">
@@ -432,7 +460,7 @@ export default function NutritionPage() {
                 onChange={e => setSearchQuery(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSearch()}
                 placeholder='e.g. "chicken biryani" or "roti"'
-                className="flex-1 bg-background border border-border rounded-xl px-4 py-3 text-white text-sm placeholder:text-muted-foreground outline-none focus:border-primary"
+                className="flex-1 bg-background border border-border rounded-xl px-4 py-3 text-foreground text-sm placeholder:text-muted-foreground outline-none focus:border-primary"
               />
               <button onClick={handleSearch} disabled={searching || !searchQuery.trim()}
                 className="btn-accent px-6 py-3 text-sm font-bold disabled:opacity-50">
@@ -452,7 +480,7 @@ export default function NutritionPage() {
                   <div key={idx} className="glass rounded-xl p-4 border border-border">
                     <div className="flex justify-between items-start gap-4">
                       <div className="flex-1 min-w-0">
-                        <p className="text-white font-semibold capitalize">{item.name}</p>
+                        <p className="text-foreground font-semibold capitalize">{item.name}</p>
                         <p className="text-muted-foreground text-sm mt-1">{item.calories} cal per {item.per}</p>
                         <p className="text-muted-foreground text-xs mt-1">P: {item.protein}g · C: {item.carbs}g · F: {item.fat}g</p>
                       </div>
@@ -469,14 +497,14 @@ export default function NutritionPage() {
                           <div>
                             <label className="text-muted-foreground text-xs block mb-1">Meal type</label>
                             <select value={logMealType} onChange={e => setLogMealType(e.target.value)}
-                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-primary">
+                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm outline-none focus:border-primary">
                               {MEAL_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                             </select>
                           </div>
                           <div>
                             <label className="text-muted-foreground text-xs block mb-1">Quantity (g)</label>
                             <input type="number" min="1" value={logQuantity} onChange={e => setLogQuantity(e.target.value)}
-                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-primary" />
+                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm outline-none focus:border-primary" />
                           </div>
                         </div>
                         <button onClick={() => handleLogMeal(item)} disabled={submittingLog}
@@ -491,31 +519,52 @@ export default function NutritionPage() {
             )}
           </div>
         </section>
-        </FadeIn>
 
         {user && todayMeals.length > 0 && (
           <section>
             <SectionHeading title="Today's Meals" />
-            <div className="space-y-3">
-              {todayMeals.map(meal => (
-                <div key={meal._id} className="glass rounded-xl p-4 border border-border">
-                  <p className="text-primary text-xs font-semibold uppercase mb-2">{meal.mealType}</p>
-                  {meal.foods.map((food, i) => (
-                    <div key={i} className="flex justify-between text-sm">
-                      <span className="text-white">{food.name}</span>
-                      <span className="text-primary font-medium">{Math.round(food.calories)} cal</span>
-                    </div>
-                  ))}
-                  <p className="text-muted-foreground text-xs mt-2">
-                    P: {Math.round(meal.totalProtein)}g · C: {Math.round(meal.totalCarbs)}g · F: {Math.round(meal.totalFat)}g
-                  </p>
-                </div>
-              ))}
+            <div className="space-y-6">
+              {MEAL_TYPES.map(({ value, label }) => {
+                const mealsForType = todayMeals.filter(
+                  (meal) => meal.mealType.toLowerCase() === value,
+                )
+                if (mealsForType.length === 0) return null
+                return (
+                  <div key={value} className="space-y-3">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-primary">{label}</h3>
+                    {mealsForType.map((meal) => (
+                      <div key={meal._id} className="glass rounded-xl p-4 border border-border">
+                        <div className="mb-2 flex items-start justify-between gap-3">
+                          <p className="text-primary text-xs font-semibold uppercase">{label}</p>
+                          <button
+                            type="button"
+                            onClick={() => void handleDeleteMeal(meal._id)}
+                            disabled={deletingMealId === meal._id}
+                            aria-label={`Delete ${label} meal`}
+                            className="inline-flex items-center gap-1 rounded-lg border border-red-500/30 px-2.5 py-1 text-xs text-red-400 hover:bg-red-500/10 disabled:opacity-50"
+                          >
+                            <Trash2 className="size-3.5" />
+                            {deletingMealId === meal._id ? 'Deleting...' : 'Delete'}
+                          </button>
+                        </div>
+                        {meal.foods.map((food, i) => (
+                          <div key={i} className="flex justify-between text-sm">
+                            <span className="text-foreground">{food.name}</span>
+                            <span className="text-primary font-medium">{Math.round(food.calories)} cal</span>
+                          </div>
+                        ))}
+                        <p className="text-muted-foreground text-xs mt-2">
+                          P: {Math.round(meal.totalProtein)}g · C: {Math.round(meal.totalCarbs)}g · F: {Math.round(meal.totalFat)}g
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })}
             </div>
           </section>
         )}
 
-        <FadeIn delay={0.2}>
         <section>
           <SectionHeading
             title="Meal Inspiration"
@@ -540,7 +589,7 @@ export default function NutritionPage() {
               value={mealSearch}
               onChange={(e) => setMealSearch(e.target.value)}
               placeholder="Search recipes by name..."
-              className="w-full bg-background border border-border rounded-xl px-4 py-3 text-white text-sm placeholder:text-muted-foreground outline-none focus:border-primary"
+              className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground text-sm placeholder:text-muted-foreground outline-none focus:border-primary"
             />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -549,7 +598,7 @@ export default function NutritionPage() {
                 <select
                   value={mealCategory}
                   onChange={(e) => setMealCategory(e.target.value)}
-                  className="bg-background border border-border rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-primary"
+                  className="bg-background border border-border rounded-xl px-3 py-2.5 text-sm text-foreground outline-none focus:border-primary"
                 >
                   <option value="All">All categories</option>
                   {mealCategories.map((c) => (
@@ -562,7 +611,7 @@ export default function NutritionPage() {
                 <select
                   value={mealArea}
                   onChange={(e) => setMealArea(e.target.value)}
-                  className="bg-background border border-border rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-primary"
+                  className="bg-background border border-border rounded-xl px-3 py-2.5 text-sm text-foreground outline-none focus:border-primary"
                 >
                   <option value="All">All cuisines</option>
                   {mealAreas.map((a) => (
@@ -576,7 +625,7 @@ export default function NutritionPage() {
               <button
                 onClick={() => setMealLetter('All')}
                 className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${
-                  mealLetter === 'All' ? 'border-primary bg-primary text-black' : 'border-border text-muted-foreground'
+                  mealLetter === 'All' ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground'
                 }`}
               >
                 All
@@ -586,7 +635,7 @@ export default function NutritionPage() {
                   key={letter}
                   onClick={() => setMealLetter(letter)}
                   className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
-                    mealLetter === letter ? 'border-primary bg-primary text-black' : 'border-border text-muted-foreground hover:border-white/20'
+                    mealLetter === letter ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:border-primary/25'
                   }`}
                 >
                   {letter}
@@ -595,7 +644,7 @@ export default function NutritionPage() {
             </div>
 
             {hasMealFilters && (
-              <button onClick={clearMealFilters} className="text-xs text-muted-foreground hover:text-white underline underline-offset-2">
+              <button onClick={clearMealFilters} className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2">
                 Clear recipe filters
               </button>
             )}
@@ -608,7 +657,7 @@ export default function NutritionPage() {
           ) : recipeMeals.length === 0 ? (
             <div className="glass rounded-2xl p-8 text-center">
               <UtensilsCrossed className="size-8 mx-auto mb-3 text-primary/50" />
-              <p className="text-white font-medium">No recipes match your filters</p>
+              <p className="text-foreground font-medium">No recipes match your filters</p>
               <p className="text-muted-foreground text-sm mt-1">Try a different category, cuisine, or search term.</p>
             </div>
           ) : (
@@ -619,7 +668,7 @@ export default function NutritionPage() {
                   const isOpen = expandedMeal === recipe.id
                   return (
                     <div key={recipe.id} className="glass interactive-lift card-athletic flex h-full flex-col overflow-hidden rounded-2xl">
-                      <Link href={`/nutrition/${recipe.id}`} className="block">
+                      <Link href={mealDetailPath(recipe.name, recipe.id)} className="block">
                         <CatalogImageFrame
                           src={recipe.thumb}
                           alt={recipe.name}
@@ -631,21 +680,21 @@ export default function NutritionPage() {
                             </div>
                           }
                           badge={
-                            <span className="absolute left-3 top-3 rounded-full border border-primary/20 bg-black/60 px-2 py-0.5 text-[10px] font-bold text-primary backdrop-blur">
+                            <span className="absolute left-3 top-3 rounded-full border border-border bg-background/85 px-2 py-0.5 text-[10px] font-bold text-foreground backdrop-blur">
                               {recipe.category}
                             </span>
                           }
                         />
                       </Link>
                       <div className="flex flex-1 flex-col p-5">
-                        <Link href={`/nutrition/${recipe.id}`} className="text-white font-semibold leading-tight hover:text-primary transition-colors">
+                        <Link href={mealDetailPath(recipe.name, recipe.id)} className="text-foreground font-semibold leading-tight hover:text-primary transition-colors">
                           {recipe.name}
                         </Link>
                         <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
                           <Globe className="size-3" /> {recipe.area}
                         </div>
                         <Link
-                          href={`/nutrition/${recipe.id}`}
+                          href={mealDetailPath(recipe.name, recipe.id)}
                           className="mt-2 text-xs font-medium text-primary hover:text-primary/80"
                         >
                           View full recipe →
@@ -703,7 +752,6 @@ export default function NutritionPage() {
             </>
           )}
         </section>
-        </FadeIn>
       </div>
     </div>
   )

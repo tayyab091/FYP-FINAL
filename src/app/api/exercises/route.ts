@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { fetchExerciseById, getExerciseCatalog, getLastFilteredRemovedCount, queryExercises } from '@/lib/exercises-api'
+import { fetchExerciseById, getLastFilteredRemovedCount, queryExercises } from '@/lib/exercises-api'
 
 export async function GET(req: NextRequest) {
   try {
@@ -21,8 +21,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (metaOnly) {
-      const { meta } = await getExerciseCatalog()
-      const preview = await queryExercises({
+      const result = await queryExercises({
         search,
         muscle,
         bodyPart,
@@ -30,14 +29,15 @@ export async function GET(req: NextRequest) {
         equipment,
         page: 1,
         limit: Math.min(limit, 24),
+        includeMeta: true,
       })
       return NextResponse.json({
-        meta: { ...meta, filteredRemoved: getLastFilteredRemovedCount() },
-        exercises: preview.exercises,
-        total: preview.total,
-        page: preview.page,
-        limit: preview.limit,
-        totalPages: preview.totalPages,
+        meta: { ...result.meta!, filteredRemoved: getLastFilteredRemovedCount() },
+        exercises: result.exercises,
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: result.totalPages,
       })
     }
 

@@ -16,7 +16,7 @@
 T.E.S.T. connects members, verified trainers, gym owners, and admins:
 
 - Members track workouts, nutrition, progress, and chat with trainers  
-- Trainers manage clients, assign plans, and (with Daily.co) host live sessions  
+- Trainers manage clients, assign plans, and host live sessions on Jitsi Meet  
 - Gym owners manage gym profiles and affiliated trainers  
 - Admins verify trainers/gyms and oversee users  
 
@@ -37,8 +37,8 @@ Edge proxy.ts (jose JWT) ── redirects for protected / guest / role routes
 Next.js Route Handlers (Node) ── Mongoose ── MongoDB Atlas
    │
    ├── Pusher (optional) ── private chat + notification channels
-   ├── Daily.co (optional) ── live video rooms
-   ├── Vercel Blob (optional) ── chat images
+   ├── Jitsi Meet (`meet.jit.si`) ── live video rooms
+   ├── Cloudinary (optional) ── chat images
    ├── Stripe (optional) ── Checkout; simulated upgrade when unset
    ├── SMTP (optional) ── password reset / verify email
    └── Gemini / Spoonacular (optional) ── AI coach / food search
@@ -49,8 +49,8 @@ Next.js Route Handlers (Node) ── Mongoose ── MongoDB Atlas
 | Need | Not used | Used instead |
 |------|----------|--------------|
 | Realtime chat | Socket.io custom server | **Pusher** (+ REST poll fallback) |
-| Live video | Homegrown WebRTC | **Daily.co** |
-| Image uploads | Local `fs` / `public/uploads` | **Vercel Blob** |
+| Live video | Homegrown WebRTC | **Jitsi Meet** |
+| Image uploads | Local `fs` / `public/uploads` | **Cloudinary** |
 | Edge auth | Node `jsonwebtoken` / fs | **`jose` in `proxy.ts`** |
 
 Prefer `npm run dev` (`next dev`). `npm run dev:custom` (`tsx server.ts`) is a legacy/custom entry and is not required for Vercel.
@@ -62,7 +62,7 @@ Prefer `npm run dev` (`next dev`). `npm run dev:custom` (`tsx server.ts`) is a l
 | Collection / model | Purpose |
 |--------------------|---------|
 | `User` | Accounts, roles, subscription, reset/verify tokens |
-| `Trainer` | Public trainer profile, verification, gym link |
+| `Trainer` | Public trainer profile, verification, gym link, **unique `slug` for `/coaching/[slug]`** |
 | `Gym` | Gym owner entity + verification |
 | `Relationship` | Member↔trainer coaching request lifecycle |
 | `Conversation` / `Message` | 1:1 chat (text/image types) |
@@ -72,7 +72,7 @@ Prefer `npm run dev` (`next dev`). `npm run dev:custom` (`tsx server.ts`) is a l
 | `Notification` | In-app notifications |
 | `Review` | Trainer ratings |
 | `CommunityPost` / `CommunityComment` | Social feed |
-| `LiveSession` | Scheduled sessions + Daily room metadata |
+| `LiveSession` | Scheduled sessions + meeting room metadata |
 | `GamificationProfile` | XP, streaks, achievements |
 | `AuditLog` | Admin actions |
 
@@ -94,19 +94,76 @@ Enforcement lives in `src/lib/subscription.ts` (+ `subscription-server.ts` for D
 | Analytics | — | ✓ | ✓ |
 | AI form check | — | ✓ | ✓ |
 | Live sessions (join) | — | — | ✓ |
-| Live sessions (create) | Trainer role + Daily.co | | |
+| Live sessions (create) | Trainer role + Jitsi Meet | | |
 
-Privileged roles (admin / trainer / gym_owner) bypass member subscription gates where noted in code.
+Privileged roles (admin / trainer / gym_owner) bypass member subscription gates where noted in code. Per-role routes, APIs, bypasses, and restrictions are detailed in §5.
 
 ---
 
-## 5. Main UI routes
+## 5. Role features
+
+Privileged platform roles beyond member and trainer flows. Enforcement lives in route handlers, `proxy.ts`, and `src/lib/access.ts`.
+
+### Admin (`admin`)
+
+| Area | Details |
+|------|---------|
+| **Home** | `/admin` (Admin Console) |
+| **Tabs** | overview, users, trainers, gyms, verifications, audit, subscriptions |
+| **Pages** | `/admin/exercises`, `/admin/nutrition` (read-only catalogs); `/settings` (Admin Controls tab) |
+| **APIs** | All `/api/admin/*` — stats, users, suspend, trainer/gym verify, audit-logs, subscriptions |
+
+**Subscription bypass:** analytics, meal plans, community, AI form checker.
+
+**Live sessions:** treated as Elite for **join** only (hosting requires trainer role).
+
+**Cannot:** trainer dashboard, gym-owner workspace, suspend other admins, change admin subscriptions.
+
+### Super admin (`super_admin`)
+
+Functionally **identical** to admin — no exclusive capabilities. Every authorization check uses `['admin', 'super_admin'].includes(role)`. Differences are cosmetic only (red badge vs purple, sidebar label). `super_admin` must be set manually in MongoDB; no API creates it.
+
+### Gym owner (`gym_owner`)
+
+| Area | Details |
+|------|---------|
+| **Home** | `/gym-owner` |
+| **Tabs** | My Gym (profile edit), My Trainers (link by email, approve/remove), Analytics |
+| **Pages** | `/gym-owner/exercises`, `/gym-owner/nutrition` (read-only); `/chat`; `/settings` (Facility tab) |
+| **APIs** | `/api/gym-owner/gym` (GET/PUT), `/api/gym-owner/trainers` (GET/POST/PUT); register via `/api/auth/register-gym-owner` |
+
+**Subscription bypass:** analytics, meal plans, community, form checker. **Not** live sessions — Elite plan required.
+
+**Cannot:** admin console, trainer dashboard, member `/dashboard`, platform verification (admin only).
+
+**Gym verification:** view status only; admin approves via `/api/admin/gyms/[id]/verify`.
+
+### Role comparison
+
+| Capability | Admin | Super admin | Gym owner |
+|------------|:-----:|:-----------:|:---------:|
+| Admin Console (`/admin`) | ✓ | ✓ | — |
+| Suspend users (non-admin) | ✓ | ✓ | — |
+| Suspend admins | — | — | — |
+| Verify trainers / gyms | ✓ | ✓ | — |
+| Manage subscriptions (non-admin) | ✓ | ✓ | — |
+| Change admin subscriptions | — | — | — |
+| Gym-owner workspace | — | — | ✓ |
+| Trainer dashboard | — | — | — |
+| Analytics / meal plans / community / form checker bypass | ✓ | ✓ | ✓ |
+| Live sessions (join as Elite) | ✓ | ✓ | — (needs Elite) |
+| Live sessions (host) | — (trainer only) | — | — |
+| Distinct from admin beyond UI | — | cosmetic only | — |
+
+---
+
+## 6. Main UI routes
 
 | Path | Audience |
 |------|----------|
 | `/`, `/login`, `/signup`, `/forgot-password`, `/reset-password`, `/verify-email` | Public / auth |
 | `/register-trainer`, `/register-gym-owner` | Onboarding |
-| `/coaching`, `/nutrition`, `/exercises`, `/exercise-check`, `/subscription` | Catalog / marketing / gated tools |
+| `/coaching`, `/coaching/[slug]`, `/nutrition`, `/exercises`, `/exercise-check`, `/subscription` | Catalog / marketing / gated tools |
 | `/my-fitness` | Member hub (progress, plan, gamification) |
 | `/chat`, `/notifications` | Messaging |
 | `/meal-plans`, `/community`, `/analytics`, `/live-sessions` | Plan-gated member features |
@@ -116,7 +173,7 @@ Privileged roles (admin / trainer / gym_owner) bypass member subscription gates 
 
 ---
 
-## 6. API routes (summary)
+## 7. API routes (summary)
 
 ### Auth & user
 `/api/auth/register`, `register-trainer`, `register-gym-owner`, `login`, `logout`, `me`, `forgot-password`, `reset-password`, `verify-email`, `oauth/google`, `oauth/google/callback`, `create-admin`  
@@ -147,7 +204,7 @@ Privileged roles (admin / trainer / gym_owner) bypass member subscription gates 
 
 ---
 
-## 7. Environment variables
+## 8. Environment variables
 
 See `.env.example`. Minimum to run locally:
 
@@ -162,8 +219,9 @@ JWT_SECRET=...
 | `JWT_SECRET` | **Yes** | Auth / proxy fail |
 | `ADMIN_SETUP_KEY` | Dev seed | Seed / create-admin blocked |
 | `PUSHER_*` + `NEXT_PUBLIC_PUSHER_*` | Optional | Chat/notifications poll instead of push |
-| `DAILY_API_KEY` | Optional | Live session create returns 503 |
-| `BLOB_READ_WRITE_TOKEN` | Optional | Chat image upload 503 |
+| No extra live-video env vars | Optional | Live sessions use `meet.jit.si` directly |
+| `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | Optional | Chat image upload 503 |
+| `CLOUDINARY_UPLOAD_FOLDER` | Optional | Defaults to `chat` |
 | `STRIPE_*` | Optional / **PAUSED** | Simulated checkout when unset; live Checkout out of scope for current phase |
 | `SMTP_*` | Optional | Reset/verify links logged + `devLink` returned in development |
 | `GOOGLE_CLIENT_*` | Optional | OAuth returns 503; when set, links same-email accounts via `googleId` |
@@ -173,7 +231,7 @@ JWT_SECRET=...
 
 ---
 
-## 8. Local development
+## 9. Local development
 
 ```bash
 npm install
@@ -189,14 +247,14 @@ Verification helper: `node scripts/live-verify.mjs` (server must be running).
 
 ---
 
-## 9. Known gaps & suggested next steps
+## 10. Known gaps & suggested next steps
 
 **Gaps (env / product):**
 
-1. Production realtime requires Pusher + Daily + Blob tokens on Vercel  
+1. Production realtime requires Pusher and Cloudinary credentials on Vercel; Jitsi uses `meet.jit.si`
 2. Google OAuth and SMTP need real credentials for production auth UX  
 3. **Payments PAUSED:** Stripe is one-time Checkout (simulated/test locally); JazzCash planned, not started — not in current verification scope  
-4. Live video create hard-requires Daily — cannot fully demo without key  
+4. Live video still depends on browser camera/microphone access and third-party iframe availability
 
 **Security (2026-07-13 hardening):**
 
@@ -208,7 +266,7 @@ Verification helper: `node scripts/live-verify.mjs` (server must be running).
 
 **Suggested next steps:**
 
-1. Provision Pusher / Daily / Blob / SMTP / Google; document dashboard URLs in team wiki  
+1. Provision Pusher / Cloudinary / SMTP / Google; document dashboard URLs in team wiki  
 2. When payments resume: live Stripe keys + webhook, then JazzCash design  
 3. Add CI smoke tests against `/api/health` + login (`npm run live-verify`)  
 4. Consider MongoDB connection string with explicit hosts for CI Windows runners  
@@ -217,12 +275,23 @@ Verification helper: `node scripts/live-verify.mjs` (server must be running).
 
 ---
 
-## 10. Related docs
+## 11. Related docs
 
 - `docs/LIVE_VERIFICATION_REPORT.md` — live probe results (latest: 69/69 pass)  
 - `docs/SECURITY_AUDIT_REPORT.md` — NoSQL / XSS / CSP / rate-limit audit  
 - `docs/AUDIT_REPORT.md` — Working / Partial / Cannot-run matrix  
 - `docs/REALTIME_CHAT.md` — Pusher channel conventions  
+
+- `docs/MODULE_INVENTORY.md` — routes/API map and merge + slug migration notes  
+- `BUG_REPORT.md` — verification bugs and known limitations  
+
+---
+
+## 12. Branch integration (2026-07-29)
+
+- **`musadiq`** merged **`remotes/fyp-final/main`** (integration main; includes Tayyab UI/admin work). Local branch **`tayyab`** was already contained after that merge.
+- Local git branch **`main`** has **unrelated history** to `musadiq`; use **`fyp-final/main`** for integration, not local `main`, unless histories are reconciled deliberately.
+- **Trainer slugs:** run `npm run backfill-trainer-slugs` once per environment after deploy; new trainers receive slugs on registration.
 
 ---
 

@@ -12,6 +12,8 @@ const UserSchema = new Schema({
   },
   country: { type: String, default: 'Pakistan' },
   profileImage: { type: String, default: '' },
+  avatarUrl: { type: String, default: '' },
+  avatarPublicId: { type: String, default: '' },
   bio: { type: String, default: '', maxlength: 500 },
   subscription: {
     plan: { type: String, enum: ['basic', 'pro', 'elite'], default: 'basic' },
@@ -46,6 +48,23 @@ const UserSchema = new Schema({
   goalMetricCurrent: { type: Number },
   goalMetricTarget: { type: Number },
   goalMetricUnit: { type: String, default: '' },
+  /** Expo push tokens for mobile app notifications */
+  expoPushTokens: { type: [String], default: [] },
+  notificationPreferences: {
+    chatMessages: { type: Boolean, default: true },
+    workoutPlans: { type: Boolean, default: true },
+    mealPlans: { type: Boolean, default: true },
+    weeklyProgress: { type: Boolean, default: true },
+    achievements: { type: Boolean, default: true },
+    connectionRequests: { type: Boolean, default: true },
+    communityActivity: { type: Boolean, default: true },
+    liveSessions: { type: Boolean, default: true },
+    subscriptionUpdates: { type: Boolean, default: true },
+    adminTrainerApplications: { type: Boolean, default: true },
+    adminGymVerification: { type: Boolean, default: true },
+    adminUserSuspension: { type: Boolean, default: true },
+    adminSubscriptionUpgrades: { type: Boolean, default: true },
+  },
 }, { timestamps: true })
 
 export default mongoose.models.User || mongoose.model('User', UserSchema)

@@ -1,109 +1,304 @@
 'use client'
-import { useState, useRef, useEffect } from 'react'
+
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { Bot, Send, X } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
+import { ChatMessageContent } from '@/components/shared/ChatMessageContent'
+import { isAuthPath } from '@/lib/shell-routes'
+import { apaParagraph, apaReply } from '@/lib/chat-apa-format'
 
-interface Message { role: 'user' | 'assistant'; content: string }
+const MOBILE_MAX_WIDTH = 767
 
-const QUICK_PROMPTS = ['Help me gain weight', 'Build a fat-loss plan', 'Improve my 5K time']
+function shouldReserveBottomNav(pathname: string, role: string | undefined): boolean {
+  if (!role || role !== 'user') return false
+  if (
+    isAuthPath(pathname) ||
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/gym-owner') ||
+    pathname.startsWith('/trainer-dashboard')
+  ) {
+    return false
+  }
+  return (
+    pathname === '/dashboard' ||
+    pathname.startsWith('/my-fitness') ||
+    pathname.startsWith('/community') ||
+    pathname.startsWith('/chat') ||
+    pathname.startsWith('/analytics') ||
+    pathname.startsWith('/meal-plans') ||
+    pathname.startsWith('/leaderboard') ||
+    pathname.startsWith('/live-sessions') ||
+    pathname.startsWith('/exercise-check') ||
+    pathname.startsWith('/notifications') ||
+    pathname.startsWith('/settings')
+  )
+}
+
+function isMobileViewport(): boolean {
+  if (typeof window === 'undefined') return false
+  return window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH}px)`).matches
+}
+
+interface Message {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+const GUEST_OPENING = apaReply([
+  apaParagraph(
+    'Welcome to the T.E.S.T. AI Fitness Coach.',
+    'I can estimate your daily calorie needs from your weight, height, age, and sex.',
+  ),
+  apaParagraph('Example prompt: "I am 25, 75 kg, 178 cm, male."'),
+], { disclaimer: false })
+
+const LOGGED_IN_OPENING = apaReply([
+  apaParagraph(
+    'Welcome to the T.E.S.T. AI Fitness Coach.',
+    'Ask about workouts, nutrition, recovery, or your fitness goals.',
+  ),
+], { disclaimer: false })
+
+const GUEST_CHIPS = [
+  { label: 'Calculate my calories', value: 'Calculate my calories' },
+  { label: 'How to lose fat?', value: 'How to lose fat?' },
+  { label: 'Pakistani food calories', value: 'Pakistani food calories' },
+]
 
 export function AIChatbot() {
   const pathname = usePathname()
+  const { user, isLoading } = useAuth()
+  const isGuest = !isLoading && !user
   const [open, setOpen] = useState(false)
-  const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: 'Hi! I\'m your T.E.S.T. AI fitness coach 🤖 Ask me anything about workouts, nutrition, or your fitness goals!' }
-  ])
+  const [visible, setVisible] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const initializedRef = useRef(false)
+
+  const updateKeyboardInset = useCallback(() => {
+    const root = document.documentElement
+    const vv = window.visualViewport
+
+    if (!vv || !open || !visible || !isMobileViewport()) {
+      root.style.removeProperty('--ai-chat-keyboard-inset')
+      root.style.removeProperty('--ai-chat-visual-offset-top')
+      root.style.removeProperty('--ai-chat-visual-height')
+      return
+    }
+
+    const keyboardInset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
+    root.style.setProperty('--ai-chat-keyboard-inset', `${keyboardInset}px`)
+    root.style.setProperty('--ai-chat-visual-offset-top', `${vv.offsetTop}px`)
+    root.style.setProperty('--ai-chat-visual-height', `${vv.height}px`)
+  }, [open, visible])
+
+  useEffect(() => {
+    if (isLoading) return
+    if (initializedRef.current) return
+    initializedRef.current = true
+    setMessages([
+      { role: 'assistant', content: isGuest ? GUEST_OPENING : LOGGED_IN_OPENING },
+    ])
+  }, [isLoading, isGuest])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
 
   useEffect(() => {
-    if (!open) return
-    inputRef.current?.focus()
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false)
+    return () => {
+      if (closeTimer.current) clearTimeout(closeTimer.current)
     }
-    document.addEventListener('keydown', onKeyDown)
-    return () => document.removeEventListener('keydown', onKeyDown)
-  }, [open])
+  }, [])
 
-  const hiddenRoutes = ['/chat', '/login', '/signup', '/register-trainer', '/register-gym-owner', '/forgot-password', '/reset-password', '/verify-email']
-  if (hiddenRoutes.some((route) => pathname.startsWith(route))) return null
+  useEffect(() => {
+    if (open && visible) {
+      const id = requestAnimationFrame(() => inputRef.current?.focus())
+      return () => cancelAnimationFrame(id)
+    }
+  }, [open, visible])
 
-  const send = async (suggested?: string) => {
-    const msg = (suggested ?? input).trim()
+  useEffect(() => {
+    if (isLoading) return
+    const root = document.documentElement
+    const hasBottomNav = shouldReserveBottomNav(pathname, user?.role)
+    if (hasBottomNav) {
+      root.dataset.aiChatBottomNav = 'true'
+    } else {
+      delete root.dataset.aiChatBottomNav
+    }
+    return () => {
+      delete root.dataset.aiChatBottomNav
+    }
+  }, [pathname, user?.role, isLoading])
+
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH}px)`)
+    const syncMobile = () => setIsMobile(mq.matches)
+    syncMobile()
+    mq.addEventListener('change', syncMobile)
+    return () => mq.removeEventListener('change', syncMobile)
+  }, [])
+
+  useEffect(() => {
+    if (!open || !visible) {
+      document.documentElement.style.removeProperty('--ai-chat-keyboard-inset')
+      document.documentElement.style.removeProperty('--ai-chat-visual-offset-top')
+      document.documentElement.style.removeProperty('--ai-chat-visual-height')
+      return
+    }
+
+    updateKeyboardInset()
+
+    const vv = window.visualViewport
+    if (!vv) return
+
+    vv.addEventListener('resize', updateKeyboardInset)
+    vv.addEventListener('scroll', updateKeyboardInset)
+    window.addEventListener('orientationchange', updateKeyboardInset)
+
+    return () => {
+      vv.removeEventListener('resize', updateKeyboardInset)
+      vv.removeEventListener('scroll', updateKeyboardInset)
+      window.removeEventListener('orientationchange', updateKeyboardInset)
+      document.documentElement.style.removeProperty('--ai-chat-keyboard-inset')
+      document.documentElement.style.removeProperty('--ai-chat-visual-offset-top')
+      document.documentElement.style.removeProperty('--ai-chat-visual-height')
+    }
+  }, [open, visible, updateKeyboardInset])
+
+  if (pathname.startsWith('/chat')) return null
+
+  const toggle = () => {
+    if (open) {
+      setOpen(false)
+      if (closeTimer.current) clearTimeout(closeTimer.current)
+      closeTimer.current = setTimeout(() => setVisible(false), 220)
+      return
+    }
+    if (closeTimer.current) clearTimeout(closeTimer.current)
+    setVisible(true)
+    requestAnimationFrame(() => setOpen(true))
+  }
+
+  const send = async (text?: string) => {
+    const msg = (text ?? input).trim()
     if (!msg || loading) return
     setInput('')
-    setMessages(m => [...m, { role: 'user', content: msg }])
+    setMessages((m) => [...m, { role: 'user', content: msg }])
     setLoading(true)
     try {
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: msg, history: messages.slice(-6) })
+        body: JSON.stringify({ message: msg, history: messages.slice(-6) }),
       })
       const data = await res.json()
       if (!res.ok && !data.reply) throw new Error(data.message || 'Coach unavailable')
-      setMessages(m => [...m, { role: 'assistant', content: data.reply || 'Sorry, try again.' }])
+      setMessages((m) => [...m, { role: 'assistant', content: data.reply || 'Sorry, try again.' }])
     } catch {
-      setMessages(m => [...m, { role: 'assistant', content: 'Connection error. Please try again.' }])
+      setMessages((m) => [...m, { role: 'assistant', content: 'Connection error. Please try again.' }])
     } finally {
       setLoading(false)
     }
   }
 
+  const handleChipClick = (value: string) => {
+    setInput(value)
+    requestAnimationFrame(() => inputRef.current?.focus())
+  }
+
+  const panelClassName = [
+    'ai-chatbot__panel',
+    open ? 'ai-chatbot__panel--open' : 'ai-chatbot__panel--closing',
+    isMobile ? 'ai-chatbot__panel--mobile' : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+
   return (
     <>
-      <button type="button" onClick={() => setOpen(!open)} aria-label={open ? 'Close AI Fitness Coach' : 'Open AI Fitness Coach'} aria-expanded={open} aria-controls="ai-fitness-coach" data-ai-chatbot-trigger
-        className="fixed bottom-[calc(5.75rem+env(safe-area-inset-bottom))] right-4 z-50 flex size-13 items-center justify-center rounded-2xl bg-gradient-to-br from-[#26d788] to-[#087d50] text-white shadow-[0_16px_45px_rgba(34,245,154,.26)] transition-transform hover:-translate-y-1 md:bottom-6 md:right-6 md:size-14">
-        {open ? <X className="size-5" /> : <Bot className="size-6" />}
+      <button
+        type="button"
+        onClick={toggle}
+        aria-label={open ? 'Close AI Fitness Coach' : 'Open AI Fitness Coach'}
+        aria-expanded={open}
+        className="ai-chatbot__fab"
+      >
+        <span className={`ai-chatbot__fab-icon ${open ? 'ai-chatbot__fab-icon--open' : ''}`}>
+          {open ? <X className="size-5" strokeWidth={2.25} /> : <Bot className="size-6" strokeWidth={2} />}
+        </span>
       </button>
 
-      {open && (
-        <div id="ai-fitness-coach" role="dialog" aria-label="AI Fitness Coach" className="fixed bottom-[calc(10rem+env(safe-area-inset-bottom))] right-3 z-50 flex h-[min(30rem,calc(100dvh-11rem))] w-[calc(100vw-1.5rem)] max-w-sm flex-col overflow-hidden rounded-3xl border border-white/[.1] bg-[#0c100d]/96 shadow-[0_30px_100px_rgba(0,0,0,.5)] backdrop-blur-2xl md:bottom-24 md:right-6">
-          <div className="px-4 py-3 border-b border-white/[.07] flex items-center gap-3 flex-shrink-0">
-            <div className="flex size-9 items-center justify-center rounded-xl border border-primary/15 bg-primary/[.09] text-primary"><Bot className="size-4" /></div>
-            <div>
-              <div className="text-sm font-bold">AI Fitness Coach</div>
-              <div className="text-[10px] text-primary flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                Goal-aware coach
+      {visible && isMobile && (
+        <button
+          type="button"
+          className={`ai-chatbot__backdrop ${open ? 'ai-chatbot__backdrop--open' : ''}`}
+          aria-label="Close chat"
+          onClick={toggle}
+          tabIndex={-1}
+        />
+      )}
+
+      {visible && (
+        <div
+          ref={panelRef}
+          className={panelClassName}
+          role="dialog"
+          aria-label="AI Fitness Coach"
+          aria-modal="false"
+        >
+          <header className="ai-chatbot__header">
+            <div className="ai-chatbot__avatar" aria-hidden>
+              <Bot className="size-4" />
+            </div>
+            <div className="ai-chatbot__title-wrap">
+              <div className="ai-chatbot__title">AI Fitness Coach</div>
+              <div className="ai-chatbot__status">
+                <span className="ai-chatbot__status-dot" />
+                Online
               </div>
             </div>
-          </div>
+            <button
+              type="button"
+              onClick={toggle}
+              className="ai-chatbot__close"
+              aria-label="Close chat"
+            >
+              <X className="size-4" />
+            </button>
+          </header>
 
-          <div role="log" aria-live="polite" aria-relevant="additions" className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div className="ai-chatbot__messages">
             {messages.map((m, i) => (
-              <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] break-words whitespace-pre-wrap px-3 py-2.5 rounded-2xl text-sm leading-relaxed ${
-                  m.role === 'user'
-                    ? 'bg-primary text-primary-foreground font-semibold rounded-br-sm'
-                    : 'bg-white/[.06] border border-white/[.06] text-white rounded-bl-sm'
-                }`}>
-                  {m.content}
+              <div
+                key={`${m.role}-${i}`}
+                className={`ai-chatbot__row ${m.role === 'user' ? 'ai-chatbot__row--user' : 'ai-chatbot__row--bot'}`}
+              >
+                <div
+                  className={`ai-chatbot__bubble ${
+                    m.role === 'user' ? 'ai-chatbot__bubble--user' : 'ai-chatbot__bubble--bot'
+                  }`}
+                >
+                  <ChatMessageContent
+                    content={m.content}
+                    variant={m.role === 'user' ? 'user' : 'bot'}
+                  />
                 </div>
               </div>
             ))}
-            {messages.length === 1 && !loading && (
-              <div className="flex flex-wrap gap-2 pt-1">
-                {QUICK_PROMPTS.map((prompt) => (
-                  <button key={prompt} type="button" onClick={() => void send(prompt)} className="rounded-full border border-primary/20 bg-primary/[.06] px-3 py-1.5 text-left text-[11px] font-semibold text-primary hover:bg-primary/[.12]">
-                    {prompt}
-                  </button>
-                ))}
-              </div>
-            )}
             {loading && (
-              <div className="flex justify-start" role="status" aria-label="AI coach is responding">
-                <div className="bg-muted px-4 py-3 rounded-2xl rounded-bl-sm flex gap-1">
-                  {[0,1,2].map(i => (
-                    <div key={i} className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce"
-                      style={{ animationDelay: `${i * 0.15}s` }} />
+              <div className="ai-chatbot__row ai-chatbot__row--bot">
+                <div className="ai-chatbot__bubble ai-chatbot__bubble--bot ai-chatbot__typing">
+                  {[0, 1, 2].map((i) => (
+                    <span key={i} style={{ animationDelay: `${i * 0.15}s` }} />
                   ))}
                 </div>
               </div>
@@ -111,18 +306,47 @@ export function AIChatbot() {
             <div ref={bottomRef} />
           </div>
 
-          <div className="px-3 py-3 border-t border-white/[.07] flex gap-2 flex-shrink-0">
-            <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)} maxLength={1000}
-              onKeyDown={e => e.key === 'Enter' && void send()}
-              aria-label="Message the AI fitness coach"
-              autoComplete="off"
+          {isGuest && (
+            <div className="ai-chatbot__chips">
+              {GUEST_CHIPS.map((chip) => (
+                <button
+                  key={chip.label}
+                  type="button"
+                  onClick={() => handleChipClick(chip.value)}
+                  className="ai-chatbot__chip"
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <form
+            className="ai-chatbot__composer"
+            onSubmit={(e) => {
+              e.preventDefault()
+              void send()
+            }}
+          >
+            <input
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
               placeholder="Ask about fitness, nutrition..."
-              className="flex-1 bg-black/25 border border-white/[.09] rounded-xl px-3 py-2 text-sm text-white placeholder-[#56615b] outline-none focus:border-primary/40 transition-colors" />
-            <button type="button" onClick={() => void send()} disabled={!input.trim() || loading} aria-label="Send message"
-              className="flex size-9 flex-shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground disabled:opacity-40">
+              className="ai-chatbot__input"
+              disabled={loading}
+              autoComplete="off"
+              enterKeyHint="send"
+            />
+            <button
+              type="submit"
+              disabled={!input.trim() || loading}
+              className="ai-chatbot__send"
+              aria-label="Send message"
+            >
               <Send className="size-3.5" />
             </button>
-          </div>
+          </form>
         </div>
       )}
     </>

@@ -43,9 +43,14 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
 export const PLANS = SUBSCRIPTION_PLANS
 
 /** Home page pricing cards — derived from subscription plans for consistent copy */
-export const MARKETING_PLANS = SUBSCRIPTION_PLANS.map(plan => ({
+export const MARKETING_PLANS = SUBSCRIPTION_PLANS.map((plan) => ({
+  id: plan.id,
   name: plan.name,
   price: plan.period ? `${plan.price}${plan.period}` : plan.price,
+  period: plan.period,
+  priceLabel: plan.price,
   features: plan.features,
   highlight: plan.highlighted,
+  premium: plan.id === 'elite',
+  cta: plan.cta,
 }))

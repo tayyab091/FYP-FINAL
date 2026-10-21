@@ -6,6 +6,7 @@ import Gym from '@/models/Gym'
 import bcrypt from 'bcryptjs'
 import { parseJsonBody, setupKeySchema } from '@/lib/validation'
 import { rateLimitAuth } from '@/lib/rate-limit'
+import { allocateTrainerSlug } from '@/lib/trainer-slug-server'
 
 export async function POST(req: NextRequest) {
   try {
@@ -52,6 +53,11 @@ export async function POST(req: NextRequest) {
       { fullName: 'Usman Malik', email: 'usman@test.com', specialty: ['Bodybuilding', 'Nutrition'], country: 'Pakistan', bio: 'Former national bodybuilding champion.', isFeatured: false, profileImage: 'https://randomuser.me/api/portraits/men/3.jpg', rating: 4.7 },
       { fullName: 'Fatima Rizvi', email: 'fatima@test.com', specialty: ['HIIT', 'Cardio'], country: 'Pakistan', bio: 'Specializing in HIIT and postnatal fitness.', isFeatured: false, profileImage: 'https://randomuser.me/api/portraits/women/4.jpg', rating: 4.9 },
       { fullName: 'Bilal Ahmed', email: 'bilal@test.com', specialty: ['CrossFit'], country: 'Pakistan', bio: 'CrossFit Level 2 certified trainer.', isFeatured: false, profileImage: 'https://randomuser.me/api/portraits/men/5.jpg', rating: 4.6 },
+      { fullName: 'Zara Malik', email: 'zara.trainer@test.com', specialty: ['Yoga', 'Mindfulness'], country: 'Pakistan', bio: 'Holistic wellness coach combining yoga and strength.', isFeatured: false, profileImage: 'https://randomuser.me/api/portraits/women/6.jpg', rating: 4.8 },
+      { fullName: 'Hassan Sheikh', email: 'hassan@test.com', specialty: ['Nutrition', 'Weight Loss'], country: 'Pakistan', bio: 'Certified nutritionist and weight loss coach. 300+ transformations in 4 years.', isFeatured: false, profileImage: 'https://randomuser.me/api/portraits/men/7.jpg', rating: 4.7 },
+      { fullName: 'Ayesha Tariq', email: 'ayesha@test.com', specialty: ['Pilates', 'Flexibility'], country: 'Pakistan', bio: 'Pilates instructor and flexibility specialist. Online and in-person sessions.', isFeatured: false, profileImage: 'https://randomuser.me/api/portraits/women/8.jpg', rating: 4.8 },
+      { fullName: 'Kamran Butt', email: 'kamran@test.com', specialty: ['Strength Training', 'Powerlifting'], country: 'UAE', bio: 'Elite powerlifting coach based in Dubai. Trained national-level athletes.', isFeatured: false, profileImage: 'https://randomuser.me/api/portraits/men/9.jpg', rating: 4.9 },
+      { fullName: 'Sana Mirza', email: 'sana@test.com', specialty: ['HIIT', 'Cardio', 'Dance Fitness'], country: 'Pakistan', bio: 'High energy HIIT and dance fitness instructor. Makes every session fun!', isFeatured: false, profileImage: 'https://randomuser.me/api/portraits/women/10.jpg', rating: 4.8 },
     ]
 
     for (const t of trainersData) {
@@ -60,8 +66,9 @@ export async function POST(req: NextRequest) {
         tUser = await User.create({ fullName: t.fullName, email: t.email, password: hash('Trainer@123'), role: 'trainer', country: t.country })
       }
       if (!await Trainer.findOne({ email: t.email })) {
+        const slug = await allocateTrainerSlug(t.fullName)
         await Trainer.create({
-          userId: tUser._id, name: t.fullName, email: t.email,
+          userId: tUser._id, slug, name: t.fullName, email: t.email,
           specialty: t.specialty, country: t.country, bio: t.bio,
           isFeatured: t.isFeatured, isFullyVerified: true, isActive: true,
           gymVerificationStatus: 'approved', adminVerificationStatus: 'approved',
@@ -79,8 +86,15 @@ export async function POST(req: NextRequest) {
     ]
 
     for (const u of usersData) {
-      if (!await User.findOne({ email: u.email })) {
-        const endDate = u.plan !== 'basic' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : undefined
+      const endDate = u.plan !== 'basic' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : undefined
+      const subscription = {
+        plan: u.plan,
+        status: 'active' as const,
+        startDate: new Date(),
+        ...(endDate && { endDate }),
+      }
+      const existing = await User.findOne({ email: u.email })
+      if (!existing) {
         await User.create({
           fullName: u.fullName,
           email: u.email,
@@ -90,15 +104,13 @@ export async function POST(req: NextRequest) {
           currentWeight: 70,
           fitnessGoal: 'general_fitness',
           activityLevel: 'moderate',
-          subscription: {
-            plan: u.plan,
-            status: 'active',
-            startDate: new Date(),
-            ...(endDate && { endDate }),
-          },
+          subscription,
         })
         results.push(`✓ User: ${u.email} / User@123 (${u.plan})`)
-      } else results.push(`→ User ${u.email} already exists`)
+      } else {
+        await User.updateOne({ email: u.email }, { $set: { subscription } })
+        results.push(`→ User ${u.email} subscription reset to ${u.plan}`)
+      }
     }
 
     return NextResponse.json({

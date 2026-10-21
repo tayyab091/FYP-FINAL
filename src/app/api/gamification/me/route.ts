@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import { getUser } from '@/lib/auth'
-import { getGamificationMe } from '@/lib/gamification'
+import { getGamificationMe, getLeaderboard } from '@/lib/gamification'
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,6 +14,13 @@ export async function GET(req: NextRequest) {
     }
 
     await connectDB()
+
+    const leaderboard = req.nextUrl.searchParams.get('leaderboard') === 'true'
+    if (leaderboard) {
+      const data = await getLeaderboard(tokenUser.userId, 10)
+      return NextResponse.json(data)
+    }
+
     const gamification = await getGamificationMe(tokenUser.userId)
     return NextResponse.json(gamification)
   } catch {

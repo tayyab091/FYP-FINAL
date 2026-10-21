@@ -8,7 +8,9 @@ import Trainer from '@/models/Trainer'
 import User from '@/models/User'
 import Relationship from '@/models/Relationship'
 import { parseJsonBody, reviewSchema } from '@/lib/validation'
-import { createPublicSlug, idFromPublicSlug } from '@/lib/slug'
+import { USER_AVATAR_POPULATE_SELECT, resolveAvatarUrl } from '@/lib/avatar'
+import { findTrainerByIdOrSlug, resolveTrainerObjectId } from '@/lib/resolve-trainer'
+import { createPublicSlug } from '@/lib/slug'
 
 async function getReviewStats(trainerId: string) {
   const stats = await Review.aggregate([
@@ -30,18 +32,16 @@ async function getReviewStats(trainerId: string) {
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const trainerId = idFromPublicSlug(id) || id
-    if (!mongoose.isValidObjectId(trainerId)) {
+    const trainerId = await resolveTrainerObjectId(id)
+    if (!trainerId) {
       return NextResponse.json({ message: 'Trainer not found' }, { status: 404 })
     }
 
     await connectDB()
-    const trainer = await Trainer.findById(trainerId).select('_id').lean()
-    if (!trainer) return NextResponse.json({ message: 'Trainer not found' }, { status: 404 })
 
     const reviews = await Review.find({ trainerId })
       .sort({ createdAt: -1 })
-      .populate('userId', 'fullName')
+      .populate('userId', USER_AVATAR_POPULATE_SELECT)
       .lean()
 
     const { averageRating, reviewCount } = await getReviewStats(trainerId)
@@ -67,6 +67,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         comment: review.comment,
         createdAt: review.createdAt,
         authorName: (review.userId as { fullName?: string } | null)?.fullName || 'Anonymous',
+        authorImage:
+          resolveAvatarUrl(
+            review.userId as { avatarUrl?: string; profileImage?: string } | null,
+          ) ||
+          (review.userId as { profileImage?: string } | null)?.profileImage ||
+          '',
       })),
       averageRating: reviewCount > 0 ? Math.round(averageRating * 10) / 10 : 0,
       reviewCount,
@@ -84,19 +90,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!tokenUser) return NextResponse.json({ message: 'Not authenticated' }, { status: 401 })
 
     const { id } = await params
-    const trainerId = idFromPublicSlug(id) || id
-    if (!mongoose.isValidObjectId(trainerId)) {
+    const trainer = await findTrainerByIdOrSlug(id)
+    if (!trainer) {
       return NextResponse.json({ message: 'Trainer not found' }, { status: 404 })
     }
+    const trainerId = trainer._id.toString()
 
     const parsed = await parseJsonBody(req, reviewSchema)
     if ('error' in parsed) return parsed.error
     const { rating, comment } = parsed.data
 
     await connectDB()
-
-    const trainer = await Trainer.findById(trainerId).select('_id userId name').lean()
-    if (!trainer) return NextResponse.json({ message: 'Trainer not found' }, { status: 404 })
 
     if (trainer.userId?.toString() === tokenUser.userId) {
       return NextResponse.json({ message: 'You cannot review yourself' }, { status: 403 })
@@ -114,7 +118,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       )
     }
 
-    const user = await User.findById(tokenUser.userId).select('fullName').lean()
+    const user = await User.findById(tokenUser.userId).select('fullName profileImage avatarUrl').lean()
     if (!user) return NextResponse.json({ message: 'User not found' }, { status: 404 })
 
     const existing = await Review.findOne({ trainerId, userId: tokenUser.userId })
@@ -134,12 +138,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     await Trainer.updateOne({ _id: trainerId }, { $set: { rating: roundedRating } })
 
     if (trainer.userId) {
+      const slug = typeof trainer.slug === 'string' ? trainer.slug : trainerId
       await createNotification({
         userId: trainer.userId,
         title: 'New review received',
         message: `${user.fullName} left you a ${rating}-star review`,
         type: 'trainer',
-        link: `/coaching/${createPublicSlug(trainer.name, trainerId)}`,
+        link: `/coaching/${slug || createPublicSlug(trainer.name || 'trainer', trainerId)}`,
       })
     }
 
@@ -150,6 +155,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         comment: review.comment,
         createdAt: review.createdAt,
         authorName: user.fullName,
+        authorImage: resolveAvatarUrl(user) || user.profileImage || '',
       },
       averageRating: roundedRating,
       reviewCount,

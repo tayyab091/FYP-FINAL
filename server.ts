@@ -1,7 +1,7 @@
 /**
  * Local optional server entry.
  * Production on Vercel uses `next start` / serverless — no Socket.io.
- * Realtime: Pusher | Live video: Daily.co | Uploads: Vercel Blob
+ * Realtime: Pusher | Live video: Jitsi Meet | Uploads: Cloudinary
  */
 import { createServer } from 'http'
 import { parse } from 'url'

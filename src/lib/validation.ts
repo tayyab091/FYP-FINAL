@@ -193,6 +193,10 @@ export const profileUpdateSchema = z.object({
 
 export const communityPostSchema = z.object({
   content: plainTextSchema(2000, 1),
+  category: z
+    .enum(['Motivation', 'Question', 'Achievement', 'Workout'])
+    .optional()
+    .default('Motivation'),
 })
 
 export const communityCommentSchema = z.object({
@@ -284,10 +288,23 @@ export const verifyEmailSchema = z.object({
 
 export const adminActionSchema = z.object({
   action: z.enum(['verify', 'reject']),
+  reason: optionalPlainTextSchema(500),
 })
 
 export const suspendSchema = z.object({
   suspend: z.boolean(),
+  reason: optionalPlainTextSchema(500),
+})
+
+export const superAdminCreateSchema = z.object({
+  fullName: plainTextSchema(100, 2),
+  email: emailSchema,
+  password: passwordSchema,
+})
+
+export const superAdminSuspendSchema = z.object({
+  suspend: z.boolean(),
+  reason: plainTextSchema(500, 3),
 })
 
 export const progressBodySchema = z.object({
@@ -297,6 +314,7 @@ export const progressBodySchema = z.object({
   waist: z.number().min(0).max(500).optional(),
   hips: z.number().min(0).max(500).optional(),
   notes: optionalPlainTextSchema(1000),
+  date: z.string().min(1).max(64).optional(),
 })
 
 export const gymOwnerTrainerActionSchema = z.object({
@@ -387,6 +405,7 @@ export const liveSessionCreateSchema = z.object({
   scheduledAt: z.string().min(1).max(64),
   durationMinutes: z.number().int().min(15).max(240).optional().default(60),
   maxParticipants: z.number().int().min(1).max(100).optional().default(20),
+  clientId: objectIdSchema('clientId').optional(),
 })
 
 export const workoutPlanCreateSchema = z.object({
@@ -397,6 +416,34 @@ export const workoutPlanCreateSchema = z.object({
   durationWeeks: z.number().int().min(1).max(52).optional(),
   difficulty: optionalPlainTextSchema(40),
   weeklySchedule: z.array(z.unknown()).max(14).optional().default([]),
+})
+
+export const workoutLogStartSchema = z.object({
+  planId: objectIdSchema('planId'),
+  date: z.string().min(1).max(64).optional(),
+  exercises: z
+    .array(
+      z.object({
+        name: plainTextSchema(120, 1),
+        setsCompleted: z.number().int().min(0).max(100).optional(),
+        repsCompleted: optionalPlainTextSchema(40),
+        notes: optionalPlainTextSchema(500),
+      }),
+    )
+    .max(100)
+    .optional()
+    .default([]),
+})
+
+/** Toggle a single exercise's checklist-completed flag on an in-progress log. */
+export const workoutLogToggleSchema = z.object({
+  exerciseIndex: z.number().int().min(0).max(99),
+  completed: z.boolean(),
+})
+
+/** Abandon an in-progress workout log without completing it (XP is never awarded). */
+export const workoutLogCancelSchema = z.object({
+  status: z.literal('skipped'),
 })
 
 export const workoutCompleteSchema = z.object({
@@ -421,6 +468,28 @@ export const mealPlanGenerateSchema = z.object({
   preferenceNotes: optionalPlainTextSchema(1000),
   title: optionalPlainTextSchema(120),
   dailyCalories: z.number().int().min(800).max(6000).optional(),
+})
+
+const mealItemSchema = z.object({
+  mealType: z.enum(['breakfast', 'lunch', 'dinner', 'snack']),
+  name: plainTextSchema(120, 1),
+  calories: z.number().min(0).max(5000).default(0),
+  protein: z.number().min(0).max(500).default(0),
+  carbs: z.number().min(0).max(500).default(0),
+  fat: z.number().min(0).max(500).default(0),
+  notes: optionalPlainTextSchema(500),
+})
+
+/** Trainer assigns a full meal plan to an active client. */
+export const mealPlanAssignSchema = z.object({
+  userId: objectIdSchema('userId'),
+  relationshipId: objectIdSchema('relationshipId').optional(),
+  title: plainTextSchema(120, 1),
+  goal: z.enum(['weight_loss', 'muscle_gain', 'maintenance', 'endurance', 'flexibility', 'general_fitness']),
+  durationDays: z.number().int().min(1).max(31).default(7),
+  dailyCalories: z.number().int().min(800).max(6000).optional(),
+  meals: z.array(mealItemSchema).min(1).max(8),
+  preferenceNotes: optionalPlainTextSchema(1000),
 })
 
 export const mealPlanUpdateSchema = z.object({

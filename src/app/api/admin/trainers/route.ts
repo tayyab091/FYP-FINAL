@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import Trainer from '@/models/Trainer'
 import { getUser } from '@/lib/auth'
+import { USER_AVATAR_POPULATE_SELECT } from '@/lib/avatar'
 
 export async function GET(req: NextRequest) {
   try {
@@ -13,7 +14,7 @@ export async function GET(req: NextRequest) {
 
     await connectDB()
     const trainers = await Trainer.find({})
-      .populate('userId', 'fullName email profileImage')
+      .populate('userId', USER_AVATAR_POPULATE_SELECT)
       .sort({ createdAt: -1 })
       .lean()
 

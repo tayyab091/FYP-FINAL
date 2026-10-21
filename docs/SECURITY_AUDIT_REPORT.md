@@ -15,7 +15,7 @@
 | XSS stored in UGC | React text nodes OK; no HTML sanitize | Server `sanitizePlainText` + URL allowlist | Community HTML → tags stripped; `javascript:` profile image → **400** |
 | CSP / security headers | CORS `*` only | CSP + nosniff + frame/referrer/permissions | Homepage returns CSP |
 | Rate limits | None | Auth / AI / upload in-memory limits | Applied on login, register, AI, upload, seed |
-| Uploads | Type/size in Blob helper | + rate limit | Unchanged MIME/size checks |
+| Uploads | Type/size checks in upload helper | + rate limit | Unchanged MIME/size checks |
 | Passwords | bcrypt + `.select('-password')` on me/profile | Same; change-password Zod | Live login OK |
 | Payments | Stripe simulated | **PAUSED** (untouched) | GET plan fields only |
 
@@ -81,7 +81,7 @@
 
 | | |
 |--|--|
-| **Location** | `api/chat/upload`, `lib/blob.ts` |
+| **Location** | `api/chat/upload`, `lib/cloudinary.ts` |
 | **Risk** | Oversized / non-image uploads |
 | **Fix** | Existing MIME + 4MB checks; added `rateLimitUpload` |
 
@@ -116,7 +116,7 @@ Not audited for live Checkout/webhook hardening this phase. Do not treat as veri
 
 ## Missing env keys (not invented)
 
-Documented gaps unchanged: `PUSHER_*`, `DAILY_API_KEY`, `BLOB_READ_WRITE_TOKEN`, `SMTP_*`, `GOOGLE_CLIENT_*`, live `STRIPE_*` (**PAUSED**).
+Documented gaps unchanged: `PUSHER_*`, `CLOUDINARY_*`, `SMTP_*`, `GOOGLE_CLIENT_*`, live `STRIPE_*` (**PAUSED**).
 
 ---
 

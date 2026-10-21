@@ -14,11 +14,11 @@ export async function GET(req: NextRequest) {
     await connectDB()
     const plan = await WorkoutPlan.findOne({
       userId: tokenUser.userId,
-      status: 'active',
-    }).lean()
+      status: { $in: ['active', 'draft'] },
+    }).sort({ updatedAt: -1 }).lean()
 
     if (!plan) return NextResponse.json({ plan: null })
-    return NextResponse.json(plan)
+    return NextResponse.json({ plan })
   } catch {
     return NextResponse.json({ message: 'Server error' }, { status: 500 })
   }

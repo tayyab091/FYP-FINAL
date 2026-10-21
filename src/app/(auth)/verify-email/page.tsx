@@ -73,7 +73,7 @@ function VerifyEmailContent() {
               <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary">
                 <BadgeCheck className="size-7" />
               </div>
-              <h1 className="mb-2 text-xl font-bold text-white">Email verified</h1>
+              <h1 className="mb-2 text-xl font-bold text-foreground">Email verified</h1>
               <p className="mb-6 text-sm text-muted-foreground">{message}</p>
               <Link href="/login" className="btn-accent px-8 py-3 text-sm">
                 Continue to sign in
@@ -85,7 +85,7 @@ function VerifyEmailContent() {
               <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/10 text-red-400">
                 <CircleAlert className="size-7" />
               </div>
-              <h1 className="mb-2 text-xl font-bold text-white">Verification failed</h1>
+              <h1 className="mb-2 text-xl font-bold text-foreground">Verification failed</h1>
               <p className="mb-6 text-sm text-muted-foreground">{message}</p>
               <Link href="/login" className="text-sm font-medium text-primary hover:text-primary/80">
                 Back to sign in

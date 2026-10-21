@@ -11,11 +11,10 @@ Full-stack fitness coaching platform built as a Final Year Project. Members conn
 | Database | MongoDB + Mongoose |
 | Auth | JWT (httpOnly cookies), Google OAuth, email verify / password reset |
 | Realtime | **Pusher** (chat + notifications) — Vercel-compatible |
-| Live video | **Daily.co** rooms (Elite); scheduling gated in our API |
-| Uploads | **Vercel Blob** (chat images) |
+| Live video | **Jitsi Meet** (`meet.jit.si`) rooms (Elite); scheduling gated in our API |
+| Uploads | **Cloudinary** (chat images) |
 | UI | Tailwind CSS 4, shadcn/ui, Recharts, Framer Motion |
 | AI | Google Gemini (chatbot, nutrition hints) |
-| Maps | Google Maps Embed + Places Nearby Search |
 | Pose | MediaPipe Pose (exercise form checker) |
 | Payments | Stripe Checkout (test mode) with simulated fallback when keys unset |
 | Email | SMTP via nodemailer (console link fallback in development) |
@@ -24,7 +23,6 @@ Full-stack fitness coaching platform built as a Final Year Project. Members conn
 ## Features
 
 - **Trainer marketplace** — Browse, filter, and connect with verified coaches
-- **Gym marketplace** — Search gyms, browse profiles, and discover nearby places on Google Maps
 - **Coaching relationships** — Request / accept flow with permission flags
 - **Workout plans** — Trainers create weekly schedules; clients complete sessions with history & streaks
 - **Nutrition tracking** — Food search, meal logging, personalized calorie targets
@@ -32,8 +30,8 @@ Full-stack fitness coaching platform built as a Final Year Project. Members conn
 - **Progress tracking** — Weight, body fat, measurements with charts
 - **Advanced analytics** — Pro+ dashboard: workouts, nutrition, weight trends (`/analytics`)
 - **Community feed** — Basic+ posts, likes, comments (`/community`)
-- **Live training sessions** — Elite scheduling + **Daily.co** video rooms (`/live-sessions`)
-- **Chat** — REST + **Pusher** realtime; workout plan cards and **Vercel Blob** image uploads
+- **Live training sessions** — Elite scheduling + **Jitsi Meet** video rooms (`/live-sessions`)
+- **Chat** — REST + **Pusher** realtime; workout plan cards and **Cloudinary** image uploads
 - **Notifications** — In-app center + bell; Pusher push with poll fallback
 - **Trainer reviews** — Rating + comment; average on trainer profiles
 - **AI form checker** — Pro/Elite gated pose feedback (`/exercise-check`)
@@ -78,11 +76,13 @@ Optional integrations (see `.env.example`):
 | `SMTP_*` | Transactional email (verify / reset links) |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth |
 | `PUSHER_*` / `NEXT_PUBLIC_PUSHER_*` | Realtime chat + notifications |
-| `DAILY_API_KEY` | Elite live video rooms |
-| `BLOB_READ_WRITE_TOKEN` | Chat + profile image uploads (Vercel Blob) |
+| No extra env vars | Live sessions embed `meet.jit.si` directly |
+| `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | Chat image uploads (Cloudinary) |
+| `CLOUDINARY_URL` | Alternative Cloudinary credential format |
+| `CLOUDINARY_UPLOAD_FOLDER` | Optional Cloudinary folder for chat images |
+| `BLOB_READ_WRITE_TOKEN` | Optional legacy profile image uploads (Vercel Blob) |
 | `GEMINI_API_KEY` / `GEMINI_MODEL` | Goal-aware AI chatbot (local fallback when unset) |
-| `GOOGLE_MAPS_API_KEY` | Server-side Google Places nearby-gym search |
-| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Google Maps embeds in the browser |
+| `GOOGLE_MAPS_API_KEY` / `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Gym search and map display |
 | `SPOONACULAR_API_KEY` | Enhanced food search |
 
 3. **Run development server**
@@ -144,7 +144,6 @@ Additional trainers: `sarah@test.com`, `usman@test.com`, `fatima@test.com`, `bil
 | Path | Description |
 |------|-------------|
 | `/coaching` | Trainer marketplace |
-| `/gyms` | Gym marketplace, profiles, map, and nearby search |
 | `/my-fitness` | Member hub (workout, history, nutrition, progress) |
 | `/meal-plans` | Personalized meal plans (Pro+) |
 | `/analytics` | Advanced analytics (Pro+) |
@@ -175,7 +174,7 @@ src/
 ├── app/              # Next.js App Router (pages + API routes)
 ├── components/       # UI components
 ├── hooks/            # React hooks (useAuth, useChatRealtime)
-├── lib/              # Auth, MongoDB, Stripe, Pusher, Daily, Blob, plans
+├── lib/              # Auth, MongoDB, Stripe, Pusher, Jitsi, Cloudinary, plans
 ├── models/           # Mongoose schemas
 ├── middleware.ts     # Edge route guards (re-exports proxy)
 └── proxy.ts          # Next.js 16 request proxy / auth redirects

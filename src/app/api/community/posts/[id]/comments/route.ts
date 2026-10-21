@@ -9,6 +9,7 @@ import CommunityPost from '@/models/CommunityPost'
 import CommunityComment from '@/models/CommunityComment'
 import User from '@/models/User'
 import { communityCommentSchema, parseJsonBody, parseObjectIdParam } from '@/lib/validation'
+import { resolveAvatarUrl } from '@/lib/avatar'
 
 type RouteContext = { params: Promise<{ id: string }> }
 
@@ -42,9 +43,24 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
 
     const comments = await CommunityComment.find({ postId: idResult.id })
       .sort({ createdAt: 1 })
+      .populate('authorId', 'fullName profileImage avatarUrl')
       .lean()
 
-    return NextResponse.json(comments)
+    return NextResponse.json(
+      comments.map((comment) => {
+        const author =
+          comment.authorId && typeof comment.authorId === 'object' && 'fullName' in comment.authorId
+            ? (comment.authorId as { fullName?: string; profileImage?: string; avatarUrl?: string })
+            : null
+        return {
+          _id: comment._id.toString(),
+          authorName: author?.fullName || comment.authorName || 'Member',
+          authorImage: resolveAvatarUrl(author) || author?.profileImage || '',
+          content: comment.content,
+          createdAt: comment.createdAt,
+        }
+      }),
+    )
   } catch {
     return NextResponse.json({ message: 'Server error' }, { status: 500 })
   }
@@ -69,8 +85,9 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     const post = await CommunityPost.findById(idResult.id).select('_id authorId').lean()
     if (!post) return NextResponse.json({ message: 'Post not found' }, { status: 404 })
 
-    const user = await User.findById(tokenUser.userId).select('fullName').lean()
+    const user = await User.findById(tokenUser.userId).select('fullName profileImage avatarUrl').lean()
     const authorName = user?.fullName || tokenUser.email
+    const authorImage = resolveAvatarUrl(user) || user?.profileImage || ''
 
     const comment = await CommunityComment.create({
       postId: idResult.id,
@@ -89,7 +106,16 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       }).catch(() => {})
     }
 
-    return NextResponse.json(comment, { status: 201 })
+    return NextResponse.json(
+      {
+        _id: comment._id.toString(),
+        authorName,
+        authorImage,
+        content: comment.content,
+        createdAt: comment.createdAt,
+      },
+      { status: 201 },
+    )
   } catch {
     return NextResponse.json({ message: 'Server error' }, { status: 500 })
   }

@@ -2,6 +2,7 @@ import mongoose, { Schema } from 'mongoose'
 
 const TrainerSchema = new Schema({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  slug: { type: String, unique: true, sparse: true, trim: true, lowercase: true },
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   specialty: [{ type: String }],

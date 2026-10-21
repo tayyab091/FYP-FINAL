@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import WorkoutPlan from '@/models/WorkoutPlan'
 import Trainer from '@/models/Trainer'
+import User from '@/models/User'
 import { getUser } from '@/lib/auth'
+import { createNotification } from '@/lib/notifications'
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -26,6 +28,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ message: 'Not authorized to activate this plan' }, { status: 403 })
     }
 
+    const wasInactive = plan.status !== 'active'
+
     await WorkoutPlan.updateMany(
       { userId: plan.userId, status: 'active' },
       { status: 'completed' }
@@ -34,6 +38,23 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     plan.status = 'active'
     plan.startDate = new Date()
     await plan.save()
+
+    // Notify client when a trainer activates/assigns the plan
+    if (wasInactive && isOwningTrainer && plan.userId.toString() !== tokenUser.userId) {
+      try {
+        const trainerUser = await User.findById(tokenUser.userId).select('fullName').lean()
+        const trainerName = trainerUser?.fullName || 'Your trainer'
+        await createNotification({
+          userId: plan.userId,
+          title: 'Workout plan assigned',
+          message: `${trainerName} assigned you “${plan.title}”`,
+          type: 'workout',
+          link: '/my-fitness',
+        })
+      } catch (notifyError) {
+        console.error('Workout plan notify error:', notifyError)
+      }
+    }
 
     return NextResponse.json(plan)
   } catch {

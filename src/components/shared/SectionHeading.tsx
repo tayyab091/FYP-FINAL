@@ -12,7 +12,7 @@ export function SectionHeading({ title, description, action, className }: Sectio
   return (
     <div className={cn('mb-5 flex flex-wrap items-end justify-between gap-3', className)}>
       <div>
-        <h2 className="font-heading text-lg font-bold text-white">{title}</h2>
+        <h2 className="font-heading text-lg font-bold text-foreground">{title}</h2>
         {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
       </div>
       {action}

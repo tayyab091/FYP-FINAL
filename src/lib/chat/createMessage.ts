@@ -82,7 +82,7 @@ export async function createMessage(input: CreateMessageInput) {
   let trimmed = content.trim()
   if (type === 'image') {
     if (!isSafeHttpUrl(trimmed, true)) {
-      throw new ChatError(400, 'Image content must be a valid https URL (Vercel Blob)')
+      throw new ChatError(400, 'Image content must be a valid https URL (Cloudinary or Vercel Blob)')
     }
     if (trimmed.length > 2048) {
       throw new ChatError(400, 'Image URL is too long')
@@ -150,9 +150,15 @@ export async function createMessage(input: CreateMessageInput) {
       .map((recipientId: string) =>
         createNotification({
           userId: recipientId,
-          title: `New message from ${senderName}`,
-          message: preview,
-          type: 'chat',
+          title:
+            type === 'workout_plan'
+              ? 'Workout plan assigned'
+              : `New message from ${senderName}`,
+          message:
+            type === 'workout_plan'
+              ? `${senderName} sent you a workout plan`
+              : preview,
+          type: type === 'workout_plan' ? 'workout' : 'chat',
           link: `/chat/${conversationId}`,
         }),
       ),

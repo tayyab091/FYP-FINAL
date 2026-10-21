@@ -4,6 +4,8 @@ import User from '@/models/User'
 import Trainer from '@/models/Trainer'
 import { getUser } from '@/lib/auth'
 import { parseJsonBody, profileUpdateSchema } from '@/lib/validation'
+import { resolveAvatarUrl } from '@/lib/avatar'
+import { allocateTrainerSlug } from '@/lib/trainer-slug-server'
 
 export async function PUT(req: NextRequest) {
   try {
@@ -33,20 +35,30 @@ export async function PUT(req: NextRequest) {
       runValidators: true,
     }).select('-password')
 
-    if (tokenUser.role === 'trainer') {
+    if (user?.role === 'trainer') {
+      const trainer = await Trainer.findOne({ userId: tokenUser.userId })
+      if (trainer) {
+        const nameChanged = data.fullName !== undefined && trainer.name !== data.fullName
       const trainerUpdate: Record<string, unknown> = {}
       if (data.fullName !== undefined) trainerUpdate.name = data.fullName
       if (data.country !== undefined) trainerUpdate.country = data.country
       if (data.profileImage !== undefined) trainerUpdate.profileImage = data.profileImage
       if (data.bio !== undefined) trainerUpdate.bio = data.bio
+        if (nameChanged) trainerUpdate.slug = await allocateTrainerSlug(data.fullName, trainer._id)
       if (Object.keys(trainerUpdate).length > 0) {
-        await Trainer.findOneAndUpdate({ userId: tokenUser.userId }, trainerUpdate, {
-          runValidators: true,
-        })
+          await Trainer.updateOne({ _id: trainer._id }, { $set: trainerUpdate }, { runValidators: true })
+        }
       }
     }
 
-    return NextResponse.json({ user, message: 'Profile updated' })
+    const avatarUrl = resolveAvatarUrl(user) || ''
+    const serialized = user?.toObject()
+    if (serialized) {
+      serialized.avatarUrl = avatarUrl
+      serialized.profileImage = avatarUrl || serialized.profileImage
+    }
+
+    return NextResponse.json({ user: serialized, message: 'Profile updated' })
   } catch {
     return NextResponse.json({ message: 'Server error' }, { status: 500 })
   }

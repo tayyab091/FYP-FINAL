@@ -4,6 +4,22 @@ import { aiChatSchema, parseJsonBody } from '@/lib/validation'
 import { rateLimitAi } from '@/lib/rate-limit'
 import { connectDB } from '@/lib/mongodb'
 import User from '@/models/User'
+import { generateChatFallback, getWeightConflictMessage } from '@/lib/chat-fallback-engine'
+import { APA_CHAT_DISCLAIMER } from '@/lib/chat-apa-format'
+
+const GEMINI_APA_INSTRUCTIONS = `You are a professional fitness and nutrition coach for T.E.S.T., a Pakistani fitness platform.
+
+Format every answer using APA-style structure:
+- Start with a short title line (plain text, no markdown #).
+- Use section headings on their own line (title case, no emoji).
+- Use numbered lists (1. 2. 3.) for sequential steps or ranked recommendations.
+- Use bullet points (•) for non-sequential items.
+- Separate sections and paragraphs with blank lines.
+- End with: ${APA_CHAT_DISCLAIMER}
+- Keep answers concise (about 120–180 words), practical, and encouraging.
+- When relevant, include Pakistani food examples (e.g., biryani, daal, roti, paratha).
+- Do not answer questions unrelated to fitness or nutrition.
+- Do not provide medical diagnoses; recommend consulting a physician for medical concerns.`
 
 interface ChatHistoryItem {
   role?: string
@@ -25,7 +41,7 @@ function goalLabel(goal?: string) {
   return goal ? goal.replaceAll('_', ' ') : 'general fitness'
 }
 
-function localCoachReply(message: string, profile?: FitnessContext | null) {
+function localCoachReply(message: string, profile?: FitnessContext | null): string | null {
   const lower = message.toLowerCase()
   const savedGoal = goalLabel(profile?.fitnessGoal)
   const goalPrefix = profile?.fitnessGoal ? `Keeping your ${savedGoal} goal in mind, ` : ''
@@ -52,7 +68,7 @@ function localCoachReply(message: string, profile?: FitnessContext | null) {
   if (/warm|stretch|mobility|injury|pain/.test(lower)) {
     return 'Warm up with 5–10 minutes of easy movement, dynamic mobility, and lighter practice sets. Do not train through sharp, worsening, or unexplained pain; a qualified clinician should assess persistent symptoms. Use controlled ranges of motion instead of bouncing into stretches.'
   }
-  return `${goalPrefix}focus on consistency, progressive training, enough protein, quality sleep, and one measurable weekly target. Tell me your main goal, training experience, days available, and equipment, and I can make the advice more specific.`
+  return null
 }
 
 export async function POST(req: NextRequest) {
@@ -64,6 +80,9 @@ export async function POST(req: NextRequest) {
     if ('error' in parsed) return parsed.error
     const { message, history } = parsed.data
     const safeHistory = history.slice(-6)
+
+    const weightConflict = getWeightConflictMessage(message)
+    if (weightConflict) return NextResponse.json({ reply: weightConflict, source: 'local-coach' })
 
     let profile: FitnessContext | null = null
     const tokenUser = await getUser(req)
@@ -80,7 +99,7 @@ export async function POST(req: NextRequest) {
 
     const apiKey = process.env.GEMINI_API_KEY
     if (!apiKey || apiKey === 'PASTE_GEMINI_KEY_HERE') {
-      return NextResponse.json({ reply: localCoachReply(message, profile), source: 'local-coach' })
+      return NextResponse.json({ reply: localCoachReply(message, profile) || generateChatFallback(message), source: 'local-coach' })
     }
 
     const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
@@ -98,8 +117,7 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({
           systemInstruction: {
             parts: [{
-              text: `You are the T.E.S.T. fitness and nutrition coach for users in Pakistan. ${context}
-Answer the user's actual intent and never confuse weight gain with weight loss. Give concise, practical guidance in 3–5 sentences. Use Pakistani food examples when helpful. Stay within exercise, nutrition, recovery, and healthy habits. Do not diagnose medical conditions; recommend a qualified clinician for red-flag symptoms. Ask one focused follow-up only when essential.`,
+              text: `${GEMINI_APA_INSTRUCTIONS}\n\nMember context: ${context}\nAnswer the user's actual intent and never confuse weight gain with weight loss. Ask one focused follow-up only when essential.`,
             }],
           },
           contents: [
@@ -121,7 +139,7 @@ Answer the user's actual intent and never confuse weight gain with weight loss. 
     }
     if (!response.ok) {
       console.error('Gemini API error:', data.error?.message || response.status)
-      return NextResponse.json({ reply: localCoachReply(message, profile), source: 'local-fallback' })
+      return NextResponse.json({ reply: localCoachReply(message, profile) || generateChatFallback(message), source: 'local-fallback' })
     }
 
     const reply = data.candidates?.[0]?.content?.parts
@@ -129,7 +147,7 @@ Answer the user's actual intent and never confuse weight gain with weight loss. 
       .join('\n')
       .trim()
     return NextResponse.json({
-      reply: reply || localCoachReply(message, profile),
+      reply: reply || localCoachReply(message, profile) || generateChatFallback(message),
       source: reply ? 'gemini' : 'local-fallback',
     })
   } catch (error) {

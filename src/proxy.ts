@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { jwtVerify } from 'jose'
+import { mealSlug } from '@/lib/meal-slug'
 import {
   getRoleDashboardPath,
   getRoleRestriction,
@@ -22,9 +23,34 @@ async function getRoleFromToken(token: string | undefined): Promise<string> {
   }
 }
 
-/** Lightweight Next.js 16 request proxy; route handlers still enforce authorization. */
+async function redirectNumericNutritionUrl(request: NextRequest): Promise<NextResponse | null> {
+  const match = request.nextUrl.pathname.match(/^\/nutrition\/(\d+)$/)
+  if (!match) return null
+
+  const mealId = match[1]
+  try {
+    const res = await fetch(`${request.nextUrl.origin}/api/meals?id=${encodeURIComponent(mealId)}`, {
+      headers: { accept: 'application/json' },
+    })
+    if (!res.ok) return null
+
+    const meal = (await res.json()) as { id?: string; name?: string }
+    const slug = mealSlug(meal.name || '', meal.id || mealId)
+    if (slug === mealId) return null
+
+    return NextResponse.redirect(new URL(`/nutrition/${slug}`, request.url), 308)
+  } catch {
+    return null
+  }
+}
+
+/** Next.js 16 proxy: route handlers enforce authorization; this adds early redirects. */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  const nutritionRedirect = await redirectNumericNutritionUrl(request)
+  if (nutritionRedirect) return nutritionRedirect
+
   const role = await getRoleFromToken(request.cookies.get('token')?.value)
   const isLoggedIn = Boolean(role)
 
@@ -47,7 +73,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico|logo.png|.*\\.png$|.*\\.jpg$|.*\\.svg$|.*\\.gif$).*)',
-  ],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|logo.png|.*\\.png$|.*\\.jpg$|.*\\.svg$|.*\\.gif$).*)'],
 }

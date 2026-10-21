@@ -14,12 +14,15 @@ interface AccessGateProps {
 
 export function AccessGate({ icon: Icon, title, description, action, className }: AccessGateProps) {
   return (
-    <div className={cn('flex min-h-[50vh] items-center justify-center px-4', className)}>
+    <div
+      data-testid="subscription-gate"
+      className={cn('flex min-h-[50vh] items-center justify-center px-4', className)}
+    >
       <div className="elite-panel max-w-md px-8 py-12 text-center">
         <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10">
           <Icon className="size-7 text-primary" strokeWidth={2.2} />
         </div>
-        <h2 className="font-heading text-xl font-bold text-white">{title}</h2>
+        <h2 className="font-heading text-xl font-bold text-foreground">{title}</h2>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
         {action && <div className="mt-6">{action}</div>}
       </div>

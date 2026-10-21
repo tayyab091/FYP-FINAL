@@ -18,8 +18,8 @@
 | `GEMINI_API_KEY` / `SPOONACULAR_API_KEY` | Placeholder | Nutrition falls back to local DB |
 | `STRIPE_*` | Placeholder | **PAUSED** — simulated path when unset/non-live |
 | `PUSHER_*` / `NEXT_PUBLIC_PUSHER_*` | ❌ Missing | Realtime push N/A; REST poll works |
-| `DAILY_API_KEY` | ❌ Missing | Live session **create** returns 503 |
-| `BLOB_READ_WRITE_TOKEN` | ❌ Missing | Chat image upload returns 503 |
+| No Jitsi env vars | n/a | Live session create should work without extra secrets |
+| `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | Optional | Chat image upload depends on Cloudinary config |
 | `SMTP_*` | ❌ Missing | Forgot-password / verify return `devLink` in development |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | ❌ Missing | OAuth start returns 503 |
 
@@ -50,7 +50,7 @@ Legend: ✅ working · ⚠️ partial / env-gated · ❌ broken · 🧩 newly wi
 | Coaching / trainers | ✅ | `GET /api/trainers` | |
 | Trainer reviews | ✅🔒 | GET/POST reviews | Zod rating/comment sanitize |
 | Chat list / send / typing | ✅🔒 | messages POST + typing | ObjectId + sanitized text; https-only images |
-| Chat image (Blob) | ⚠️🔒 | upload without file → 503 | MIME/size + rate limit; needs Blob token |
+| Chat image (Cloudinary) | ⚠️🔒 | upload without file / env → 400 or 503 | MIME/size + rate limit; needs Cloudinary keys |
 | Pusher realtime | ⚠️ | auth → 503 | Needs Pusher keys; REST poll fallback OK |
 | Notifications center | ✅ | list + community triggers | |
 | Nutrition catalog | ✅🔒 | meals + analyze GET | Query Zod-sanitized |
@@ -61,7 +61,7 @@ Legend: ✅ working · ⚠️ partial / env-gated · ❌ broken · 🧩 newly wi
 | Meal plans (Pro) | ✅🔒 | GET + POST generate 201 | Zod body |
 | Analytics (Pro) | ✅ | summary 200 | |
 | Community feed | ✅🔒 | post / like / comment | HTML stripped server-side |
-| Live sessions | ⚠️🔒 | list OK; member create 403; trainer create 503 | Create body Zod; Daily required |
+| Live sessions | ✅🔒 | list/create/join with trainer + elite gating | Create body Zod; Jitsi embed via `meet.jit.si` |
 | Subscription / payments | ⏸️ | GET plan fields only | **PAUSED — out of scope** |
 | Edge route guards | ✅ | `src/proxy.ts` only | jose JWT |
 | Gamification | ✅🔒 | `/api/gamification/me`; form-check Zod + rate limit | |
@@ -82,13 +82,12 @@ Legend: ✅ working · ⚠️ partial / env-gated · ❌ broken · 🧩 newly wi
 
 - **69 pass / 0 fail / 69 total** (`npm run live-verify`)
 - `npm run build` — success
-- Env-gated expected 503s counted as pass: OAuth, Blob upload, Pusher auth, Daily create
+- Env-gated expected 503s counted as pass: OAuth, Cloudinary upload, Pusher auth
 
 ## Cannot fully verify without secrets
 
 - Realtime push (Pusher)
-- Live video room create (Daily.co)
-- Chat image Blob uploads
+- Chat image Cloudinary uploads
 - Google OAuth end-to-end
 - SMTP-delivered emails (dev `devLink` verified instead)
 - Real Stripe Checkout — **PAUSED**

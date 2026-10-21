@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import User from '@/models/User'
-import AuditLog from '@/models/AuditLog'
+import { writeAuditLog } from '@/lib/audit-log'
 import { getUser } from '@/lib/auth'
 import { parseJsonBody, parseObjectIdParam, suspendSchema } from '@/lib/validation'
 
@@ -22,7 +22,7 @@ export async function PUT(
 
     const parsed = await parseJsonBody(req, suspendSchema)
     if ('error' in parsed) return parsed.error
-    const { suspend } = parsed.data
+    const { suspend, reason } = parsed.data
 
     await connectDB()
     const target = await User.findById(idResult.id).select('fullName email role isSuspended')
@@ -34,12 +34,13 @@ export async function PUT(
     target.isSuspended = suspend
     await target.save()
 
-    await AuditLog.create({
-      adminId: tokenUser.userId,
+    await writeAuditLog({
+      actorId: tokenUser.userId,
       action: suspend ? 'USER_SUSPENDED' : 'USER_UNSUSPENDED',
       targetId: target._id,
       targetModel: 'User',
-      details: { email: target.email, fullName: target.fullName },
+      reason,
+      details: { email: target.email, fullName: target.fullName, role: target.role },
     })
 
     return NextResponse.json({

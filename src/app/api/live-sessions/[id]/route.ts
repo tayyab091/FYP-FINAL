@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/mongodb'
 import { getUser } from '@/lib/auth'
 import LiveSession from '@/models/LiveSession'
 import User from '@/models/User'
+import { USER_AVATAR_POPULATE_SELECT, resolveAvatarUrl } from '@/lib/avatar'
 
 export async function GET(
   req: NextRequest,
@@ -22,16 +23,25 @@ export async function GET(
       return NextResponse.json({ message: 'Session not found' }, { status: 404 })
     }
 
-    const trainer = await User.findById(session.trainerId).select('fullName profileImage').lean()
+    const trainer = await User.findById(session.trainerId).select(USER_AVATAR_POPULATE_SELECT).lean()
+    const trainerAvatar = resolveAvatarUrl(trainer) || trainer?.profileImage || ''
 
     return NextResponse.json({
       session: {
         ...session,
         _id: session._id.toString(),
         trainerId: session.trainerId.toString(),
+        clientId: session.clientId ? session.clientId.toString() : null,
         participantIds: (session.participantIds || []).map((pid: { toString(): string }) => pid.toString()),
+        meetingProvider: session.meetingProvider || (session.dailyRoomUrl ? 'daily' : 'jitsi'),
+        meetingRoomName: session.meetingRoomName || session.dailyRoomName || '',
+        meetingUrl: session.meetingUrl || session.dailyRoomUrl || '',
         trainer: trainer
-          ? { fullName: trainer.fullName, profileImage: trainer.profileImage }
+          ? {
+              fullName: trainer.fullName,
+              profileImage: trainerAvatar,
+              avatarUrl: trainerAvatar,
+            }
           : null,
       },
     })

@@ -21,7 +21,7 @@ export function RepCounter({ count, label = 'REPS', className, children }: RepCo
         initial={reduceMotion ? false : { scale: 1.35, opacity: 0.6 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 500, damping: 18 }}
-        className="font-heading text-3xl font-black text-white md:text-4xl"
+        className="font-heading text-3xl font-black text-foreground md:text-4xl"
       >
         {children ?? count}
       </motion.div>
