@@ -10,6 +10,11 @@ import MealLog from '@/models/MealLog'
 import { getUser } from '@/lib/auth'
 import mongoose from 'mongoose'
 import { USER_AVATAR_POPULATE_SELECT } from '@/lib/avatar'
+import {
+  getTrainerClientProgressDecision,
+  getTrainerClientRoleDecision,
+  getTrainerClientSelect,
+} from '@/lib/trainer-progress-access.mjs'
 
 export async function GET(
   req: NextRequest,
@@ -18,8 +23,9 @@ export async function GET(
   try {
     const tokenUser = await getUser(req)
     if (!tokenUser) return NextResponse.json({ message: 'Not authenticated' }, { status: 401 })
-    if (tokenUser.role !== 'trainer') {
-      return NextResponse.json({ message: 'Trainers only' }, { status: 403 })
+    const roleDecision = getTrainerClientRoleDecision(tokenUser)
+    if (!roleDecision.allowed) {
+      return NextResponse.json({ message: roleDecision.message }, { status: roleDecision.status })
     }
 
     const { userId } = await params
@@ -36,25 +42,26 @@ export async function GET(
       userId,
       status: 'active',
     }).lean()
-    if (!relationship) {
-      return NextResponse.json({ message: 'No active client relationship' }, { status: 404 })
+    const accessDecision = getTrainerClientProgressDecision(relationship)
+    if (!accessDecision.allowed) {
+      return NextResponse.json({ message: accessDecision.message }, { status: accessDecision.status })
     }
 
     const client = await User.findById(userId)
-      .select(`${USER_AVATAR_POPULATE_SELECT} country fitnessGoal activityLevel currentWeight targetWeight`)
+      .select(getTrainerClientSelect(USER_AVATAR_POPULATE_SELECT, accessDecision.canViewProgress))
       .lean()
     if (!client) return NextResponse.json({ message: 'Client not found' }, { status: 404 })
 
     const response: Record<string, unknown> = {
       client,
       permissions: {
-        canViewProgress: relationship.canViewProgress,
+        canViewProgress: accessDecision.canViewProgress,
         canViewNutrition: relationship.canViewNutrition,
         canEditSchedule: relationship.canEditSchedule,
       },
     }
 
-    if (relationship.canViewProgress) {
+    if (accessDecision.canViewProgress) {
       const [progress, activePlan, recentWorkouts] = await Promise.all([
         ProgressRecord.find({ userId }).sort({ date: -1 }).limit(10).lean(),
         WorkoutPlan.findOne({ userId, status: 'active' }).lean(),
