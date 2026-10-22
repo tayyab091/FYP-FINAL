@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Activity } from 'lucide-react'
 import { shouldHideSiteFooter } from '@/lib/shell-routes'
+import { BrandMark } from '@/components/shared/BrandMark'
 
 const links = [
   { label: 'Trainers', href: '/coaching' },
@@ -24,9 +24,7 @@ export function SiteFooter() {
     <footer className="mt-auto border-t border-border py-12 px-6">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-8 md:flex-row">
         <Link href="/" className="flex items-center gap-2.5">
-          <span className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[0_0_28px_rgba(34,245,154,.2)]">
-            <Activity className="size-4.5" strokeWidth={2.6} />
-          </span>
+          <BrandMark className="size-9" />
           <span className="font-heading text-lg font-black tracking-[-.045em] gradient-text">T.E.S.T.</span>
         </Link>
         <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">

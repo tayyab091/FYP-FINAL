@@ -10,6 +10,7 @@ import { Eye, EyeOff, Dumbbell } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { easeTransition, fadeUp } from '@/lib/motion'
 import { resolvePostLoginPath } from '@/lib/route-access'
+import { BrandMark } from '@/components/shared/BrandMark'
 
 export default function LoginPage() {
   const { login, user, isLoading: authLoading } = useAuth()
@@ -53,7 +54,7 @@ export default function LoginPage() {
         className="w-full max-w-md"
       >
         <div className="text-center mb-8">
-          <Link href="/" className="font-heading text-2xl font-black tracking-[-.045em] text-foreground xl:hidden">T.E.S.T.</Link>
+          <Link href="/" className="inline-flex items-center justify-center gap-2 font-heading text-2xl font-black tracking-[-.045em] text-foreground xl:hidden"><BrandMark className="size-9" />T.E.S.T.</Link>
           <div className="mx-auto mt-4 mb-3 flex size-12 items-center justify-center rounded-2xl border border-primary/20 bg-primary/[.08] text-primary">
             <Dumbbell className="size-6" />
           </div>

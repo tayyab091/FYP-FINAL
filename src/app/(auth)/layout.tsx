@@ -1,7 +1,8 @@
-import { Activity, BrainCircuit, ShieldCheck, Sparkles } from 'lucide-react'
+import { BrainCircuit, ShieldCheck, Sparkles } from 'lucide-react'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { NO_INDEX_METADATA } from '@/lib/seo'
+import { BrandMark } from '@/components/shared/BrandMark'
 
 export const metadata = NO_INDEX_METADATA
 
@@ -19,9 +20,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="absolute inset-0 opacity-30 [background-image:linear-gradient(color-mix(in_srgb,var(--primary)_6%,transparent)_1px,transparent_1px),linear-gradient(90deg,color-mix(in_srgb,var(--primary)_6%,transparent)_1px,transparent_1px)] [background-size:58px_58px] dark:[background-image:linear-gradient(rgba(255,255,255,.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.035)_1px,transparent_1px)]" />
 
         <div className="relative flex items-center gap-3">
-          <span className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[0_0_35px_rgba(34,245,154,.25)]">
-            <Activity className="size-5" strokeWidth={2.7} />
-          </span>
+          <BrandMark className="size-10" />
           <span className="font-heading text-xl font-black tracking-[-.045em]">T.E.S.T.</span>
         </div>
 
