@@ -78,8 +78,11 @@ Optional integrations (see `.env.example`):
 | `PUSHER_*` / `NEXT_PUBLIC_PUSHER_*` | Realtime chat + notifications |
 | No extra env vars | Live sessions embed `meet.jit.si` directly |
 | `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | Chat image uploads (Cloudinary) |
+| `CLOUDINARY_URL` | Alternative Cloudinary credential format |
 | `CLOUDINARY_UPLOAD_FOLDER` | Optional Cloudinary folder for chat images |
-| `GEMINI_API_KEY` | AI chatbot |
+| `BLOB_READ_WRITE_TOKEN` | Optional legacy profile image uploads (Vercel Blob) |
+| `GEMINI_API_KEY` / `GEMINI_MODEL` | Goal-aware AI chatbot (local fallback when unset) |
+| `GOOGLE_MAPS_API_KEY` / `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Gym search and map display |
 | `SPOONACULAR_API_KEY` | Enhanced food search |
 
 3. **Run development server**

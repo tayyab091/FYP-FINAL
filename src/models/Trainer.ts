@@ -8,7 +8,7 @@ const TrainerSchema = new Schema({
   specialty: [{ type: String }],
   country: { type: String, default: 'Pakistan' },
   rating: { type: Number, default: 5.0, min: 0, max: 5 },
-  bio: { type: String, default: '' },
+  bio: { type: String, default: '', maxlength: 500 },
   profileImage: { type: String, default: '' },
   gymId: { type: Schema.Types.ObjectId, ref: 'Gym' },
   gymName: { type: String },

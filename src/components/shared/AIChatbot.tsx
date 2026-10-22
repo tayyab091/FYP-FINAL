@@ -201,6 +201,7 @@ export function AIChatbot() {
         body: JSON.stringify({ message: msg, history: messages.slice(-6) }),
       })
       const data = await res.json()
+      if (!res.ok && !data.reply) throw new Error(data.message || 'Coach unavailable')
       setMessages((m) => [...m, { role: 'assistant', content: data.reply || 'Sorry, try again.' }])
     } catch {
       setMessages((m) => [...m, { role: 'assistant', content: 'Connection error. Please try again.' }])

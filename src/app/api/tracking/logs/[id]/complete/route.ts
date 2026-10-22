@@ -7,7 +7,6 @@ import { getWorkoutWeeklyLimit, normalizePlan } from '@/lib/subscription'
 import { syncUserSubscription } from '@/lib/subscription-server'
 import { awardWorkoutXp } from '@/lib/gamification'
 import { parseJsonBody, parseObjectIdParam, workoutCompleteSchema } from '@/lib/validation'
-
 async function enforceWeeklyLimit(userId: string) {
   const subscription = await syncUserSubscription(userId)
   const planId = normalizePlan(subscription?.plan)

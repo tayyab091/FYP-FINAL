@@ -17,6 +17,24 @@ import {
   type ScoringState,
 } from '@/lib/form-checker-pose'
 
+function SideProfileDiagram() {
+  return (
+    <svg viewBox="0 0 200 160" className="mx-auto h-32 w-40" aria-hidden="true">
+      <rect x="0" y="0" width="200" height="160" fill="none" />
+      <rect x="8" y="60" width="18" height="12" rx="2" fill="currentColor" className="text-muted-foreground" opacity="0.6" />
+      <text x="4" y="52" fontSize="8" fill="currentColor" className="text-muted-foreground" opacity="0.7">camera</text>
+      <circle cx="120" cy="30" r="10" fill="none" stroke="currentColor" strokeWidth="2" className="text-primary" />
+      <line x1="120" y1="40" x2="120" y2="80" stroke="currentColor" strokeWidth="2" className="text-primary" />
+      <line x1="120" y1="50" x2="100" y2="70" stroke="currentColor" strokeWidth="2" className="text-primary" />
+      <line x1="120" y1="50" x2="140" y2="65" stroke="currentColor" strokeWidth="2" className="text-primary" />
+      <line x1="120" y1="80" x2="105" y2="120" stroke="currentColor" strokeWidth="2" className="text-primary" />
+      <line x1="120" y1="80" x2="135" y2="120" stroke="currentColor" strokeWidth="2" className="text-primary" />
+      <line x1="26" y1="66" x2="110" y2="66" stroke="currentColor" strokeWidth="1" strokeDasharray="4 3" className="text-muted-foreground" opacity="0.5" />
+      <text x="60" y="155" fontSize="9" fill="currentColor" className="text-muted-foreground" opacity="0.8">Side profile · full body · good lighting</text>
+    </svg>
+  )
+}
+
 export function PoseDetector() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -227,27 +245,6 @@ export function PoseDetector() {
     turn_90: 'border-amber-500/40 bg-amber-500/10 text-amber-400',
     step_back: 'border-destructive/40 bg-destructive/10 text-destructive',
     unclear: 'border-amber-500/40 bg-amber-500/10 text-amber-400',
-  }
-
-  function SideProfileDiagram() {
-    return (
-      <svg viewBox="0 0 200 160" className="mx-auto w-40 h-32" aria-hidden="true">
-        <rect x="0" y="0" width="200" height="160" fill="none" />
-        {/* camera */}
-        <rect x="8" y="60" width="18" height="12" rx="2" fill="currentColor" className="text-muted-foreground" opacity="0.6" />
-        <text x="4" y="52" fontSize="8" fill="currentColor" className="text-muted-foreground" opacity="0.7">camera</text>
-        {/* person side profile */}
-        <circle cx="120" cy="30" r="10" fill="none" stroke="currentColor" strokeWidth="2" className="text-primary" />
-        <line x1="120" y1="40" x2="120" y2="80" stroke="currentColor" strokeWidth="2" className="text-primary" />
-        <line x1="120" y1="50" x2="100" y2="70" stroke="currentColor" strokeWidth="2" className="text-primary" />
-        <line x1="120" y1="50" x2="140" y2="65" stroke="currentColor" strokeWidth="2" className="text-primary" />
-        <line x1="120" y1="80" x2="105" y2="120" stroke="currentColor" strokeWidth="2" className="text-primary" />
-        <line x1="120" y1="80" x2="135" y2="120" stroke="currentColor" strokeWidth="2" className="text-primary" />
-        {/* sight line */}
-        <line x1="26" y1="66" x2="110" y2="66" stroke="currentColor" strokeWidth="1" strokeDasharray="4 3" className="text-muted-foreground" opacity="0.5" />
-        <text x="60" y="155" fontSize="9" fill="currentColor" className="text-muted-foreground" opacity="0.8">Side profile · full body · good lighting</text>
-      </svg>
-    )
   }
 
   return (

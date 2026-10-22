@@ -14,6 +14,7 @@ import { getRoleHomePath } from '@/lib/access'
 
 const NAV_LINKS = [
   { label: 'Find Trainers', href: '/coaching' },
+  { label: 'Find Gyms', href: '/gyms' },
   { label: 'Exercises', href: '/exercises' },
   { label: 'Form Checker', href: '/exercise-check' },
   { label: 'Nutrition', href: '/nutrition' },

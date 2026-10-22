@@ -181,11 +181,14 @@ export const profileUpdateSchema = z.object({
       }
       return safe
     }),
-  bio: optionalPlainTextSchema(2000),
+  bio: optionalPlainTextSchema(500),
   currentWeight: z.number().min(0).max(500).optional(),
   targetWeight: z.number().min(0).max(500).optional(),
   fitnessGoal: optionalPlainTextSchema(100),
   activityLevel: optionalPlainTextSchema(50),
+  goalMetricCurrent: z.number().min(0).max(100000).optional(),
+  goalMetricTarget: z.number().min(0).max(100000).optional(),
+  goalMetricUnit: optionalPlainTextSchema(30),
 })
 
 export const communityPostSchema = z.object({
@@ -222,7 +225,7 @@ export const aiChatSchema = z.object({
 
 export const trainerProfileSchema = z.object({
   specialty: z.array(plainTextSchema(80, 1)).max(20).optional(),
-  bio: optionalPlainTextSchema(2000),
+  bio: optionalPlainTextSchema(500),
   certifications: z.array(plainTextSchema(120, 1)).max(20).optional(),
   hourlyRate: z.number().min(0).max(1_000_000).optional(),
   experience: optionalPlainTextSchema(500),
@@ -230,7 +233,7 @@ export const trainerProfileSchema = z.object({
 
 export const reviewSchema = z.object({
   rating: z.number().int().min(1).max(5),
-  comment: plainTextSchema(1000, 20),
+  comment: plainTextSchema(1000, 1),
 })
 
 export const registerTrainerSchema = z.object({
@@ -250,7 +253,7 @@ export const registerTrainerSchema = z.object({
       const arr = Array.isArray(v) ? v : [v]
       return arr.map((s) => sanitizePlainText(s, 80)).filter(Boolean).slice(0, 20)
     }),
-  bio: optionalPlainTextSchema(2000),
+  bio: optionalPlainTextSchema(500),
   experience: optionalPlainTextSchema(500),
 })
 
@@ -390,12 +393,17 @@ export const gymUpdateSchema = z.object({
       }
       return safe
     }),
+  city: optionalPlainTextSchema(100),
+  latitude: z.number().min(-90).max(90).optional(),
+  longitude: z.number().min(-180).max(180).optional(),
+  facilities: z.array(plainTextSchema(80, 1)).max(30).optional(),
+  images: z.array(httpUrlSchema(true)).max(8).optional(),
 })
 
 export const liveSessionCreateSchema = z.object({
   title: plainTextSchema(120, 3),
   scheduledAt: z.string().min(1).max(64),
-  durationMinutes: z.union([z.literal(30), z.literal(45), z.literal(60)]).optional().default(60),
+  durationMinutes: z.number().int().min(15).max(240).optional().default(60),
   maxParticipants: z.number().int().min(1).max(100).optional().default(20),
   clientId: objectIdSchema('clientId').optional(),
 })

@@ -10,6 +10,7 @@ import Relationship from '@/models/Relationship'
 import { parseJsonBody, reviewSchema } from '@/lib/validation'
 import { USER_AVATAR_POPULATE_SELECT, resolveAvatarUrl } from '@/lib/avatar'
 import { findTrainerByIdOrSlug, resolveTrainerObjectId } from '@/lib/resolve-trainer'
+import { createPublicSlug } from '@/lib/slug'
 
 async function getReviewStats(trainerId: string) {
   const stats = await Review.aggregate([
@@ -143,7 +144,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         title: 'New review received',
         message: `${user.fullName} left you a ${rating}-star review`,
         type: 'trainer',
-        link: `/coaching/${slug}`,
+        link: `/coaching/${slug || createPublicSlug(trainer.name || 'trainer', trainerId)}`,
       })
     }
 

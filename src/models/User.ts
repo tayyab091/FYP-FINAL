@@ -14,7 +14,7 @@ const UserSchema = new Schema({
   profileImage: { type: String, default: '' },
   avatarUrl: { type: String, default: '' },
   avatarPublicId: { type: String, default: '' },
-  bio: { type: String, default: '' },
+  bio: { type: String, default: '', maxlength: 500 },
   subscription: {
     plan: { type: String, enum: ['basic', 'pro', 'elite'], default: 'basic' },
     status: { type: String, enum: ['active', 'inactive'], default: 'active' },
@@ -45,6 +45,9 @@ const UserSchema = new Schema({
   },
   targetWeight: { type: Number },
   currentWeight: { type: Number },
+  goalMetricCurrent: { type: Number },
+  goalMetricTarget: { type: Number },
+  goalMetricUnit: { type: String, default: '' },
   /** Expo push tokens for mobile app notifications */
   expoPushTokens: { type: [String], default: [] },
   notificationPreferences: {

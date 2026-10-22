@@ -8,6 +8,7 @@ import { createToken, cookieOptions } from '@/lib/auth'
 import { createSecureToken, sendVerificationEmail } from '@/lib/auth-email'
 import { parseJsonBody, registerGymOwnerSchema } from '@/lib/validation'
 import { rateLimitAuth } from '@/lib/rate-limit'
+import { createPublicSlug } from '@/lib/slug'
 
 export async function POST(req: NextRequest) {
   try {
@@ -42,6 +43,7 @@ export async function POST(req: NextRequest) {
 
       await Gym.create([{
         name: gymName,
+        slug: createPublicSlug(gymName, createdUser._id.toString()),
         address: gymAddress || 'Pakistan',
         country: country || 'Pakistan',
         ownerId: createdUser._id,

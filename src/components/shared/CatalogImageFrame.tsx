@@ -23,6 +23,7 @@ interface CatalogImageFrameProps {
   hasError?: boolean
   onError?: () => void
   className?: string
+  imageClassName?: string
 }
 
 export function CatalogImageFrame({
@@ -38,6 +39,7 @@ export function CatalogImageFrame({
   hasError = false,
   onError,
   className = '',
+  imageClassName = '',
 }: CatalogImageFrameProps) {
   const showImage = Boolean(src) && !hasError
 
@@ -51,7 +53,7 @@ export function CatalogImageFrame({
           alt={alt}
           fill
           sizes={sizes ?? (variant === 'card' ? '(max-width: 768px) 100vw, 33vw' : '(max-width: 768px) 100vw, 896px')}
-          className={fit === 'cover' ? 'object-cover' : 'object-contain'}
+          className={`${fit === 'cover' ? 'object-cover' : 'object-contain'} ${imageClassName}`}
           priority={priority}
           loading={priority ? undefined : loading}
           onError={onError}

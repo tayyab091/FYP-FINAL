@@ -37,7 +37,6 @@ export async function POST(req: NextRequest) {
     if (Number.isNaN(date.getTime())) {
       return NextResponse.json({ message: 'Invalid date' }, { status: 400 })
     }
-
     const record = await ProgressRecord.create({
       userId: tokenUser.userId,
       weight,

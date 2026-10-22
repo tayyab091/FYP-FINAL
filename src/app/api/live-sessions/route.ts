@@ -6,10 +6,10 @@ import LiveSession from '@/models/LiveSession'
 import User from '@/models/User'
 import Trainer from '@/models/Trainer'
 import Relationship from '@/models/Relationship'
-import { createJitsiRoom, isJitsiConfigured } from '@/lib/jitsi'
 import { createNotification } from '@/lib/notifications'
 import { normalizePlan, canAccessLiveSessions } from '@/lib/subscription'
 import { liveSessionCreateSchema, parseJsonBody } from '@/lib/validation'
+import { createJitsiRoom, isJitsiConfigured } from '@/lib/jitsi'
 import { USER_AVATAR_POPULATE_SELECT, resolveAvatarUrl } from '@/lib/avatar'
 
 function sessionEndTime(scheduledAt: Date, durationMinutes: number) {
@@ -202,7 +202,7 @@ export async function POST(req: NextRequest) {
       meetingUrl: jitsiRoom.embedUrl,
     })
 
-    // Notify assigned client (preferred) or all Elite clients with active relationships
+    // Notify an assigned client, or all eligible clients for an open group session.
     try {
       const trainerUser = await User.findById(tokenUser.userId).select('fullName').lean()
       const trainerName = trainerUser?.fullName || 'Your trainer'

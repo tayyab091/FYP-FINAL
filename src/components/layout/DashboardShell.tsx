@@ -42,6 +42,9 @@ interface NavItem {
 const roleNavigation: Record<UserRole, NavItem[]> = {
   user: [
     { label: 'Home', href: '/dashboard', icon: Home, exact: true },
+    { label: 'Find Trainers', href: '/coaching', icon: Users },
+    { label: 'Find Gyms', href: '/gyms', icon: Building2 },
+    { label: 'Exercise Library', href: '/exercises', icon: Dumbbell },
     { label: 'My Fitness', href: '/my-fitness', icon: LayoutDashboard },
     { label: 'Form Checker', href: '/exercise-check', icon: Camera },
     { label: 'Meal Plans', href: '/meal-plans', icon: UtensilsCrossed },
@@ -113,6 +116,7 @@ const pageTitles: Record<string, string> = {
   '/exercises': 'Exercise Library',
   '/exercise-check': 'AI Form Checker',
   '/coaching': 'Find Trainers',
+  '/gyms': 'Find Gyms',
   '/chat': 'Messages',
   '/live-sessions': 'Live Sessions',
   '/notifications': 'Notifications',

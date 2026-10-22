@@ -1,34 +1,10 @@
 import Link from 'next/link'
-import fs from 'node:fs'
-import path from 'node:path'
 import { ArrowLeft, Globe, UtensilsCrossed, Play } from 'lucide-react'
 import type { MealDetail } from '@/lib/meals'
 import { CatalogImageFrame } from '@/components/shared/CatalogImageFrame'
 import { MealDocumentTitle } from './MealDocumentTitle'
 
 export function MealDetailView({ meal }: { meal: MealDetail }) {
-  // #region agent log
-  try {
-    const payload = {
-      sessionId: '1483ff',
-      hypothesisId: 'H3',
-      runId: 'post-fix',
-      location: 'MealDetailView.tsx:render',
-      message: 'server render meal detail',
-      data: { mealId: meal.id, mealName: meal.name, category: meal.category },
-      timestamp: Date.now(),
-    }
-    fs.appendFileSync(path.join(process.cwd(), 'debug-1483ff.log'), `${JSON.stringify(payload)}\n`)
-    fetch('http://127.0.0.1:7893/ingest/3b5841b0-46ed-4652-9b9f-279e38a5ba27', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '1483ff' },
-      body: JSON.stringify(payload),
-    }).catch(() => {})
-  } catch {
-    /* ignore */
-  }
-  // #endregion
-
   return (
     <>
       <MealDocumentTitle name={meal.name} category={meal.category} />

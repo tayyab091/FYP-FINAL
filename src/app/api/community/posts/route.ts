@@ -122,7 +122,6 @@ export async function GET(req: NextRequest) {
     if ('error' in query) return query.error
 
     await connectDB()
-
     const filters: Record<string, unknown> = {}
     if (query.data.category) filters.category = query.data.category
     if (query.data.mine) filters.authorId = new mongoose.Types.ObjectId(tokenUser.userId)

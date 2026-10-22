@@ -83,18 +83,28 @@
 }
 
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; background: var(--background); overflow-x: hidden; }
+html {
+  overflow-x: clip;
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+  background: var(--background);
+}
 body {
   min-height: 100vh;
   margin: 0;
-  overflow-x: hidden;
-  background: var(--background);
+  overflow-x: clip;
+  background:
+    radial-gradient(circle at 12% -8%, rgba(34,245,154,.1), transparent 28rem),
+    radial-gradient(circle at 92% 6%, rgba(38,174,255,.08), transparent 24rem),
+    var(--background);
   color: var(--foreground);
   font-family: var(--font-body), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
+
+img, svg, video, canvas { max-width: 100%; }
 
 body::before {
   position: fixed;

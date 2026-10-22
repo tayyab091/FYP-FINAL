@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import fs from 'node:fs'
-import path from 'node:path'
 import {
   getMealById,
   getRandomMeals,
@@ -11,7 +9,6 @@ import {
 } from '@/lib/meals'
 
 export async function GET(req: NextRequest) {
-  const startedAt = Date.now()
   try {
     const { searchParams } = req.nextUrl
     const id = searchParams.get('id')
@@ -52,32 +49,6 @@ export async function GET(req: NextRequest) {
         limit: Math.min(limit, 24),
         includeMeta: true,
       })
-      // #region agent log
-      try {
-        fs.appendFileSync(
-          path.join(process.cwd(), 'debug-1483ff.log'),
-          `${JSON.stringify({
-            sessionId: '1483ff',
-            hypothesisId: 'H1',
-            location: 'api/meals/route.ts:meta',
-            message: 'meals meta response',
-            data: {
-              durationMs: Date.now() - startedAt,
-              mealCount: preview.meals.length,
-              total: preview.total,
-              category: category || 'All',
-              area: area || 'All',
-              letter: letter || 'All',
-            },
-            timestamp: Date.now(),
-            runId: 'post-fix',
-          })}\n`,
-        )
-      } catch {
-        /* ignore */
-      }
-      fetch('http://127.0.0.1:7893/ingest/3b5841b0-46ed-4652-9b9f-279e38a5ba27',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1483ff'},body:JSON.stringify({sessionId:'1483ff',hypothesisId:'H1-H3',location:'api/meals/route.ts:meta',message:'meals meta response',data:{mealCount:preview.meals.length,total:preview.total},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       return NextResponse.json({
         meta: preview.meta,
         meals: preview.meals,

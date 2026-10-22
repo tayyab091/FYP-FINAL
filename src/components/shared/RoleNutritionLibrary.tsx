@@ -154,9 +154,6 @@ export function RoleNutritionLibrary({
             total: data.meta.total ?? data.total ?? prev?.total ?? 0,
           }))
         }
-        // #region agent log
-        fetch('http://127.0.0.1:7893/ingest/3b5841b0-46ed-4652-9b9f-279e38a5ba27',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1483ff'},body:JSON.stringify({sessionId:'1483ff',hypothesisId:'H2',location:'RoleNutritionLibrary.tsx:fetch',message:'meals applied to UI',data:{count:(data.meals||[]).length,total:data.total,category,area,letter},timestamp:Date.now(),runId:'post-fix'})}).catch(()=>{});
-        // #endregion
       })
       .catch((err: Error) => {
         if (controller.signal.aborted) return
