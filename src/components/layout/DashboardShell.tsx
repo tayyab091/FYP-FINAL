@@ -29,6 +29,7 @@ import { getRoleHomePath } from '@/lib/access'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { Avatar } from '@/components/shared/Avatar'
 import { ThemeToggle } from '@/components/shared/ThemeToggle'
+import { BrandMark } from '@/components/shared/BrandMark'
 
 type UserRole = 'user' | 'trainer' | 'gym_owner' | 'admin' | 'super_admin'
 
@@ -173,9 +174,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     <div className="flex h-full flex-col bg-card/95 backdrop-blur-2xl">
       <div className="flex h-16 items-center border-b border-border px-5">
         <Link href={homePath} onClick={onNavigate} className="flex items-center gap-2.5">
-          <span className="flex size-8 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[0_0_30px_rgba(34,245,154,.2)]">
-            <Activity className="size-4.5" strokeWidth={2.7} />
-          </span>
+          <BrandMark className="size-9" />
           <span className="font-heading text-lg font-black tracking-[-.045em] text-foreground">T.E.S.T.</span>
         </Link>
       </div>
