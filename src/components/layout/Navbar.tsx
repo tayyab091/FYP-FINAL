@@ -72,7 +72,7 @@ export function Navbar() {
             <span className="font-heading text-lg font-black tracking-[-.045em] text-foreground">T.E.S.T.</span>
           </Link>
 
-          <div className="ml-2 hidden flex-1 items-center justify-center md:flex">
+          <div className="ml-2 hidden flex-1 items-center justify-center xl:flex">
             <div className="flex items-center gap-0.5 rounded-xl border border-border bg-muted/50 p-1">
               {NAV_LINKS.map((l) => {
                 const active = pathname === l.href || pathname.startsWith(`${l.href}/`)
@@ -98,7 +98,7 @@ export function Navbar() {
             </div>
           </div>
 
-          <div className="ml-auto hidden items-center gap-2.5 md:flex">
+          <div className="ml-auto hidden items-center gap-2.5 xl:flex">
             <ThemeToggle />
             {isLoading ? (
               <div className="h-8 w-28 animate-pulse rounded-full bg-muted" />
@@ -140,7 +140,7 @@ export function Navbar() {
             )}
           </div>
 
-          <div className="ml-auto flex items-center gap-2 md:hidden">
+          <div className="ml-auto flex items-center gap-2 xl:hidden">
             <ThemeToggle />
             {!isLoading && !user && (
               <Link href="/signup" className="btn-accent btn-sm px-3.5">
@@ -175,7 +175,7 @@ export function Navbar() {
             animate={{ opacity: 1 }}
             exit={reduceMotion ? undefined : { opacity: 0 }}
             transition={easeTransition}
-            className="fixed inset-0 z-[60] md:hidden"
+            className="fixed inset-0 z-[60] xl:hidden"
           >
             <button
               type="button"

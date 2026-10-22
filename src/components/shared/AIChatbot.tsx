@@ -140,6 +140,18 @@ export function AIChatbot() {
   }, [pathname, user?.role, isLoading])
 
   useEffect(() => {
+    const root = document.documentElement
+    if (open && visible) {
+      root.dataset.aiChatOpen = 'true'
+    } else {
+      delete root.dataset.aiChatOpen
+    }
+    return () => {
+      delete root.dataset.aiChatOpen
+    }
+  }, [open, visible])
+
+  useEffect(() => {
     const mq = window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH}px)`)
     const syncMobile = () => setIsMobile(mq.matches)
     syncMobile()

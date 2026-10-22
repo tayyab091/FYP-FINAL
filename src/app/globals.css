@@ -1,62 +1,61 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-:root,
-.dark {
-  color-scheme: dark;
-  --background: #070908;
-  --foreground: #f4f7f5;
-  --card: #0e1210;
-  --card-foreground: #f4f7f5;
-  --popover: #101411;
-  --popover-foreground: #f4f7f5;
-  --primary: #22f59a;
-  --primary-foreground: #03130b;
-  --secondary: #151b18;
-  --secondary-foreground: #dce5e0;
-  --muted: #171c19;
-  --muted-foreground: #88938d;
-  --accent: #22f59a;
-  --accent-foreground: #03130b;
-  --destructive: #fb7185;
-  --border: rgba(255,255,255,.09);
-  --input: rgba(255,255,255,.1);
-  --ring: rgba(34,245,154,.52);
-  --radius: 1rem;
-  --surface: #0e1210;
-  --surface-2: #151b18;
-  --accent-dim: #13c87a;
-  --text: #f4f7f5;
-  --text-2: #a1aaa5;
-  --text-3: #66716b;
-}
-
-.light {
+:root {
   color-scheme: light;
-  --background: #f6f4fb;
-  --foreground: #1a1528;
+  --background: #f5f8f6;
+  --foreground: #14231c;
   --card: #ffffff;
-  --card-foreground: #1a1528;
+  --card-foreground: #14231c;
   --popover: #ffffff;
-  --popover-foreground: #1a1528;
-  --primary: #7c3aed;
+  --popover-foreground: #14231c;
+  --primary: #087a56;
   --primary-foreground: #ffffff;
-  --secondary: #ede9f8;
-  --secondary-foreground: #3b2d5c;
-  --muted: #e8e4f3;
-  --muted-foreground: #6b6280;
-  --accent: #9333ea;
+  --secondary: #e8f0ec;
+  --secondary-foreground: #284238;
+  --muted: #edf2ef;
+  --muted-foreground: #5e7067;
+  --accent: #0f8a61;
   --accent-foreground: #ffffff;
   --destructive: #e11d48;
-  --border: rgba(76, 29, 149, 0.12);
-  --input: rgba(76, 29, 149, 0.14);
-  --ring: rgba(124, 58, 237, 0.45);
+  --border: rgba(20, 54, 40, 0.12);
+  --input: rgba(20, 54, 40, 0.16);
+  --ring: rgba(8, 122, 86, 0.38);
+  --radius: 1rem;
   --surface: #ffffff;
-  --surface-2: #f0ebfa;
-  --accent-dim: #6d28d9;
-  --text: #1a1528;
-  --text-2: #5c5470;
-  --text-3: #8b83a0;
+  --surface-2: #edf4f0;
+  --accent-dim: #066747;
+  --text: #14231c;
+  --text-2: #52665c;
+  --text-3: #73847a;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: #070b09;
+  --foreground: #f4f7f5;
+  --card: #101612;
+  --card-foreground: #f4f7f5;
+  --popover: #121a15;
+  --popover-foreground: #f4f7f5;
+  --primary: #22d393;
+  --primary-foreground: #06130d;
+  --secondary: #18211c;
+  --secondary-foreground: #dce5e0;
+  --muted: #18201b;
+  --muted-foreground: #9aa79f;
+  --accent: #22d393;
+  --accent-foreground: #06130d;
+  --destructive: #fb7185;
+  --border: rgba(255,255,255,.1);
+  --input: rgba(255,255,255,.12);
+  --ring: rgba(34,211,147,.48);
+  --surface: #101612;
+  --surface-2: #18211c;
+  --accent-dim: #13a875;
+  --text: #f4f7f5;
+  --text-2: #a1aaa5;
+  --text-3: #718078;
 }
 
 @theme inline {
@@ -88,14 +87,18 @@ html {
   scroll-behavior: smooth;
   scroll-padding-top: 5rem;
   background: var(--background);
+  color-scheme: light;
+}
+html.dark {
+  color-scheme: dark;
 }
 body {
   min-height: 100vh;
   margin: 0;
   overflow-x: clip;
   background:
-    radial-gradient(circle at 12% -8%, rgba(34,245,154,.1), transparent 28rem),
-    radial-gradient(circle at 92% 6%, rgba(38,174,255,.08), transparent 24rem),
+    radial-gradient(circle at 10% -10%, color-mix(in srgb, var(--primary) 8%, transparent), transparent 30rem),
+    radial-gradient(circle at 92% 5%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 26rem),
     var(--background);
   color: var(--foreground);
   font-family: var(--font-body), system-ui, sans-serif;
@@ -104,7 +107,12 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-img, svg, video, canvas { max-width: 100%; }
+img, svg, video, canvas, iframe { max-width: 100%; }
+button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
+input, textarea, select { max-width: 100%; }
+main, section, article, aside, header, footer { min-width: 0; }
+button, input, textarea, select { font: inherit; }
+button, a { touch-action: manipulation; }
 
 body::before {
   position: fixed;
@@ -140,17 +148,17 @@ body::after {
 :root body,
 .dark body {
   background:
-    radial-gradient(circle at 12% -8%, rgba(34,245,154,.1), transparent 28rem),
-    radial-gradient(circle at 92% 6%, rgba(38,174,255,.08), transparent 24rem),
+    radial-gradient(circle at 10% -10%, color-mix(in srgb, var(--primary) 8%, transparent), transparent 30rem),
+    radial-gradient(circle at 92% 5%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 26rem),
     var(--background);
 }
 
 :root body::before,
 .dark body::before {
-  opacity: .22;
+  opacity: .1;
   background-image:
-    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+    linear-gradient(color-mix(in srgb, var(--foreground) 3%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--foreground) 3%, transparent) 1px, transparent 1px);
 }
 
 :root body::after,
@@ -158,23 +166,8 @@ body::after {
   opacity: .04;
 }
 
-.light body {
-  background:
-    radial-gradient(circle at 12% -8%, rgba(124, 58, 237, 0.12), transparent 28rem),
-    radial-gradient(circle at 92% 6%, rgba(147, 51, 234, 0.08), transparent 24rem),
-    var(--background);
-}
-
-.light body::before {
-  opacity: .12;
-  background-image:
-    linear-gradient(rgba(76, 29, 149, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(76, 29, 149, 0.04) 1px, transparent 1px);
-}
-
-.light body::after {
-  opacity: .03;
-}
+.light body::before { opacity: .1; }
+.light body::after { opacity: .025; }
 
 .section-band {
   border-block: 1px solid var(--border);
@@ -198,7 +191,7 @@ h1, h2, h3, h4, h5, h6 {
 .light ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
 
 .gradient-text {
-  background: linear-gradient(120deg, color-mix(in srgb, var(--primary) 70%, white) 0%, var(--primary) 45%, #6366f1 100%);
+  background: linear-gradient(120deg, color-mix(in srgb, var(--primary) 78%, white) 0%, var(--primary) 55%, var(--accent-dim) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -308,8 +301,24 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .page-shell {
-  width: min(100% - 2rem, 76rem);
+  width: min(calc(100% - clamp(1.25rem, 5vw, 4rem)), 80rem);
   margin-inline: auto;
+}
+
+@media (max-width: 420px) {
+  .page-shell { width: calc(100% - 1.5rem); }
+}
+
+:where(.grid, .flex) > * { min-width: 0; }
+
+@media (max-width: 639px) {
+  .dashboard-grid { gap: 1rem; }
+  .dashboard-stat-card { min-height: 0; }
+  .tile { padding: 1rem; border-radius: 1rem; }
+  .page-hero { border-radius: 1.25rem; }
+  .stat-card-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: .75rem; }
+  .dashboard-fab-reserve,
+  .dashboard-fab-reserve-with-nav { padding-right: 0; }
 }
 
 .page-hero {
@@ -504,12 +513,12 @@ h1, h2, h3, h4, h5, h6 {
 /* Reserve scroll space for FloatingChat + AIChatbot FAB stack (see layout.tsx). */
 .dashboard-fab-reserve {
   padding-bottom: 19rem;
-  padding-right: 4.5rem;
+  padding-right: 0;
 }
 @media (min-width: 768px) {
   .dashboard-fab-reserve {
     padding-bottom: 14rem;
-    padding-right: 5rem;
+    padding-right: 0;
   }
 }
 @media (max-height: 700px) {
@@ -520,12 +529,12 @@ h1, h2, h3, h4, h5, h6 {
 /* Member routes that also render the mobile BottomNav (~4rem). */
 .dashboard-fab-reserve-with-nav {
   padding-bottom: 19rem;
-  padding-right: 4.5rem;
+  padding-right: 0;
 }
 @media (min-width: 768px) {
   .dashboard-fab-reserve-with-nav {
     padding-bottom: 12rem;
-    padding-right: 5rem;
+    padding-right: 0;
   }
 }
 @media (max-height: 700px) {
@@ -671,12 +680,16 @@ select option {
 
 /* ─── Floating message button ─── */
 .float-messages {
+  --ai-chat-fab-base: 0.75rem;
+  --ai-chat-bottom-nav-lift: 0rem;
+  --ai-chat-fab-size: 3.25rem;
+  --ai-chat-panel-gap: 0.75rem;
   position: fixed;
-  bottom: 88px;
-  right: 20px;
+  bottom: calc(var(--ai-chat-fab-base) + var(--ai-chat-bottom-nav-lift) + env(safe-area-inset-bottom, 0px) + var(--ai-chat-fab-size) + var(--ai-chat-panel-gap));
+  right: max(1rem, env(safe-area-inset-right, 0px));
   z-index: 60;
-  width: 52px;
-  height: 52px;
+  width: 3.25rem;
+  height: 3.25rem;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--primary), var(--accent));
   box-shadow: 0 4px 20px color-mix(in srgb, var(--primary) 35%, transparent);
@@ -687,9 +700,19 @@ select option {
   transition: transform 0.2s, box-shadow 0.2s;
   color: var(--primary-foreground);
 }
+html[data-ai-chat-bottom-nav='true'] .float-messages {
+  --ai-chat-bottom-nav-lift: 4.15rem;
+}
 .float-messages:hover {
   transform: scale(1.1);
   box-shadow: 0 6px 28px color-mix(in srgb, var(--primary) 50%, transparent);
+}
+
+html[data-ai-chat-open='true'] .float-messages {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(0.5rem) scale(.9);
 }
 
 .dark .float-messages {
@@ -698,6 +721,15 @@ select option {
 }
 .dark .float-messages:hover {
   box-shadow: 0 6px 28px rgba(0, 255, 135, 0.5);
+}
+
+@media (min-width: 768px) {
+  .float-messages {
+    --ai-chat-fab-base: 1.5rem;
+    --ai-chat-fab-size: 3.5rem;
+    --ai-chat-panel-gap: .85rem;
+    right: max(1.5rem, env(safe-area-inset-right, 0px));
+  }
 }
 
 /* ─── Site-wide AI chatbot panel ─── */
@@ -2093,12 +2125,12 @@ html[data-ai-chat-bottom-nav='true'] .ai-chatbot__panel {
 .light .landing-hero {
   background:
     radial-gradient(ellipse 90% 60% at 50% -5%, color-mix(in srgb, var(--primary) 18%, transparent), transparent 55%),
-    radial-gradient(ellipse 70% 50% at 80% 90%, color-mix(in srgb, #a78bfa 14%, transparent), transparent 50%),
-    radial-gradient(ellipse 60% 45% at 15% 70%, color-mix(in srgb, #c4b5fd 12%, transparent), transparent 45%),
+    radial-gradient(ellipse 70% 50% at 80% 90%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 50%),
+    radial-gradient(ellipse 60% 45% at 15% 70%, color-mix(in srgb, var(--primary) 8%, transparent), transparent 45%),
     var(--background);
 }
 .light .landing-hero__grid {
-  color: color-mix(in srgb, var(--primary) 48%, #9333ea);
+  color: color-mix(in srgb, var(--primary) 60%, var(--accent));
   opacity: 0.62;
 }
 .light .landing-hero__lines {
@@ -2106,24 +2138,24 @@ html[data-ai-chat-bottom-nav='true'] .ai-chatbot__panel {
   opacity: 0.55;
 }
 .light .landing-hero__line {
-  stroke: color-mix(in srgb, var(--primary) 58%, #a78bfa);
+  stroke: color-mix(in srgb, var(--primary) 58%, var(--accent));
 }
 .light .landing-hero__line--horiz {
-  stroke: color-mix(in srgb, var(--primary) 35%, #c4b5fd);
+  stroke: color-mix(in srgb, var(--primary) 35%, var(--accent));
 }
 .light .landing-hero__orb--1 {
   background: color-mix(in srgb, var(--primary) 30%, transparent);
 }
 .light .landing-hero__orb--2 {
-  background: color-mix(in srgb, #a78bfa 26%, transparent);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
 }
 .light .landing-hero__orb--3 {
-  background: color-mix(in srgb, #c4b5fd 22%, transparent);
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
 }
 .light .landing-hero__mesh {
   background:
     radial-gradient(ellipse 70% 55% at 50% 35%, color-mix(in srgb, var(--primary) 22%, transparent), transparent 60%),
-    radial-gradient(ellipse 50% 40% at 85% 15%, color-mix(in srgb, #a78bfa 16%, transparent), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 85% 15%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 55%),
     radial-gradient(ellipse 40% 35% at 10% 80%, color-mix(in srgb, var(--primary) 14%, transparent), transparent 50%);
 }
 .light .landing-hero__glow {
@@ -2133,7 +2165,7 @@ html[data-ai-chat-bottom-nav='true'] .ai-chatbot__panel {
   background: radial-gradient(
     circle at 50% 55%,
     color-mix(in srgb, var(--primary) 40%, white),
-    color-mix(in srgb, #a78bfa 18%, transparent) 45%,
+    color-mix(in srgb, var(--accent) 12%, transparent) 45%,
     transparent 70%
   );
 }
@@ -2157,7 +2189,7 @@ html[data-ai-chat-bottom-nav='true'] .ai-chatbot__panel {
 }
 .light .landing-hero--energized .landing-hero__grid,
 .light .landing-hero--blast .landing-hero__grid {
-  color: color-mix(in srgb, var(--primary) 65%, #9333ea);
+  color: color-mix(in srgb, var(--primary) 70%, var(--accent));
   opacity: 0.85;
 }
 
@@ -2270,7 +2302,7 @@ html.landing-page--looping body {
     120deg,
     color-mix(in srgb, var(--primary) 75%, white) 0%,
     var(--primary) 50%,
-    color-mix(in srgb, var(--primary) 60%, #6366f1) 100%
+    color-mix(in srgb, var(--primary) 60%, var(--accent)) 100%
   );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -3028,7 +3060,7 @@ html.landing-page--looping body {
   width: 100%;
   height: var(--bar-h, 50%);
   border-radius: 0.2rem 0.2rem 0 0;
-  background: linear-gradient(to top, color-mix(in srgb, var(--primary) 60%, #6366f1), var(--primary));
+  background: linear-gradient(to top, color-mix(in srgb, var(--primary) 60%, var(--accent)), var(--primary));
 }
 .landing-pillar-mock__sleep-meta {
   display: flex;
