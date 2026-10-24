@@ -81,6 +81,7 @@ export default function NutritionPage() {
   const [mealsLoadingMore, setMealsLoadingMore] = useState(false)
   const [expandedMeal, setExpandedMeal] = useState<string | null>(null)
   const [mealDetails, setMealDetails] = useState<Record<string, MealDetail>>({})
+  const [detailErrors, setDetailErrors] = useState<Record<string, string>>({})
   const [mealCategory, setMealCategory] = useState('All')
   const [mealArea, setMealArea] = useState('All')
   const [mealSearch, setMealSearch] = useState('')
@@ -223,10 +224,15 @@ export default function NutritionPage() {
 
   const loadMealDetail = async (id: string) => {
     if (mealDetails[id]) return
-    const res = await fetch(`/api/meals?id=${id}`)
-    if (res.ok) {
+    setDetailErrors((prev) => ({ ...prev, [id]: '' }))
+    try {
+      const res = await fetch(`/api/meals?id=${encodeURIComponent(id)}`)
+      if (!res.ok) throw new Error('Preview unavailable')
       const detail = await res.json()
+      if (!detail.id || !Array.isArray(detail.ingredients)) throw new Error('Invalid preview')
       setMealDetails((prev) => ({ ...prev, [id]: detail }))
+    } catch {
+      setDetailErrors((prev) => ({ ...prev, [id]: 'Unable to load this recipe preview.' }))
     }
   }
 
@@ -701,6 +707,7 @@ export default function NutritionPage() {
                         </Link>
                         <button
                           onClick={() => void toggleMeal(recipe.id)}
+                          aria-expanded={isOpen}
                           className={`mt-3 flex items-center gap-1 text-xs font-medium transition-colors ${
                             isOpen
                               ? 'text-primary drop-shadow-[0_0_8px_rgba(34,245,154,0.35)]'
@@ -710,7 +717,8 @@ export default function NutritionPage() {
                           {isOpen ? <><ChevronUp className="size-3" /> Hide preview</> : <><ChevronDown className="size-3" /> Quick preview</>}
                         </button>
                         {isOpen && (
-                          <ExpandableCardPanel loading={!detail} variant="nutrition">
+                          <ExpandableCardPanel loading={!detail && !detailErrors[recipe.id]} variant="nutrition">
+                            {detailErrors[recipe.id] && <div role="alert" className="space-y-2 text-sm"><p>{detailErrors[recipe.id]}</p><button type="button" className="min-h-10 px-3 font-semibold text-primary" onClick={() => void loadMealDetail(recipe.id)}>Retry preview</button></div>}
                             {detail && (
                               <DishMoreInfoPanel
                                 dish={{

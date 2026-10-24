@@ -4,6 +4,8 @@ import path from 'path'
 const projectRoot = path.resolve(__dirname)
 
 const nextConfig: NextConfig = {
+  // Allows verification to use a separate, workspace-local build directory.
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   // Parent lockfile at C:\Users\al rafio\package-lock.json otherwise becomes Turbopack root.
   turbopack: {
     root: projectRoot,
@@ -28,7 +30,7 @@ const nextConfig: NextConfig = {
       "frame-ancestors 'self'",
       "form-action 'self'",
       // Next.js / MediaPipe need inline + eval; map APIs and optional Daily embeds are allowed.
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.daily.co https://maps.googleapis.com https://maps.gstatic.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/ https://js.stripe.com https://*.daily.co https://maps.googleapis.com https://maps.gstatic.com",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
@@ -54,7 +56,7 @@ const nextConfig: NextConfig = {
         headers: [
           // Same-origin app; avoid wildcard CORS with credentialed cookies.
           { key: 'Access-Control-Allow-Origin', value: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000' },
-          { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, DELETE, OPTIONS' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, PATCH, DELETE, OPTIONS' },
           { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization' },
           { key: 'Access-Control-Allow-Credentials', value: 'true' },
         ],

@@ -24,7 +24,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   }
 
   await connectDB()
-  const user = await activateUserPlan(userId, plan)
+  const user = await activateUserPlan(userId, plan, session)
   if (!user) {
     console.error('Stripe webhook: user not found', { userId, sessionId: session.id })
   }

@@ -12,11 +12,11 @@ export async function POST(req: NextRequest) {
     const limited = rateLimitAuth(req)
     if (limited) return limited
 
-    await connectDB()
     const parsed = await parseJsonBody(req, loginBodySchema)
     if ('error' in parsed) return parsed.error
 
     const { email, password } = parsed.data
+    await connectDB()
 
     const user = await User.findOne({ email })
     if (!user) {

@@ -113,7 +113,8 @@ export async function getMealMetaFast(): Promise<MealCatalogMeta> {
 
 function warmMealCatalog(): void {
   if (getCached<MealCatalog>('meal-catalog-v3')) return
-  void getMealCatalog()
+  // Warming is optional; a provider outage must not become an unhandled rejection.
+  void getMealCatalog().catch(() => {})
 }
 
 async function fetchMealsDirect(options: {

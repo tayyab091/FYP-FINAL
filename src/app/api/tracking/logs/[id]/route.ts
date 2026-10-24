@@ -79,9 +79,13 @@ export async function PATCH(
       if (!parsed.success) {
         return NextResponse.json({ message: 'Invalid request' }, { status: 400 })
       }
-      log.status = 'skipped'
-      await log.save()
-      return NextResponse.json({ message: 'Workout cancelled', log })
+      const updated = await WorkoutLog.findOneAndUpdate(
+        { _id: log._id, userId: tokenUser.userId, status: 'in_progress' },
+        { $set: { status: 'skipped' } },
+        { returnDocument: 'after' },
+      )
+      if (!updated) return NextResponse.json({ message: 'Workout is no longer in progress' }, { status: 409 })
+      return NextResponse.json({ message: 'Workout cancelled', log: updated })
     }
 
     const parsed = workoutLogToggleSchema.safeParse(raw)
@@ -93,10 +97,13 @@ export async function PATCH(
       return NextResponse.json({ message: 'Invalid exercise index' }, { status: 400 })
     }
 
-    log.exercises[exerciseIndex].completed = completed
-    await log.save()
-
-    return NextResponse.json({ message: 'Checklist updated', log })
+    const updated = await WorkoutLog.findOneAndUpdate(
+      { _id: log._id, userId: tokenUser.userId, status: 'in_progress', [`exercises.${exerciseIndex}`]: { $exists: true } },
+      { $set: { [`exercises.${exerciseIndex}.completed`]: completed } },
+      { returnDocument: 'after' },
+    )
+    if (!updated) return NextResponse.json({ message: 'Workout is no longer in progress' }, { status: 409 })
+    return NextResponse.json({ message: 'Checklist updated', log: updated })
   } catch {
     return NextResponse.json({ message: 'Server error' }, { status: 500 })
   }

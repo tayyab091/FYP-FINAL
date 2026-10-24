@@ -52,12 +52,12 @@ export function ExerciseMoreInfoPanel({ exercise }: ExerciseMoreInfoPanelProps) 
         >
           {exercise.muscle}
         </span>
-        <span className="inline-flex items-center gap-0.5 rounded-full border border-border bg-muted/60 px-1.5 py-px text-[9px] text-muted-foreground">
-          <Wrench className="size-2.5 text-emerald-600/80 dark:text-emerald-400/80" />
+        <span className="inline-flex items-center gap-0.5 rounded-full border border-border bg-muted/60 px-1.5 py-px text-xs text-muted-foreground">
+          <Wrench className="size-3.5 text-emerald-600/80 dark:text-emerald-400/80" />
           {exercise.equipment}
         </span>
         <span
-          className={`rounded-full border px-1.5 py-px text-[9px] font-semibold ${DIFFICULTY_COLORS[exercise.difficulty] || 'border-border text-muted-foreground'}`}
+          className={`rounded-full border px-1.5 py-px text-xs font-semibold ${DIFFICULTY_COLORS[exercise.difficulty] || 'border-border text-muted-foreground'}`}
         >
           {exercise.difficulty}
         </span>
@@ -66,14 +66,14 @@ export function ExerciseMoreInfoPanel({ exercise }: ExerciseMoreInfoPanelProps) 
       {targets.length > 0 && (
         <div>
           <p className="workout-label mb-1 flex items-center gap-1 text-emerald-700/80 dark:text-emerald-400/70">
-            <Target className="size-2.5" />
+            <Target className="size-3.5" />
             Target muscles
           </p>
           <div className="flex flex-wrap gap-1">
             {targets.map((muscle) => (
               <span
                 key={muscle}
-                className="rounded-full border border-emerald-600/25 bg-emerald-500/10 px-1.5 py-px text-[9px] font-medium text-emerald-800 dark:border-emerald-400/25 dark:bg-emerald-400/10 dark:text-emerald-300"
+                className="rounded-full border border-emerald-600/25 bg-emerald-500/10 px-1.5 py-px text-xs font-medium text-emerald-800 dark:border-emerald-400/25 dark:bg-emerald-400/10 dark:text-emerald-300"
               >
                 {titleCase(muscle)}
               </span>
@@ -82,15 +82,15 @@ export function ExerciseMoreInfoPanel({ exercise }: ExerciseMoreInfoPanelProps) 
         </div>
       )}
 
-      <div className="flex flex-wrap gap-1.5 text-[9px]">
+      <div className="flex flex-wrap gap-1.5 text-xs">
         {bodyPart && (
           <span className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/40 px-1.5 py-0.5 text-muted-foreground">
-            <Activity className="size-2.5 text-emerald-600/70 dark:text-emerald-400/70" />
+            <Activity className="size-3.5 text-emerald-600/70 dark:text-emerald-400/70" />
             {titleCase(bodyPart)}
           </span>
         )}
         <span className="inline-flex items-center gap-1 rounded-md border border-emerald-600/15 bg-emerald-500/[.06] px-1.5 py-0.5 text-emerald-800/90 dark:border-emerald-400/15 dark:bg-emerald-400/[.06] dark:text-emerald-300/90">
-          <Dumbbell className="size-2.5" />
+          <Dumbbell className="size-3.5" />
           Form cues below
         </span>
       </div>
@@ -100,8 +100,8 @@ export function ExerciseMoreInfoPanel({ exercise }: ExerciseMoreInfoPanelProps) 
         {steps.length > 1 ? (
           <ol className="space-y-1">
             {steps.map((step, i) => (
-              <li key={i} className="flex gap-1.5 text-[9px] leading-snug text-muted-foreground">
-                <span className="flex size-3.5 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-[8px] font-bold text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-400">
+              <li key={i} className="flex gap-1.5 text-xs leading-snug text-muted-foreground">
+                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-sm font-bold text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-400">
                   {i + 1}
                 </span>
                 <span className="line-clamp-2">{step}</span>
@@ -109,7 +109,7 @@ export function ExerciseMoreInfoPanel({ exercise }: ExerciseMoreInfoPanelProps) 
             ))}
           </ol>
         ) : (
-          <p className="text-[9px] leading-relaxed text-muted-foreground line-clamp-4">
+          <p className="text-xs leading-relaxed text-muted-foreground line-clamp-4">
             {exercise.instructions}
           </p>
         )}
@@ -117,7 +117,7 @@ export function ExerciseMoreInfoPanel({ exercise }: ExerciseMoreInfoPanelProps) 
 
       <Link
         href={`/exercises/${exercise.id}`}
-        className="group inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-emerald-600/30 bg-emerald-500/10 px-2 py-1.5 text-[10px] font-bold text-emerald-800 transition-colors hover:bg-emerald-500/20 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300 dark:hover:bg-emerald-400/20"
+        className="group inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-emerald-600/30 bg-emerald-500/10 px-2 py-2.5 text-sm font-bold text-emerald-800 transition-colors hover:bg-emerald-500/20 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300 dark:hover:bg-emerald-400/20"
       >
         View full exercise
         <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />

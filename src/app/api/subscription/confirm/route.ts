@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/mongodb'
 import { getUser } from '@/lib/auth'
 import { activateUserPlan } from '@/lib/subscription-server'
 import { getStripe, isStripeConfigured } from '@/lib/stripe'
+import { addMonths } from '@/lib/calendar'
 
 function isPaidPlan(plan: string | undefined): plan is 'pro' | 'elite' {
   return plan === 'pro' || plan === 'elite'
@@ -33,6 +34,9 @@ export async function GET(req: NextRequest) {
     if (session.payment_status !== 'paid') {
       return NextResponse.json({ message: 'Payment not completed' }, { status: 400 })
     }
+    if (addMonths(new Date(session.created * 1000), 1) <= new Date()) {
+      return NextResponse.json({ message: 'This payment term has expired.' }, { status: 400 })
+    }
 
     const metaUserId = session.metadata?.userId
     const plan = session.metadata?.plan
@@ -45,7 +49,7 @@ export async function GET(req: NextRequest) {
     }
 
     await connectDB()
-    const user = await activateUserPlan(tokenUser.userId, plan)
+    const user = await activateUserPlan(tokenUser.userId, plan, session)
     if (!user) {
       return NextResponse.json({ message: 'User not found' }, { status: 404 })
     }

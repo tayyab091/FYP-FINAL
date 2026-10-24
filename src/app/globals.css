@@ -496,6 +496,10 @@ h1, h2, h3, h4, h5, h6 {
 .dashboard-stat-card {
   min-height: 9.5rem;
 }
+@media (min-width: 360px) and (max-width: 639px) {
+  .dashboard-grid.cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+  .dashboard-stat-card { min-height: 8rem; }
+}
 
 /* Action shortcut tiles — 4-up only when main column is wide enough (sidebar + xl). */
 .dashboard-action-grid {

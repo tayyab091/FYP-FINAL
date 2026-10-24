@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
   Apple,
@@ -79,6 +79,9 @@ export function RoleNutritionLibrary({
   const [letter, setLetter] = useState('All')
   const [expandedMeal, setExpandedMeal] = useState<string | null>(null)
   const [mealDetails, setMealDetails] = useState<Record<string, MealDetail>>({})
+  const [detailErrors, setDetailErrors] = useState<Record<string, string>>({})
+  const [retry, setRetry] = useState(0)
+  const requestVersion = useRef(0)
   const [trainerPlans, setTrainerPlans] = useState<TrainerMealPlan[]>([])
   const [plansLoading, setPlansLoading] = useState(false)
 
@@ -132,6 +135,9 @@ export function RoleNutritionLibrary({
 
   useEffect(() => {
     const controller = new AbortController()
+    requestVersion.current += 1
+    setLoadingMore(false)
+    setExpandedMeal(null)
     setFetchError(null)
     setLoading(true)
     setPage(1)
@@ -164,39 +170,24 @@ export function RoleNutritionLibrary({
         if (!controller.signal.aborted) setLoading(false)
       })
 
-    return () => controller.abort()
-  }, [buildQuery, category, area, letter])
+    return () => { controller.abort(); requestVersion.current += 1 }
+  }, [buildQuery, retry])
 
   const retryLoad = () => {
-    setFetchError(null)
-    setLoading(true)
-    fetch(`/api/meals?${buildQuery(1, true)}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`Failed (${r.status})`))))
-      .then((data) => {
-        setMeals(data.meals || [])
-        setTotal(data.total ?? 0)
-        setTotalPages(data.totalPages ?? 1)
-        setPage(data.page ?? 1)
-        if (data.meta) {
-          setMeta((prev) => ({
-            categories: data.meta.categories?.length ? data.meta.categories : prev?.categories || [],
-            areas: data.meta.areas?.length ? data.meta.areas : prev?.areas || [],
-            total: data.meta.total ?? data.total ?? prev?.total ?? 0,
-          }))
-        }
-      })
-      .catch((err: Error) => setFetchError(err.message || 'Failed to load meal catalog'))
-      .finally(() => setLoading(false))
+    setRetry((n) => n + 1)
   }
 
   const loadMore = async () => {
     if (page >= totalPages || loadingMore || loading) return
+    const version = requestVersion.current
+    setFetchError(null)
     setLoadingMore(true)
     const nextPage = page + 1
     try {
       const res = await fetch(`/api/meals?${buildQuery(nextPage, false)}`)
       if (!res.ok) throw new Error('Failed to load more meals')
       const data = await res.json()
+      if (version !== requestVersion.current) return
       setMeals((prev) => {
         const seen = new Set(prev.map((meal) => meal.id))
         const next = (data.meals || []).filter((meal: MealItem) => meal.id && !seen.has(meal.id))
@@ -206,26 +197,28 @@ export function RoleNutritionLibrary({
       setTotal(data.total ?? total)
       setTotalPages(data.totalPages ?? totalPages)
     } catch {
-      setFetchError('Failed to load more meals')
+      if (version === requestVersion.current) setFetchError('Failed to load more meals')
     } finally {
-      setLoadingMore(false)
+      if (version === requestVersion.current) setLoadingMore(false)
     }
   }
 
-  const toggleMeal = async (id: string) => {
-    if (expandedMeal === id) {
+  const toggleMeal = async (id: string, retryDetail = false) => {
+    if (expandedMeal === id && !retryDetail) {
       setExpandedMeal(null)
       return
     }
     setExpandedMeal(id)
     if (mealDetails[id]) return
+    setDetailErrors((prev) => ({ ...prev, [id]: '' }))
     try {
       const res = await fetch(`/api/meals?id=${encodeURIComponent(id)}`)
-      if (!res.ok) return
+      if (!res.ok) throw new Error('Preview unavailable')
       const detail = (await res.json()) as MealDetail
+      if (!detail.id || !Array.isArray(detail.ingredients)) throw new Error('Invalid preview')
       setMealDetails((prev) => ({ ...prev, [id]: detail }))
     } catch {
-      /* ignore */
+      setDetailErrors((prev) => ({ ...prev, [id]: 'Unable to load this recipe preview.' }))
     }
   }
 
@@ -372,7 +365,7 @@ export function RoleNutritionLibrary({
         </div>
 
         {fetchError && (
-          <div className="elite-panel mb-6 border border-red-500/30 bg-red-500/5 p-4 text-center">
+          <div role="alert" className="elite-panel mb-6 border border-red-500/30 bg-red-500/5 p-4 text-center">
             <p className="text-sm text-red-400">{fetchError}</p>
             <button
               type="button"
@@ -451,6 +444,8 @@ export function RoleNutritionLibrary({
                       <button
                         type="button"
                         onClick={() => void toggleMeal(meal.id)}
+                        aria-expanded={isOpen}
+                        aria-controls={`meal-preview-${meal.id}`}
                         className={`mt-3 flex items-center gap-1 text-xs font-medium transition-colors ${
                           isOpen ? 'text-primary' : 'text-primary/80 hover:text-primary'
                         }`}
@@ -466,7 +461,9 @@ export function RoleNutritionLibrary({
                         )}
                       </button>
                       {isOpen && (
-                        <ExpandableCardPanel loading={!detail} variant="nutrition">
+                        <ExpandableCardPanel loading={!detail && !detailErrors[meal.id]} variant="nutrition">
+                          <div id={`meal-preview-${meal.id}`}>
+                          {detailErrors[meal.id] && <div role="alert" className="space-y-2 text-sm"><p>{detailErrors[meal.id]}</p><button type="button" className="min-h-10 px-3 font-semibold text-primary" onClick={() => void toggleMeal(meal.id, true)}>Retry preview</button></div>}
                           {detail && (
                             <DishMoreInfoPanel
                               dish={{
@@ -480,6 +477,7 @@ export function RoleNutritionLibrary({
                               }}
                             />
                           )}
+                          </div>
                         </ExpandableCardPanel>
                       )}
                     </div>

@@ -1,7 +1,8 @@
 'use client'
 
 import Image from 'next/image'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
+import { ImageOff } from 'lucide-react'
 
 type CatalogImageVariant = 'card' | 'detail'
 
@@ -41,7 +42,8 @@ export function CatalogImageFrame({
   className = '',
   imageClassName = '',
 }: CatalogImageFrameProps) {
-  const showImage = Boolean(src) && !hasError
+  const [failedSrc, setFailedSrc] = useState<string | undefined>()
+  const showImage = Boolean(src) && !hasError && failedSrc !== src
 
   return (
     <div
@@ -56,10 +58,10 @@ export function CatalogImageFrame({
           className={`${fit === 'cover' ? 'object-cover' : 'object-contain'} ${imageClassName}`}
           priority={priority}
           loading={priority ? undefined : loading}
-          onError={onError}
+          onError={() => { setFailedSrc(src); onError?.() }}
         />
       ) : (
-        fallback
+        fallback ?? <span role="img" aria-label={`${alt}: preview unavailable`} className="flex flex-col items-center gap-2 p-4 text-center text-sm text-muted-foreground"><ImageOff className="size-7" aria-hidden="true" />Preview unavailable</span>
       )}
       {badge}
     </div>

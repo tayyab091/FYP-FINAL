@@ -135,7 +135,7 @@ Additional trainers: `sarah@test.com`, `usman@test.com`, `fatima@test.com`, `bil
 | **Pro** | Unlimited workouts, meal plans, analytics, AI form checker, chat |
 | **Elite** | Everything in Pro + live sessions + unlimited trainer connections |
 
-**Payments:** When Stripe keys are set, checkout uses Stripe (test mode supported). Simulated `PUT` upgrades are **blocked** while Stripe is configured. Without Stripe keys, the app falls back to simulated activation for demos.
+**Payments:** Hosted Checkout uses `STRIPE_SECRET_KEY` (test mode supported); a browser publishable key is not required for redirects. Provider failures never activate a paid plan. Without Stripe credentials, simulated activation is available only in development; production returns an unavailable-checkout response. Payment confirmation is bound to the original purchase term and ignores duplicate or older checkout events.
 
 **Webhooks:** Point Stripe to `POST /api/webhooks/stripe`. Success URL also confirms via `GET /api/subscription/confirm?session_id=…`.
 
@@ -165,6 +165,9 @@ npm run dev      # next dev (Vercel-compatible)
 npm run build    # Production build
 npm run start    # next start
 npm run lint     # ESLint
+npm run typecheck # TypeScript without updating incremental build artifacts
+npm test          # Offline regression and authorization tests
+npm run test:e2e -- e2e/regressions.spec.ts # UI fixtures, public-page smoke checks, guest route guards
 ```
 
 ## Project structure

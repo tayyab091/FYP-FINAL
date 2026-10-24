@@ -15,18 +15,18 @@ const VARIANT_STYLES: Record<StatVariant, { gradient: string; iconBg: string; va
   },
   sky: {
     gradient: 'from-sky-400/20 via-sky-400/5 to-transparent',
-    iconBg: 'bg-sky-400/15 text-sky-400 border-sky-400/25',
-    value: 'text-sky-400',
+    iconBg: 'bg-sky-400/15 text-sky-700 dark:text-sky-400 border-sky-400/25',
+    value: 'text-sky-700 dark:text-sky-400',
   },
   amber: {
     gradient: 'from-amber-400/20 via-amber-400/5 to-transparent',
-    iconBg: 'bg-amber-400/15 text-amber-400 border-amber-400/25',
-    value: 'text-amber-400',
+    iconBg: 'bg-amber-400/15 text-amber-700 dark:text-amber-400 border-amber-400/25',
+    value: 'text-amber-700 dark:text-amber-400',
   },
   rose: {
     gradient: 'from-rose-400/20 via-rose-400/5 to-transparent',
-    iconBg: 'bg-rose-400/15 text-rose-400 border-rose-400/25',
-    value: 'text-rose-400',
+    iconBg: 'bg-rose-400/15 text-rose-700 dark:text-rose-400 border-rose-400/25',
+    value: 'text-rose-700 dark:text-rose-400',
   },
 }
 
@@ -56,18 +56,18 @@ export function StatCard({
   const canAnimate = animate && isNumeric && !Number.isNaN(numericValue)
 
   return (
-    <Card className={cn('dashboard-stat-card metric-glow card-athletic interactive-lift h-full', className)}>
-      <CardContent className="relative flex h-full min-h-[9.5rem] flex-col p-5">
+    <Card className={cn('dashboard-stat-card metric-glow card-athletic interactive-lift h-full overflow-hidden gap-0 py-0', className)}>
+      <CardContent className="relative flex h-full min-h-32 flex-col p-4 sm:min-h-[9.5rem] sm:p-5">
         <div className={cn('pointer-events-none absolute inset-0 bg-gradient-to-br', styles.gradient)} />
-        <div className="relative flex items-start justify-between gap-3">
+        <div className="relative flex items-start justify-between gap-2">
           <p className="workout-label min-h-[2.5em] flex-1 break-words leading-snug text-muted-foreground">{label}</p>
           {Icon && (
-            <span className={cn('flex size-10 shrink-0 items-center justify-center rounded-xl border', styles.iconBg)}>
+            <span className={cn('flex size-8 shrink-0 items-center justify-center rounded-xl border sm:size-10', styles.iconBg)}>
               <Icon className="size-4.5" strokeWidth={2.2} />
             </span>
           )}
         </div>
-        <p className={cn('relative mt-3 font-heading text-3xl font-black tracking-tight', styles.value)}>
+        <p className={cn('relative mt-3 font-heading text-2xl font-black tracking-tight sm:text-3xl', styles.value)}>
           {canAnimate ? (
             <CountUp value={numericValue} suffix={suffix} />
           ) : (

@@ -27,8 +27,8 @@ export async function GET(req: NextRequest) {
         bodyPart,
         target,
         equipment,
-        page: 1,
-        limit: Math.min(limit, 24),
+        page,
+        limit,
         includeMeta: true,
       })
       return NextResponse.json({

@@ -7,21 +7,26 @@ import {
   getPaidPlanAmountCents,
   getStripe,
   isStripeConfigured,
+  canSimulatePayments,
 } from '@/lib/stripe'
+import { z } from 'zod'
+import { parseJsonBody } from '@/lib/validation'
+import { resolveSubscriptionFromUser } from '@/lib/subscription'
 
-const PAID_PLANS = ['pro', 'elite'] as const
+const subscriptionSchema = z.object({ plan: z.enum(['basic', 'pro', 'elite']) })
 
 export async function POST(req: NextRequest) {
   try {
     const tokenUser = await getUser(req)
     if (!tokenUser) return NextResponse.json({ message: 'Not authenticated' }, { status: 401 })
-
-    await connectDB()
-    const { plan } = (await req.json()) as { plan?: string }
-
-    if (!plan || !['basic', 'pro', 'elite'].includes(plan)) {
-      return NextResponse.json({ message: 'Invalid plan' }, { status: 400 })
+    if (tokenUser.role !== 'user') {
+      return NextResponse.json({ message: 'Member account required' }, { status: 403 })
     }
+
+    const parsed = await parseJsonBody(req, subscriptionSchema)
+    if ('error' in parsed) return parsed.error
+    const { plan } = parsed.data
+    await connectDB()
 
     if (plan === 'basic') {
       await User.findByIdAndUpdate(tokenUser.userId, {
@@ -65,8 +70,10 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ url: session.url, mode: 'stripe' })
         }
       } catch (e) {
-        console.error('Stripe error, falling back to simulation:', e)
+        console.error('Stripe checkout error:', e)
+        return NextResponse.json({ message: 'Checkout is unavailable. Please try again later.' }, { status: 502 })
       }
+      return NextResponse.json({ message: 'Checkout did not return a payment URL.' }, { status: 502 })
     }
 
     if (isStripeConfigured()) {
@@ -99,8 +106,14 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ url: session.url, mode: 'stripe' })
         }
       } catch (e) {
-        console.error('Stripe checkout error, falling back to simulation:', e)
+        console.error('Stripe checkout error:', e)
+        return NextResponse.json({ message: 'Checkout is unavailable. Please try again later.' }, { status: 502 })
       }
+      return NextResponse.json({ message: 'Checkout did not return a payment URL.' }, { status: 502 })
+    }
+
+    if (!canSimulatePayments()) {
+      return NextResponse.json({ message: 'Payments are not configured. Please contact support.' }, { status: 503 })
     }
 
     const endDate = new Date()
@@ -132,8 +145,9 @@ export async function GET(req: NextRequest) {
     await connectDB()
     const user = await User.findById(tokenUser.userId).select('subscription').lean()
     return NextResponse.json({
-      subscription: user?.subscription || { plan: 'basic', status: 'active' },
+      subscription: user ? resolveSubscriptionFromUser(user) : { plan: 'basic', status: 'active' },
       stripeEnabled: isStripeConfigured(),
+      simulationEnabled: canSimulatePayments(),
     })
   } catch {
     return NextResponse.json({ message: 'Server error' }, { status: 500 })

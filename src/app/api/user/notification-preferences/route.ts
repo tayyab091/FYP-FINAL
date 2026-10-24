@@ -5,7 +5,6 @@ import User from '@/models/User'
 import { getUser } from '@/lib/auth'
 import { parseJsonBody } from '@/lib/validation'
 import {
-  DEFAULT_NOTIFICATION_PREFERENCES,
   NOTIFICATION_PREFERENCE_KEYS,
   normalizeNotificationPreferences,
   type NotificationPreferences,

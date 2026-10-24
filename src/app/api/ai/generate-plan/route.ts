@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getUser } from '@/lib/auth'
+import { aiPlanRequestSchema, generatedWorkoutPlanSchema, parseJsonBody } from '@/lib/validation'
+import { rateLimitAi } from '@/lib/rate-limit'
 
 const GOALS_MAP: Record<
   string,
@@ -116,11 +118,14 @@ const GOALS_MAP: Record<
 
 export async function POST(req: NextRequest) {
   try {
+    const limited = rateLimitAi(req)
+    if (limited) return limited
     const tokenUser = await getUser(req)
     if (!tokenUser) return NextResponse.json({ message: 'Not authenticated' }, { status: 401 })
 
-    const { goal, daysPerWeek, equipment, fitnessLevel, targetMuscles } = await req.json()
-    const days = parseInt(String(daysPerWeek || '4'), 10) || 4
+    const parsed = await parseJsonBody(req, aiPlanRequestSchema)
+    if ('error' in parsed) return parsed.error
+    const { goal, daysPerWeek: days, equipment, fitnessLevel, targetMuscles } = parsed.data
     const GEMINI_KEY = process.env.GEMINI_API_KEY
 
     const prompt = `You are an expert personal trainer. Generate a complete ${days}-day per week workout plan.
@@ -156,34 +161,51 @@ Rules:
 - Return ONLY the JSON object, no markdown, no explanation`
 
     if (GEMINI_KEY && GEMINI_KEY !== 'PASTE_GEMINI_KEY_HERE') {
+      try {
+      const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
       const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_KEY },
+          signal: AbortSignal.timeout(15000),
           body: JSON.stringify({
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
             generationConfig: { maxOutputTokens: 2000, temperature: 0.7 },
           }),
         },
       )
+      if (!res.ok) throw new Error('Plan provider unavailable')
       const data = await res.json()
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
       try {
         const clean = text.replace(/```json|```/g, '').trim()
-        const plan = JSON.parse(clean)
-        return NextResponse.json({ plan, generated: true })
+        const validated = generatedWorkoutPlanSchema.safeParse(JSON.parse(clean))
+        if (validated.success && validated.data.weeklySchedule.filter((day) => !day.isRestDay).length === days) {
+          return NextResponse.json({ plan: validated.data, generated: true })
+        }
       } catch {
         // fall through
+      }
+      } catch {
+        // A provider outage must still allow the local plan generator to work.
       }
     }
 
     const template = GOALS_MAP[goal] || GOALS_MAP.muscle_gain
+    const trainingDays = new Set(Array.from({ length: days }, (_, i) => Math.floor(i * 7 / days)))
+    const workouts = template.weeklySchedule.filter((day) => !day.isRestDay)
+    const bodyweight = ['Squat', 'Reverse Lunge', 'Push-up', 'Glute Bridge'].map((name) => ({ name, sets: fitnessLevel === 'beginner' ? 2 : 3, reps: '8-12', restSeconds: 60, notes: 'Use a comfortable range of motion' }))
     const plan = {
       ...template,
       goal: goal || 'muscle_gain',
       durationWeeks: 8,
       difficulty: fitnessLevel || 'intermediate',
+      weeklySchedule: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day, index) => ({
+        day,
+        isRestDay: !trainingDays.has(index),
+        exercises: trainingDays.has(index) ? (equipment.toLowerCase().includes('full gym') ? workouts[index % workouts.length].exercises : bodyweight) : [],
+      })),
     }
     return NextResponse.json({ plan, generated: false })
   } catch (error) {

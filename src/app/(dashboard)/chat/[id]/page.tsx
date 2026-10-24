@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PageLoader } from '@/components/shared/PageLoader'
 import { SignInGate } from '@/components/shared/AccessGate'
-import { ArrowLeft, ImagePlus, MessageCircle, Send } from 'lucide-react'
+import { ArrowLeft, ImagePlus, Send } from 'lucide-react'
 import { Avatar } from '@/components/shared/Avatar'
 
 interface ConversationInfo {

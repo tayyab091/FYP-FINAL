@@ -96,10 +96,10 @@ export default function MealPlansPage() {
     return plans.find((p) => p.status === 'active') || plans[0] || null
   }, [plans, selectedPlanId])
 
+  const firstDay = activePlan?.days?.[0]?.day
   useEffect(() => {
-    if (!activePlan?.days?.length) return
-    setExpandedDays({ [activePlan.days[0].day]: true })
-  }, [activePlan?._id])
+    setExpandedDays(firstDay === undefined ? {} : { [firstDay]: true })
+  }, [activePlan?._id, firstDay])
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault()

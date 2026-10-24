@@ -185,7 +185,7 @@ export const profileUpdateSchema = z.object({
   currentWeight: z.number().min(0).max(500).optional(),
   targetWeight: z.number().min(0).max(500).optional(),
   fitnessGoal: optionalPlainTextSchema(100),
-  activityLevel: optionalPlainTextSchema(50),
+  activityLevel: z.enum(['sedentary', 'light', 'moderate', 'very_active']).optional(),
   goalMetricCurrent: z.number().min(0).max(100000).optional(),
   goalMetricTarget: z.number().min(0).max(100000).optional(),
   goalMetricUnit: optionalPlainTextSchema(30),
@@ -229,6 +229,26 @@ export const trainerProfileSchema = z.object({
   certifications: z.array(plainTextSchema(120, 1)).max(20).optional(),
   hourlyRate: z.number().min(0).max(1_000_000).optional(),
   experience: optionalPlainTextSchema(500),
+})
+
+export const trainerAvailabilitySchema = z.object({
+  slots: z.array(z.object({
+    dayOfWeek: z.number().int().min(0).max(6),
+    startTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+    endTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+    isAvailable: z.boolean().default(true),
+  }).refine((slot) => !slot.isAvailable || slot.startTime < slot.endTime, 'End time must be after start time')).max(100),
+  timezone: z.string().max(80).default('Asia/Karachi').refine((timeZone) => {
+    try { new Intl.DateTimeFormat('en', { timeZone }); return true } catch { return false }
+  }, 'Invalid timezone'),
+})
+
+export const aiPlanRequestSchema = z.object({
+  goal: z.enum(['weight_loss', 'muscle_gain', 'endurance', 'flexibility', 'general_fitness']).default('muscle_gain'),
+  daysPerWeek: z.coerce.number().int().min(1).max(7).default(4),
+  equipment: plainTextSchema(300).default('Bodyweight Only'),
+  fitnessLevel: z.enum(['beginner', 'intermediate', 'advanced']).default('intermediate'),
+  targetMuscles: optionalPlainTextSchema(300),
 })
 
 export const reviewSchema = z.object({
@@ -412,10 +432,24 @@ export const workoutPlanCreateSchema = z.object({
   userId: objectIdSchema('userId'),
   relationshipId: objectIdSchema('relationshipId'),
   title: plainTextSchema(120, 1),
-  goal: optionalPlainTextSchema(200),
+  goal: z.enum(['weight_loss', 'muscle_gain', 'endurance', 'flexibility', 'general_fitness']).optional(),
   durationWeeks: z.number().int().min(1).max(52).optional(),
-  difficulty: optionalPlainTextSchema(40),
-  weeklySchedule: z.array(z.unknown()).max(14).optional().default([]),
+  difficulty: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
+  weeklySchedule: z.array(z.object({
+    day: plainTextSchema(30),
+    isRestDay: z.boolean().default(false),
+    exercises: z.array(z.object({
+      name: plainTextSchema(120),
+      sets: z.number().int().min(1).max(100).default(3),
+      reps: plainTextSchema(40).default('10'),
+      restSeconds: z.number().int().min(0).max(600).default(60),
+      notes: optionalPlainTextSchema(500),
+    })).max(50).default([]),
+  })).max(14).optional().default([]),
+})
+
+export const generatedWorkoutPlanSchema = workoutPlanCreateSchema.omit({ userId: true, relationshipId: true }).extend({
+  weeklySchedule: workoutPlanCreateSchema.shape.weeklySchedule.unwrap().unwrap().length(7),
 })
 
 export const workoutLogStartSchema = z.object({
@@ -496,7 +530,7 @@ export const mealPlanUpdateSchema = z.object({
   title: optionalPlainTextSchema(120),
   goal: optionalPlainTextSchema(100),
   dailyCalories: z.number().int().min(800).max(6000).optional(),
-  days: z.array(z.unknown()).max(31).optional(),
+  days: z.array(z.object({ day: plainTextSchema(30), meals: z.array(mealItemSchema).min(1).max(8) })).min(1).max(31).optional(),
   status: z.enum(['active', 'draft']).optional(),
   preferenceNotes: optionalPlainTextSchema(1000),
 })

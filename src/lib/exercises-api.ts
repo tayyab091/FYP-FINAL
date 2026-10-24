@@ -4,8 +4,6 @@ const EXERCISEDB_BASE = 'https://oss.exercisedb.dev/api/v1'
 const CACHE_TTL = 60 * 60 * 1000 // 1 hour
 const PAGE_SIZE = 25
 const PAGE_DELAY_MS = 80
-const GIF_HEAD_BATCH = 12
-const GIF_HEAD_TIMEOUT_MS = 4000
 
 const VALID_GIF_HOSTS = [
   'static.exercisedb.dev',
@@ -153,31 +151,6 @@ function looksLikeValidGifUrl(url: string): boolean {
   }
 }
 
-async function gifUrlLoads(url: string): Promise<boolean> {
-  try {
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), GIF_HEAD_TIMEOUT_MS)
-    const res = await fetch(url, {
-      method: 'HEAD',
-      signal: controller.signal,
-      next: { revalidate: 86400 },
-    })
-    clearTimeout(timeout)
-    if (res.ok) return true
-    if (res.status === 405 || res.status === 403) {
-      const getRes = await fetch(url, {
-        method: 'GET',
-        headers: { Range: 'bytes=0-0' },
-        signal: controller.signal,
-        next: { revalidate: 86400 },
-      })
-      return getRes.ok
-    }
-    return false
-  } catch {
-    return false
-  }
-}
 
 function filterExercisesByPattern(exercises: LibraryExercise[]): LibraryExercise[] {
   const valid = exercises.filter((e) => looksLikeValidGifUrl(e.gifUrl))
@@ -275,7 +248,7 @@ async function fetchExercisePages(maxPages: number): Promise<LibraryExercise[]> 
 
 function warmExerciseCatalog(): void {
   if (getCached<ExerciseCatalog>('exercise-catalog-v4')) return
-  void getExerciseCatalog()
+  void getExerciseCatalog().catch(() => {})
 }
 
 function buildMetaFromLists(
@@ -433,7 +406,7 @@ async function queryExercisesFast(options: {
   const paged = paginate(filtered, page, limit)
 
   return {
-    exercises: paged.items.length > 0 ? paged.items : FALLBACK_EXERCISES,
+    exercises: paged.items,
     total: paged.total,
     page: paged.page,
     limit: paged.limit,
@@ -454,7 +427,11 @@ export async function queryExercises(options: {
 }): Promise<ExerciseQueryResult> {
   const cached = getCached<ExerciseCatalog>('exercise-catalog-v4')
   if (cached) return applyExerciseFilters(cached, options)
-  return queryExercisesFast(options)
+  try {
+    return await queryExercisesFast(options)
+  } catch {
+    return applyExerciseFilters({ exercises: FALLBACK_EXERCISES, meta: buildMeta(FALLBACK_EXERCISES) }, options)
+  }
 }
 
 export async function fetchExercises(options?: {
