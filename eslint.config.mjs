@@ -6,6 +6,10 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   {
+    files: ['*.js', '*.cjs'],
+    rules: { '@typescript-eslint/no-require-imports': 'off' },
+  },
+  {
     rules: {
       "@typescript-eslint/no-explicit-any": "warn",
       "react-hooks/set-state-in-effect": "off",
@@ -15,6 +19,7 @@ const eslintConfig = defineConfig([
   globalIgnores([
     // Default ignores of eslint-config-next:
     ".next/**",
+    ".next-audit/**",
     "out/**",
     "build/**",
     "next-env.d.ts",

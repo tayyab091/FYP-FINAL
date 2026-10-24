@@ -547,7 +547,6 @@ export default function CommunityPage() {
                 </div>
               </CardContent>
             </Card>
-
             {loading ? (
               <>
                 <Skeleton className="h-36 rounded-xl bg-muted" />

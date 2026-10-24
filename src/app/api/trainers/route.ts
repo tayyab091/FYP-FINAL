@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { connectDB } from '@/lib/mongodb'
+import { connectDBWithTimeout } from '@/lib/mongodb'
 import Trainer from '@/models/Trainer'
+import { createPublicSlug } from '@/lib/slug'
 
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
@@ -15,7 +16,7 @@ const FALLBACK_TRAINERS = [
 
 export async function GET(req: NextRequest) {
   try {
-    await connectDB()
+    await connectDBWithTimeout(4000)
     const { searchParams } = req.nextUrl
     const specialty = searchParams.get('specialty')
     const country = searchParams.get('country')
@@ -52,7 +53,10 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({
-      trainers,
+      trainers: trainers.map(trainer => ({
+        ...trainer,
+        slug: trainer.slug || createPublicSlug(trainer.name, trainer._id.toString()),
+      })),
       meta: { source: 'database', connectable: true },
     })
   } catch (error) {

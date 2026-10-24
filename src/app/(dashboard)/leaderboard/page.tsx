@@ -91,11 +91,6 @@ export default function LeaderboardPage() {
               const isCurrentUser =
                 leader.userId === user?.id || leader.userId === (user as { _id?: string })?._id
               const rank = index + 1
-              const initials = (leader.fullName || 'U')
-                .split(' ')
-                .map((n) => n[0])
-                .join('')
-                .slice(0, 2)
 
               return (
                 <div

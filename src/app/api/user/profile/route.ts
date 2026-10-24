@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import User from '@/models/User'
+import Trainer from '@/models/Trainer'
 import { getUser } from '@/lib/auth'
 import { parseJsonBody, profileUpdateSchema } from '@/lib/validation'
 import { resolveAvatarUrl } from '@/lib/avatar'
-import Trainer from '@/models/Trainer'
 import { allocateTrainerSlug } from '@/lib/trainer-slug-server'
 
 export async function PUT(req: NextRequest) {
@@ -26,21 +26,28 @@ export async function PUT(req: NextRequest) {
     if (data.targetWeight !== undefined) update.targetWeight = data.targetWeight
     if (data.fitnessGoal !== undefined) update.fitnessGoal = data.fitnessGoal
     if (data.activityLevel !== undefined) update.activityLevel = data.activityLevel
+    if (data.goalMetricCurrent !== undefined) update.goalMetricCurrent = data.goalMetricCurrent
+    if (data.goalMetricTarget !== undefined) update.goalMetricTarget = data.goalMetricTarget
+    if (data.goalMetricUnit !== undefined) update.goalMetricUnit = data.goalMetricUnit
 
     const user = await User.findByIdAndUpdate(tokenUser.userId, update, {
       new: true,
       runValidators: true,
     }).select('-password')
 
-    if (user?.role === 'trainer' && data.fullName) {
+    if (user?.role === 'trainer') {
       const trainer = await Trainer.findOne({ userId: tokenUser.userId })
       if (trainer) {
-        const nameChanged = trainer.name !== data.fullName
-        const trainerUpdate: Record<string, unknown> = { name: data.fullName }
-        if (nameChanged) {
-          trainerUpdate.slug = await allocateTrainerSlug(data.fullName, trainer._id)
+        const nameChanged = data.fullName !== undefined && trainer.name !== data.fullName
+      const trainerUpdate: Record<string, unknown> = {}
+      if (data.fullName !== undefined) trainerUpdate.name = data.fullName
+      if (data.country !== undefined) trainerUpdate.country = data.country
+      if (data.profileImage !== undefined) trainerUpdate.profileImage = data.profileImage
+      if (data.bio !== undefined) trainerUpdate.bio = data.bio
+        if (nameChanged) trainerUpdate.slug = await allocateTrainerSlug(data.fullName, trainer._id)
+      if (Object.keys(trainerUpdate).length > 0) {
+          await Trainer.updateOne({ _id: trainer._id }, { $set: trainerUpdate }, { runValidators: true })
         }
-        await Trainer.updateOne({ _id: trainer._id }, { $set: trainerUpdate })
       }
     }
 

@@ -21,7 +21,7 @@ export function LegalDocumentPage({ title, intro, sections, path }: LegalDocumen
     : { href: '/privacy' as const, label: 'Privacy Policy' }
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-12 md:py-16">
+    <article className="mx-auto w-full max-w-3xl px-6 py-12 md:py-16">
       <p className="mb-2 text-sm text-muted-foreground">
         <Link href="/" className="hover:text-foreground">
           Home
@@ -47,6 +47,6 @@ export function LegalDocumentPage({ title, intro, sections, path }: LegalDocumen
         </Link>
         .
       </p>
-    </main>
+    </article>
   )
 }

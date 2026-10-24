@@ -354,8 +354,6 @@ export function CoachingDetailClient({ slug }: { slug: string }) {
       </div>
     )
   }
-
-  const initials = trainer.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
   const experienceYears = trainer.experience?.match(/\d+/)?.[0]
   const experienceLabel = experienceYears
     ? `${experienceYears}+ years`

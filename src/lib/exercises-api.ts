@@ -4,8 +4,6 @@ const EXERCISEDB_BASE = 'https://oss.exercisedb.dev/api/v1'
 const CACHE_TTL = 60 * 60 * 1000 // 1 hour
 const PAGE_SIZE = 25
 const PAGE_DELAY_MS = 80
-const GIF_HEAD_BATCH = 12
-const GIF_HEAD_TIMEOUT_MS = 4000
 
 const VALID_GIF_HOSTS = [
   'static.exercisedb.dev',
@@ -27,6 +25,7 @@ export interface LibraryExercise {
   equipment: string
   difficulty: string
   gifUrl: string
+  media: string[]
   instructions: string
   sets: number
   reps: string
@@ -70,9 +69,9 @@ const MUSCLE_MAP: Record<string, string> = {
 }
 
 const FALLBACK_EXERCISES: LibraryExercise[] = [
-  { id: '1', name: 'Push-Up', muscle: 'Chest', equipment: 'Bodyweight', difficulty: 'Beginner', gifUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/Pushup_from_the_side.gif/320px-Pushup_from_the_side.gif', instructions: 'Start in high plank. Lower chest to floor keeping elbows at 45°. Push back up explosively.', sets: 3, reps: '15', bodyParts: ['chest'], targetMuscles: ['pectorals'] },
-  { id: '2', name: 'Squat', muscle: 'Legs', equipment: 'Bodyweight', difficulty: 'Beginner', gifUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Squat_animation.gif/240px-Squat_animation.gif', instructions: 'Feet shoulder-width. Push hips back and down until thighs parallel. Drive through heels to stand.', sets: 3, reps: '20', bodyParts: ['upper legs'], targetMuscles: ['quadriceps'] },
-  { id: '3', name: 'Plank', muscle: 'Core', equipment: 'Bodyweight', difficulty: 'Beginner', gifUrl: 'https://media1.tenor.com/m/TFUbZgW7RLEAAAAC/plank.gif', instructions: 'Forearms on ground elbows under shoulders. Body straight from head to heels.', sets: 3, reps: '45 sec', bodyParts: ['waist'], targetMuscles: ['abs'] },
+  { id: '1', name: 'Push-Up', muscle: 'Chest', equipment: 'Bodyweight', difficulty: 'Beginner', gifUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/Pushup_from_the_side.gif/320px-Pushup_from_the_side.gif', media: ['https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/Pushup_from_the_side.gif/320px-Pushup_from_the_side.gif'], instructions: 'Start in high plank. Lower chest to floor keeping elbows at 45°. Push back up explosively.', sets: 3, reps: '15', bodyParts: ['chest'], targetMuscles: ['pectorals'] },
+  { id: '2', name: 'Squat', muscle: 'Legs', equipment: 'Bodyweight', difficulty: 'Beginner', gifUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Squat_animation.gif/240px-Squat_animation.gif', media: ['https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Squat_animation.gif/240px-Squat_animation.gif'], instructions: 'Feet shoulder-width. Push hips back and down until thighs parallel. Drive through heels to stand.', sets: 3, reps: '20', bodyParts: ['upper legs'], targetMuscles: ['quadriceps'] },
+  { id: '3', name: 'Plank', muscle: 'Core', equipment: 'Bodyweight', difficulty: 'Beginner', gifUrl: 'https://media1.tenor.com/m/TFUbZgW7RLEAAAAC/plank.gif', media: ['https://media1.tenor.com/m/TFUbZgW7RLEAAAAC/plank.gif'], instructions: 'Forearms on ground elbows under shoulders. Body straight from head to heels.', sets: 3, reps: '45 sec', bodyParts: ['waist'], targetMuscles: ['abs'] },
 ]
 
 function normalizeMuscle(bodyPart?: string): string {
@@ -97,6 +96,8 @@ function mapExercise(raw: {
   exerciseId: string
   name: string
   gifUrl?: string
+  images?: string[]
+  imageUrls?: string[]
   bodyParts?: string[]
   equipments?: string[]
   targetMuscles?: string[]
@@ -109,13 +110,17 @@ function mapExercise(raw: {
     .filter(Boolean)
     .join(' ')
 
+  const gifUrl = raw.gifUrl || ''
+  const media = [...new Set([gifUrl, ...(raw.images || []), ...(raw.imageUrls || [])].filter(Boolean))]
+
   return {
     id: raw.exerciseId,
     name: titleCase(raw.name),
     muscle: normalizeMuscle(bodyPart),
     equipment: normalizeEquipment(raw.equipments?.[0]),
     difficulty: 'Intermediate',
-    gifUrl: raw.gifUrl || '',
+    gifUrl,
+    media,
     instructions: instructions || 'Follow the animated demonstration with controlled form.',
     sets: 3,
     reps: '12',
@@ -146,31 +151,6 @@ function looksLikeValidGifUrl(url: string): boolean {
   }
 }
 
-async function gifUrlLoads(url: string): Promise<boolean> {
-  try {
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), GIF_HEAD_TIMEOUT_MS)
-    const res = await fetch(url, {
-      method: 'HEAD',
-      signal: controller.signal,
-      next: { revalidate: 86400 },
-    })
-    clearTimeout(timeout)
-    if (res.ok) return true
-    if (res.status === 405 || res.status === 403) {
-      const getRes = await fetch(url, {
-        method: 'GET',
-        headers: { Range: 'bytes=0-0' },
-        signal: controller.signal,
-        next: { revalidate: 86400 },
-      })
-      return getRes.ok
-    }
-    return false
-  } catch {
-    return false
-  }
-}
 
 function filterExercisesByPattern(exercises: LibraryExercise[]): LibraryExercise[] {
   const valid = exercises.filter((e) => looksLikeValidGifUrl(e.gifUrl))
@@ -268,7 +248,7 @@ async function fetchExercisePages(maxPages: number): Promise<LibraryExercise[]> 
 
 function warmExerciseCatalog(): void {
   if (getCached<ExerciseCatalog>('exercise-catalog-v4')) return
-  void getExerciseCatalog()
+  void getExerciseCatalog().catch(() => {})
 }
 
 function buildMetaFromLists(
@@ -426,7 +406,7 @@ async function queryExercisesFast(options: {
   const paged = paginate(filtered, page, limit)
 
   return {
-    exercises: paged.items.length > 0 ? paged.items : FALLBACK_EXERCISES,
+    exercises: paged.items,
     total: paged.total,
     page: paged.page,
     limit: paged.limit,
@@ -447,7 +427,11 @@ export async function queryExercises(options: {
 }): Promise<ExerciseQueryResult> {
   const cached = getCached<ExerciseCatalog>('exercise-catalog-v4')
   if (cached) return applyExerciseFilters(cached, options)
-  return queryExercisesFast(options)
+  try {
+    return await queryExercisesFast(options)
+  } catch {
+    return applyExerciseFilters({ exercises: FALLBACK_EXERCISES, meta: buildMeta(FALLBACK_EXERCISES) }, options)
+  }
 }
 
 export async function fetchExercises(options?: {

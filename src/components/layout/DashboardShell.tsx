@@ -29,6 +29,7 @@ import { getRoleHomePath } from '@/lib/access'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { Avatar } from '@/components/shared/Avatar'
 import { ThemeToggle } from '@/components/shared/ThemeToggle'
+import { BrandMark } from '@/components/shared/BrandMark'
 
 type UserRole = 'user' | 'trainer' | 'gym_owner' | 'admin' | 'super_admin'
 
@@ -42,6 +43,9 @@ interface NavItem {
 const roleNavigation: Record<UserRole, NavItem[]> = {
   user: [
     { label: 'Home', href: '/dashboard', icon: Home, exact: true },
+    { label: 'Find Trainers', href: '/coaching', icon: Users },
+    { label: 'Find Gyms', href: '/gyms', icon: Building2 },
+    { label: 'Exercise Library', href: '/exercises', icon: Dumbbell },
     { label: 'My Fitness', href: '/my-fitness', icon: LayoutDashboard },
     { label: 'Form Checker', href: '/exercise-check', icon: Camera },
     { label: 'Meal Plans', href: '/meal-plans', icon: UtensilsCrossed },
@@ -113,6 +117,7 @@ const pageTitles: Record<string, string> = {
   '/exercises': 'Exercise Library',
   '/exercise-check': 'AI Form Checker',
   '/coaching': 'Find Trainers',
+  '/gyms': 'Find Gyms',
   '/chat': 'Messages',
   '/live-sessions': 'Live Sessions',
   '/notifications': 'Notifications',
@@ -169,9 +174,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     <div className="flex h-full flex-col bg-card/95 backdrop-blur-2xl">
       <div className="flex h-16 items-center border-b border-border px-5">
         <Link href={homePath} onClick={onNavigate} className="flex items-center gap-2.5">
-          <span className="flex size-8 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[0_0_30px_rgba(34,245,154,.2)]">
-            <Activity className="size-4.5" strokeWidth={2.7} />
-          </span>
+          <BrandMark className="size-9" />
           <span className="font-heading text-lg font-black tracking-[-.045em] text-foreground">T.E.S.T.</span>
         </Link>
       </div>
@@ -234,7 +237,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <Link
           href="/?marketing=1"
           onClick={onNavigate}
-          className="mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:hidden"
+          className="mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground xl:hidden"
         >
           Back to site
         </Link>
@@ -271,37 +274,37 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 border-r border-border lg:block">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 border-r border-border xl:block">
         <Suspense fallback={<div className="h-full animate-pulse bg-card/95" />}>
           <SidebarContent />
         </Suspense>
       </aside>
 
-      <header className="fixed inset-x-0 top-0 z-50 flex h-16 items-center justify-between border-b border-border bg-background/92 px-4 backdrop-blur-2xl lg:left-72 lg:px-8">
+      <header className="fixed inset-x-0 top-0 z-50 flex h-16 items-center justify-between border-b border-border bg-background/92 px-3 backdrop-blur-2xl sm:px-4 xl:left-72 xl:px-8">
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
-            className="flex size-10 items-center justify-center rounded-xl border border-primary/25 bg-primary/[.08] text-primary shadow-[0_0_20px_rgba(34,245,154,.12)] lg:hidden"
+            className="flex size-10 items-center justify-center rounded-xl border border-primary/25 bg-primary/[.08] text-primary shadow-[0_0_20px_rgba(34,245,154,.12)] xl:hidden"
             aria-label="Open dashboard navigation"
           >
             <Menu className="h-5 w-5" />
           </button>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary/70">T.E.S.T. Workspace</p>
+            <p className="hidden text-[10px] font-bold uppercase tracking-[0.18em] text-primary/70 sm:block">T.E.S.T. Workspace</p>
             <h1 className="truncate font-heading text-base font-bold tracking-tight text-foreground">{pageTitle}</h1>
           </div>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
             href="/?marketing=1"
-            className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="hidden rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:inline-flex"
           >
             Back to site
           </Link>
           <ThemeToggle />
           <NotificationBell />
-          <Link href="/settings" className="md:hidden">
+          <Link href="/settings" className="sm:hidden">
             <Avatar
               name={user?.fullName}
               avatarUrl={user?.avatarUrl || user?.profileImage}
@@ -309,7 +312,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               rounded="xl"
             />
           </Link>
-          <div className="hidden items-center gap-2 text-xs text-muted-foreground md:flex">
+          <div className="hidden items-center gap-2 text-xs text-muted-foreground xl:flex">
             <span className="h-2 w-2 animate-pulse rounded-full bg-primary shadow-[0_0_10px_rgba(34,245,154,.7)]" />
             Secure session
           </div>
@@ -317,7 +320,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       </header>
 
       {mobileOpen && (
-        <div className="fixed inset-0 z-[70] lg:hidden">
+        <div className="fixed inset-0 z-[70] xl:hidden">
           <button
             type="button"
             aria-label="Close dashboard navigation"
@@ -340,7 +343,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </div>
       )}
 
-      <div className="min-h-screen bg-[radial-gradient(circle_at_70%_-10%,rgba(124,58,237,0.08),transparent_32rem)] pt-16 dark:bg-[radial-gradient(circle_at_70%_-10%,rgba(34,245,154,.055),transparent_32rem)] lg:pl-72">
+      <div className="min-h-screen min-w-0 bg-[radial-gradient(circle_at_70%_-10%,rgba(8,122,86,0.06),transparent_32rem)] pt-16 dark:bg-[radial-gradient(circle_at_70%_-10%,rgba(34,211,147,.055),transparent_32rem)] xl:pl-72">
         {children}
       </div>
     </div>

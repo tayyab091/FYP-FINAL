@@ -38,29 +38,13 @@ async function redirectNumericNutritionUrl(request: NextRequest): Promise<NextRe
     const slug = mealSlug(meal.name || '', meal.id || mealId)
     if (slug === mealId) return null
 
-    // #region agent log
-    fetch('http://127.0.0.1:7893/ingest/3b5841b0-46ed-4652-9b9f-279e38a5ba27', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '1483ff' },
-      body: JSON.stringify({
-        sessionId: '1483ff',
-        hypothesisId: 'H2',
-        runId: 'post-fix',
-        location: 'proxy.ts:redirectNumericNutritionUrl',
-        message: 'middleware numeric nutrition redirect',
-        data: { mealId, slug, mealName: meal.name },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {})
-    // #endregion
-
     return NextResponse.redirect(new URL(`/nutrition/${slug}`, request.url), 308)
   } catch {
     return null
   }
 }
 
-/** Edge-safe route protection — jose JWT only (no Node fs / Mongoose). */
+/** Next.js 16 proxy: route handlers enforce authorization; this adds early redirects. */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
@@ -86,4 +70,8 @@ export async function proxy(request: NextRequest) {
   }
 
   return NextResponse.next()
+}
+
+export const config = {
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|logo.png|.*\\.png$|.*\\.jpg$|.*\\.svg$|.*\\.gif$).*)'],
 }

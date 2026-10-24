@@ -4,16 +4,18 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { Activity, ArrowUpRight, Menu, X } from 'lucide-react'
+import { ArrowUpRight, Menu, X } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { shouldHidePublicNavbar } from '@/lib/shell-routes'
 import { easeTransition } from '@/lib/motion'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { ThemeToggle } from '@/components/shared/ThemeToggle'
+import { BrandMark } from '@/components/shared/BrandMark'
 import { getRoleHomePath } from '@/lib/access'
 
 const NAV_LINKS = [
   { label: 'Find Trainers', href: '/coaching' },
+  { label: 'Find Gyms', href: '/gyms' },
   { label: 'Exercises', href: '/exercises' },
   { label: 'Form Checker', href: '/exercise-check' },
   { label: 'Nutrition', href: '/nutrition' },
@@ -62,16 +64,13 @@ export function Navbar() {
       >
         <div className="mx-auto flex h-full max-w-6xl items-center gap-3 px-4 sm:px-6">
           <Link href={user ? '/?marketing=1' : '/'} className="group flex shrink-0 items-center gap-2.5">
-            <motion.span
-              whileHover={reduceMotion ? {} : { scale: 1.05, rotate: -4 }}
-              className="flex size-8 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[0_0_28px_rgba(34,245,154,.22)]"
-            >
-              <Activity className="size-4.5" strokeWidth={2.6} />
+            <motion.span whileHover={reduceMotion ? {} : { scale: 1.05 }} className="flex items-center">
+              <BrandMark className="size-9" />
             </motion.span>
             <span className="font-heading text-lg font-black tracking-[-.045em] text-foreground">T.E.S.T.</span>
           </Link>
 
-          <div className="ml-2 hidden flex-1 items-center justify-center md:flex">
+          <div className="ml-2 hidden flex-1 items-center justify-center xl:flex">
             <div className="flex items-center gap-0.5 rounded-xl border border-border bg-muted/50 p-1">
               {NAV_LINKS.map((l) => {
                 const active = pathname === l.href || pathname.startsWith(`${l.href}/`)
@@ -97,7 +96,7 @@ export function Navbar() {
             </div>
           </div>
 
-          <div className="ml-auto hidden items-center gap-2.5 md:flex">
+          <div className="ml-auto hidden items-center gap-2.5 xl:flex">
             <ThemeToggle />
             {isLoading ? (
               <div className="h-8 w-28 animate-pulse rounded-full bg-muted" />
@@ -139,7 +138,7 @@ export function Navbar() {
             )}
           </div>
 
-          <div className="ml-auto flex items-center gap-2 md:hidden">
+          <div className="ml-auto flex items-center gap-2 xl:hidden">
             <ThemeToggle />
             {!isLoading && !user && (
               <Link href="/signup" className="btn-accent btn-sm px-3.5">
@@ -174,7 +173,7 @@ export function Navbar() {
             animate={{ opacity: 1 }}
             exit={reduceMotion ? undefined : { opacity: 0 }}
             transition={easeTransition}
-            className="fixed inset-0 z-[60] md:hidden"
+            className="fixed inset-0 z-[60] xl:hidden"
           >
             <button
               type="button"

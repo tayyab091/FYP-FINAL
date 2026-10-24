@@ -53,7 +53,10 @@ export function resolveSubscriptionFromUser(user: {
   const plan = normalizePlan(user.subscription?.plan)
   const endDate = user.subscription?.endDate ? new Date(user.subscription.endDate) : undefined
 
-  if (plan !== 'basic' && endDate && endDate < new Date()) {
+  if (plan !== 'basic' && (
+    user.subscription?.status === 'inactive' ||
+    (endDate && (!Number.isFinite(endDate.getTime()) || endDate <= new Date()))
+  )) {
     return { plan: 'basic', status: 'active' }
   }
 

@@ -24,10 +24,21 @@ const COUNTRIES = ['Pakistan', 'UAE', 'Saudi Arabia', 'UK', 'USA', 'Canada', 'Au
 const FITNESS_GOALS = [
   { value: 'weight_loss', label: 'Weight Loss' },
   { value: 'muscle_gain', label: 'Muscle Gain' },
+  { value: 'fat_loss', label: 'Fat Loss' },
+  { value: 'body_recomposition', label: 'Body Recomposition' },
   { value: 'endurance', label: 'Endurance & Cardio' },
   { value: 'flexibility', label: 'Flexibility & Mobility' },
   { value: 'general_fitness', label: 'General Fitness' },
 ]
+const GOAL_METRICS: Record<string, { current: string; target: string; unit: string; help: string }> = {
+  weight_loss: { current: 'Current weight', target: 'Target weight', unit: 'kg', help: 'A steady, sustainable reduction in body weight.' },
+  muscle_gain: { current: 'Current weight', target: 'Target weight', unit: 'kg', help: 'Track weight alongside strength and performance gains.' },
+  fat_loss: { current: 'Current body fat', target: 'Target body fat', unit: '%', help: 'Focus on fat reduction while preserving lean muscle.' },
+  body_recomposition: { current: 'Current body fat', target: 'Target body fat', unit: '%', help: 'Reduce fat while building or maintaining muscle.' },
+  endurance: { current: 'Current 5K time', target: 'Target 5K time', unit: 'minutes', help: 'Use a consistent benchmark to measure cardiovascular progress.' },
+  flexibility: { current: 'Mobility sessions now', target: 'Weekly session target', unit: 'sessions/week', help: 'Measure consistency with mobility and flexibility work.' },
+  general_fitness: { current: 'Active minutes now', target: 'Weekly active-minute target', unit: 'minutes/week', help: 'Build a balanced movement habit you can sustain.' },
+}
 const ACTIVITY_LEVELS = [
   { value: 'sedentary', label: 'Sedentary (desk job, little exercise)' },
   { value: 'light', label: 'Light (1-3 workouts/week)' },
@@ -61,6 +72,9 @@ export default function SettingsPage() {
     targetWeight: '',
     fitnessGoal: 'general_fitness',
     activityLevel: 'moderate',
+    goalMetricCurrent: '',
+    goalMetricTarget: '',
+    goalMetricUnit: '',
   })
   const [trainerProfile, setTrainerProfile] = useState({
     specialty: '',
@@ -107,6 +121,9 @@ export default function SettingsPage() {
             targetWeight: u.targetWeight?.toString() || '',
             fitnessGoal: u.fitnessGoal || 'general_fitness',
             activityLevel: u.activityLevel || 'moderate',
+            goalMetricCurrent: u.goalMetricCurrent?.toString() || '',
+            goalMetricTarget: u.goalMetricTarget?.toString() || '',
+            goalMetricUnit: u.goalMetricUnit || '',
           })
         }
       })
@@ -214,6 +231,9 @@ export default function SettingsPage() {
           activityLevel: profile.activityLevel,
           currentWeight: profile.currentWeight ? parseFloat(profile.currentWeight) : undefined,
           targetWeight: profile.targetWeight ? parseFloat(profile.targetWeight) : undefined,
+          goalMetricCurrent: profile.goalMetricCurrent ? parseFloat(profile.goalMetricCurrent) : undefined,
+          goalMetricTarget: profile.goalMetricTarget ? parseFloat(profile.goalMetricTarget) : undefined,
+          goalMetricUnit: profile.goalMetricUnit || GOAL_METRICS[profile.fitnessGoal]?.unit || '',
         }),
       })
       if (res.ok) {
@@ -513,6 +533,25 @@ export default function SettingsPage() {
                   />
                 </div>
               </div>
+              {GOAL_METRICS[profile.fitnessGoal]?.unit !== 'kg' && (
+                <div>
+                  <p className="mb-3 text-sm text-muted-foreground">{GOAL_METRICS[profile.fitnessGoal]?.help}</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="mb-1.5 block text-xs text-muted-foreground">{GOAL_METRICS[profile.fitnessGoal]?.current}</label>
+                      <input type="number" min="0" value={profile.goalMetricCurrent}
+                        onChange={(e) => setProfile((p) => ({ ...p, goalMetricCurrent: e.target.value, goalMetricUnit: GOAL_METRICS[p.fitnessGoal]?.unit || '' }))}
+                        className={inputClass} />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs text-muted-foreground">{GOAL_METRICS[profile.fitnessGoal]?.target}</label>
+                      <input type="number" min="0" value={profile.goalMetricTarget}
+                        onChange={(e) => setProfile((p) => ({ ...p, goalMetricTarget: e.target.value, goalMetricUnit: GOAL_METRICS[p.fitnessGoal]?.unit || '' }))}
+                        className={inputClass} />
+                    </div>
+                  </div>
+                </div>
+              )}
               {profile.currentWeight && (
                 <div className="tile min-h-0 border-primary/20 bg-primary/5 py-4">
                   <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-primary">Estimated Daily Calories</p>

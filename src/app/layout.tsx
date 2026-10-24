@@ -18,7 +18,6 @@ import {
 
 const manrope = Manrope({ subsets: ['latin'], variable: '--font-body' })
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-display' })
-
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
   title: {
@@ -61,9 +60,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body className={`${manrope.variable} ${spaceGrotesk.variable}`} suppressHydrationWarning>
+        <a
+          href="#main-content"
+          className="fixed left-4 top-4 z-[100] -translate-y-24 rounded-full bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-xl transition-transform focus:translate-y-0"
+        >
+          Skip to main content
+        </a>
         <Providers>
           <Navbar />
-          <main className="flex min-h-screen flex-col">{children}</main>
+          <main id="main-content" tabIndex={-1} className="flex min-h-screen flex-col">{children}</main>
           <SiteFooter />
           <BottomNav />
           <FloatingChat />

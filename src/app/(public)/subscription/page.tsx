@@ -8,18 +8,6 @@ import { PLANS, type PlanId } from '@/lib/plans'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 
-function isClientStripeReady(): boolean {
-  const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-  if (!key) return false
-  const normalized = key.trim().toUpperCase()
-  return (
-    key.startsWith('pk_') &&
-    !normalized.includes('PASTE_') &&
-    !normalized.includes('REPLACE') &&
-    !normalized.endsWith('_HERE')
-  )
-}
-
 function SubscriptionReturnHandler() {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -27,7 +15,7 @@ function SubscriptionReturnHandler() {
 
   useEffect(() => {
     const success = searchParams.get('success')
-    const canceled = searchParams.get('canceled')
+    const canceled = searchParams.get('canceled') || searchParams.get('cancelled')
     if (!success && !canceled) return
 
     if (success === 'true') {
@@ -37,6 +25,7 @@ function SubscriptionReturnHandler() {
 
       void (async () => {
         try {
+          if (!sessionId) throw new Error('Missing payment confirmation. Please check your current plan.')
           if (sessionId) {
             const res = await fetch(
               `/api/subscription/confirm?session_id=${encodeURIComponent(sessionId)}`,
@@ -72,7 +61,18 @@ export default function SubscriptionPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<PlanId | null>(null)
   const [processing, setProcessing] = useState(false)
-  const stripeReady = isClientStripeReady()
+  const [checkoutMode, setCheckoutMode] = useState<'stripe' | 'demo' | 'unavailable' | null>(null)
+
+  useEffect(() => {
+    if (!modalOpen) return
+    const controller = new AbortController()
+    setCheckoutMode(null)
+    fetch('/api/subscription', { signal: controller.signal })
+      .then((res) => { if (!res.ok) throw new Error('Checkout unavailable'); return res.json() })
+      .then((data) => { if (!controller.signal.aborted) setCheckoutMode(data.stripeEnabled ? 'stripe' : data.simulationEnabled ? 'demo' : 'unavailable') })
+      .catch(() => { if (!controller.signal.aborted) setCheckoutMode('unavailable') })
+    return () => controller.abort()
+  }, [modalOpen])
 
   const currentPlan: PlanId = (user?.subscription?.plan as PlanId) || 'basic'
 
@@ -224,9 +224,10 @@ export default function SubscriptionPage() {
           <DialogHeader>
             <DialogTitle>Confirm your plan</DialogTitle>
             <DialogDescription>
-              {stripeReady
-                ? 'You will be redirected to Stripe to complete your payment securely.'
-                : 'Click confirm to activate your plan.'}
+              {checkoutMode === 'stripe' ? 'You will be redirected to Stripe to complete your payment securely.'
+                : checkoutMode === 'demo' ? 'Demo mode: this activates your plan without charging a payment.'
+                : checkoutMode === 'unavailable' ? 'Checkout is currently unavailable. Please try again later.'
+                : 'Checking checkout availability…'}
             </DialogDescription>
           </DialogHeader>
 
@@ -248,12 +249,12 @@ export default function SubscriptionPage() {
             <Button variant="outline" onClick={() => setModalOpen(false)} disabled={processing}>
               Cancel
             </Button>
-            <Button onClick={handleConfirmPayment} disabled={processing}>
+            <Button onClick={handleConfirmPayment} disabled={processing || !checkoutMode || checkoutMode === 'unavailable'}>
               {processing
                 ? 'Processing...'
-                : stripeReady
+                : checkoutMode === 'stripe'
                   ? 'Continue to Stripe'
-                  : 'Confirm Payment'}
+                  : checkoutMode === 'demo' ? 'Activate Demo Plan' : 'Continue'}
             </Button>
           </DialogFooter>
         </DialogContent>

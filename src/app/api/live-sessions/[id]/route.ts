@@ -4,6 +4,9 @@ import { getUser } from '@/lib/auth'
 import LiveSession from '@/models/LiveSession'
 import User from '@/models/User'
 import { USER_AVATAR_POPULATE_SELECT, resolveAvatarUrl } from '@/lib/avatar'
+import { getLiveSessionMeetingDetails, getLiveSessionReadDecision } from '@/lib/live-session-access.mjs'
+import { normalizePlan } from '@/lib/subscription'
+import { syncUserSubscription } from '@/lib/subscription-server'
 
 export async function GET(
   req: NextRequest,
@@ -19,12 +22,22 @@ export async function GET(
     await connectDB()
 
     const session = await LiveSession.findById(id).lean()
-    if (!session) {
-      return NextResponse.json({ message: 'Session not found' }, { status: 404 })
+    const isTrainer = Boolean(session && String(session.trainerId) === tokenUser.userId)
+    const subscription = session && !isTrainer
+      ? await syncUserSubscription(tokenUser.userId)
+      : null
+    const decision = getLiveSessionReadDecision({
+      user: tokenUser,
+      session,
+      plan: normalizePlan(subscription?.plan),
+    })
+    if (!decision.allowed) {
+      return NextResponse.json({ message: decision.message }, { status: decision.status })
     }
 
     const trainer = await User.findById(session.trainerId).select(USER_AVATAR_POPULATE_SELECT).lean()
     const trainerAvatar = resolveAvatarUrl(trainer) || trainer?.profileImage || ''
+    const meetingDetails = getLiveSessionMeetingDetails(session)
 
     return NextResponse.json({
       session: {
@@ -33,9 +46,7 @@ export async function GET(
         trainerId: session.trainerId.toString(),
         clientId: session.clientId ? session.clientId.toString() : null,
         participantIds: (session.participantIds || []).map((pid: { toString(): string }) => pid.toString()),
-        meetingProvider: session.meetingProvider || (session.dailyRoomUrl ? 'daily' : 'jitsi'),
-        meetingRoomName: session.meetingRoomName || session.dailyRoomName || '',
-        meetingUrl: session.meetingUrl || session.dailyRoomUrl || '',
+        ...meetingDetails,
         trainer: trainer
           ? {
               fullName: trainer.fullName,

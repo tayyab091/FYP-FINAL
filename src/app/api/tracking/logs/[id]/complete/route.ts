@@ -7,7 +7,6 @@ import { getWorkoutWeeklyLimit, normalizePlan } from '@/lib/subscription'
 import { syncUserSubscription } from '@/lib/subscription-server'
 import { awardWorkoutXp } from '@/lib/gamification'
 import { parseJsonBody, parseObjectIdParam, workoutCompleteSchema } from '@/lib/validation'
-
 async function enforceWeeklyLimit(userId: string) {
   const subscription = await syncUserSubscription(userId)
   const planId = normalizePlan(subscription?.plan)
@@ -75,7 +74,7 @@ export async function PUT(
     }))
 
     const log = await WorkoutLog.findOneAndUpdate(
-      { _id: idResult.id, userId: tokenUser.userId, status: { $ne: 'completed' } },
+      { _id: idResult.id, userId: tokenUser.userId, status: 'in_progress' },
       {
         $set: {
           status: 'completed',
@@ -94,7 +93,7 @@ export async function PUT(
       if (!existing) {
         return NextResponse.json({ message: 'Workout log not found' }, { status: 404 })
       }
-      return NextResponse.json({ message: 'Workout already completed' }, { status: 400 })
+      return NextResponse.json({ message: existing.status === 'completed' ? 'Workout already completed' : 'Only an in-progress workout can be completed' }, { status: 400 })
     }
 
     if (log.xpAwarded) {

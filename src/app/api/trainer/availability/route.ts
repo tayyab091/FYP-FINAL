@@ -4,6 +4,7 @@ import { getUser } from '@/lib/auth'
 import Trainer from '@/models/Trainer'
 import mongoose from 'mongoose'
 import { resolveTrainerObjectId } from '@/lib/resolve-trainer'
+import { parseJsonBody, trainerAvailabilitySchema } from '@/lib/validation'
 
 const AvailabilitySchema = new mongoose.Schema(
   {
@@ -46,11 +47,13 @@ export async function PUT(req: NextRequest) {
     if (!tokenUser || tokenUser.role !== 'trainer') {
       return NextResponse.json({ message: 'Trainers only' }, { status: 403 })
     }
+    const parsed = await parseJsonBody(req, trainerAvailabilitySchema)
+    if ('error' in parsed) return parsed.error
     await connectDB()
     const trainer = await Trainer.findOne({ userId: tokenUser.userId })
     if (!trainer) return NextResponse.json({ message: 'Trainer profile not found' }, { status: 404 })
 
-    const { slots, timezone } = await req.json()
+    const { slots, timezone } = parsed.data
     const availability = await Availability.findOneAndUpdate(
       { trainerId: trainer._id },
       { trainerId: trainer._id, slots, timezone },

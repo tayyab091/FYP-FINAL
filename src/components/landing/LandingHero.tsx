@@ -14,6 +14,7 @@ export function LandingHero() {
   const reduceMotion = useReducedMotion() ?? false
   const heroRef = useRef<HTMLElement>(null)
   const rafRef = useRef<number | null>(null)
+  const tickHoldRef = useRef<(timestamp: number) => void>(() => {})
   const holdStartRef = useRef<number | null>(null)
   const holdingRef = useRef(false)
   const completedRef = useRef(false)
@@ -67,11 +68,15 @@ export function LandingHero() {
       }
 
       if (holdingRef.current) {
-        rafRef.current = requestAnimationFrame(tickHold)
+        rafRef.current = requestAnimationFrame((nextTimestamp) => tickHoldRef.current(nextTimestamp))
       }
     },
     [spawnBurst]
   )
+
+  useEffect(() => {
+    tickHoldRef.current = tickHold
+  }, [tickHold])
 
   const startHold = useCallback(
     (e: React.PointerEvent<HTMLButtonElement>) => {
@@ -84,9 +89,9 @@ export function LandingHero() {
       setHolding(true)
       setEnergy(0)
       setBlast(false)
-      rafRef.current = requestAnimationFrame(tickHold)
+      rafRef.current = requestAnimationFrame((timestamp) => tickHoldRef.current(timestamp))
     },
-    [tickHold]
+    []
   )
 
   const endHold = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {

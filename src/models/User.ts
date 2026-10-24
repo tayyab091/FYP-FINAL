@@ -11,10 +11,12 @@ const UserSchema = new Schema({
     default: 'user'
   },
   country: { type: String, default: 'Pakistan' },
+  lastStripeCheckoutId: { type: String, select: false },
+  lastStripeCheckoutCreatedAt: { type: Date, select: false },
   profileImage: { type: String, default: '' },
   avatarUrl: { type: String, default: '' },
   avatarPublicId: { type: String, default: '' },
-  bio: { type: String, default: '' },
+  bio: { type: String, default: '', maxlength: 500 },
   subscription: {
     plan: { type: String, enum: ['basic', 'pro', 'elite'], default: 'basic' },
     status: { type: String, enum: ['active', 'inactive'], default: 'active' },
@@ -30,10 +32,10 @@ const UserSchema = new Schema({
     enum: ['password', 'google'],
     default: ['password'],
   },
-  resetPasswordToken: { type: String },
-  resetPasswordExpires: { type: Date },
-  verifyEmailToken: { type: String },
-  verifyEmailExpires: { type: Date },
+  resetPasswordToken: { type: String, select: false },
+  resetPasswordExpires: { type: Date, select: false },
+  verifyEmailToken: { type: String, select: false },
+  verifyEmailExpires: { type: Date, select: false },
   isActive: { type: Boolean, default: true },
   isSuspended: { type: Boolean, default: false },
   freeChatsUsed: { type: Number, default: 0 },
@@ -45,6 +47,9 @@ const UserSchema = new Schema({
   },
   targetWeight: { type: Number },
   currentWeight: { type: Number },
+  goalMetricCurrent: { type: Number },
+  goalMetricTarget: { type: Number },
+  goalMetricUnit: { type: String, default: '' },
   /** Expo push tokens for mobile app notifications */
   expoPushTokens: { type: [String], default: [] },
   notificationPreferences: {

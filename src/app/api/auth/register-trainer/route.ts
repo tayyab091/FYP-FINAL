@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
         password: hashedPassword,
         country: country || 'Pakistan',
         role: 'trainer',
+        bio: bio || '',
         emailVerified: false,
         verifyEmailToken: verifyToken,
         verifyEmailExpires: new Date(Date.now() + 24 * 60 * 60 * 1000),

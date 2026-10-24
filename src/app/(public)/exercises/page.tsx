@@ -258,9 +258,6 @@ export default function ExercisesPage() {
           setMeta(data.meta)
           setCatalogTotal(data.meta.total ?? data.total ?? 0)
         }
-        // #region agent log
-        fetch('http://127.0.0.1:7893/ingest/3b5841b0-46ed-4652-9b9f-279e38a5ba27',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1483ff'},body:JSON.stringify({sessionId:'1483ff',hypothesisId:'H4',location:'exercises/page.tsx:fetch',message:'exercises loaded',data:{count:(data.exercises||[]).length},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
       })
       .catch(() => {})
       .finally(() => setLoading(false))

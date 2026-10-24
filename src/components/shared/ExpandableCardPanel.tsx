@@ -77,7 +77,7 @@ export function ExpandableCardPanel({
         )}
       >
         <div className="rounded-[11px] border border-border bg-card/95 backdrop-blur-md dark:bg-black/45">
-          <div className="h-36 overflow-y-auto overscroll-contain p-3 pr-2 [scrollbar-width:thin] [scrollbar-color:color-mix(in_srgb,var(--muted-foreground)_35%,transparent)_transparent]">
+          <div aria-busy={loading} className="max-h-96 overflow-y-auto overscroll-contain p-4 [scrollbar-width:thin] [scrollbar-color:color-mix(in_srgb,var(--muted-foreground)_35%,transparent)_transparent]">
             {loading ? (
               <PanelSkeleton variant={variant} />
             ) : (

@@ -1,6 +1,7 @@
 'use client'
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 interface AuthUser {
   id: string
@@ -28,18 +29,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
+  const authVersion = useRef(0)
 
   const fetchMe = useCallback(async () => {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 8000)
     try {
-      return await fetch('/api/auth/me', { signal: controller.signal })
+      const res = await fetch('/api/auth/me', { signal: controller.signal, cache: 'no-store' })
+      const data = res.ok ? await res.json() : null
+      return { status: res.status, ok: res.ok, data }
     } finally {
       clearTimeout(timeout)
     }
   }, [])
 
   const refreshUser = useCallback(async () => {
+    const version = ++authVersion.current
     // A 401 is a definitive "not authenticated" answer, so it's applied immediately.
     // Any other failure (network error, timeout, 5xx) is treated as transient: it's
     // retried once, and if it still fails the existing session is left untouched
@@ -47,13 +52,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // into a false "signed out" state (which previously bounced users off protected
     // pages onto a "Sign in" screen whose Link the proxy would immediately redirect
     // straight back to the page they were already authenticated on).
-    let res: Response | null = null
+    let res: Awaited<ReturnType<typeof fetchMe>> | null = null
     try {
       res = await fetchMe()
     } catch {
       res = null
     }
 
+    if (version !== authVersion.current) return
     if (res?.status === 401) {
       setUser(null)
       setIsLoading(false)
@@ -68,10 +74,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    if (version !== authVersion.current) return
     if (res?.status === 401) {
       setUser(null)
     } else if (res?.ok) {
-      const data = await res.json()
+      const data = res.data
       setUser(data.user ? { ...data.user, id: data.user.id || data.user._id } : null)
     }
     setIsLoading(false)
@@ -90,7 +97,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       const data = await res.json()
       if (!res.ok) return { success: false, error: data.message }
+      authVersion.current += 1
       setUser(data.user)
+      setIsLoading(false)
       return { success: true }
     } catch {
       return { success: false, error: 'Network error. Please try again.' }
@@ -98,12 +107,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const logout = useCallback(async () => {
-    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {})
-    setUser(null)
-    if (typeof window !== 'undefined') {
-      localStorage.clear()
-      sessionStorage.clear()
+    try {
+      const res = await fetch('/api/auth/logout', { method: 'POST' })
+      if (!res.ok) throw new Error('Logout failed')
+    } catch {
+      toast.error('Unable to sign out. Please try again.')
+      return
     }
+    authVersion.current += 1
+    setUser(null)
+    setIsLoading(false)
     router.replace('/')
     router.refresh()
   }, [router])

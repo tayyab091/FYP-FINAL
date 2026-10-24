@@ -1,17 +1,13 @@
 import User from '@/models/User'
 import type { PlanId } from '@/lib/plans'
 import { createNotification } from '@/lib/notifications'
+import { addMonths } from '@/lib/calendar'
+export { addMonths } from '@/lib/calendar'
 import {
   normalizePlan,
   resolveSubscriptionFromUser,
   type ResolvedSubscription,
 } from '@/lib/subscription'
-
-export function addMonths(date: Date, months: number): Date {
-  const next = new Date(date)
-  next.setMonth(next.getMonth() + months)
-  return next
-}
 
 /** Downgrade expired paid plans in the database and return the effective subscription. */
 export async function syncUserSubscription(userId: string): Promise<ResolvedSubscription | null> {
@@ -42,29 +38,25 @@ export async function syncUserSubscription(userId: string): Promise<ResolvedSubs
 }
 
 /** Activate a paid plan. Safe to call from webhook and confirm — skips if already active. */
-export async function activateUserPlan(userId: string, plan: 'pro' | 'elite') {
-  const existing = await User.findById(userId).select('subscription')
-  if (!existing) return null
-
-  const currentEnd = existing.subscription?.endDate
-    ? new Date(existing.subscription.endDate)
-    : undefined
-  const alreadyActive =
-    existing.subscription?.plan === plan &&
-    existing.subscription?.status === 'active' &&
-    !!currentEnd &&
-    currentEnd > new Date()
-
-  if (alreadyActive) {
+export async function activateUserPlan(userId: string, plan: 'pro' | 'elite', payment: { id: string; created: number }) {
+  // The purchased term is tied to the payment, never to a replayed confirmation.
+  const startDate = new Date(payment.created * 1000)
+  const endDate = addMonths(startDate, 1)
+  if (!Number.isFinite(startDate.getTime()) || endDate <= new Date()) {
     return User.findById(userId).select('-password')
   }
 
-  const startDate = new Date()
-  const endDate = addMonths(startDate, 1)
-
-  const user = await User.findByIdAndUpdate(
-    userId,
+  const user = await User.findOneAndUpdate(
     {
+      _id: userId,
+      $or: [
+        { lastStripeCheckoutCreatedAt: { $exists: false } },
+        { lastStripeCheckoutCreatedAt: { $lt: startDate } },
+      ],
+    },
+    {
+      lastStripeCheckoutId: payment.id,
+      lastStripeCheckoutCreatedAt: startDate,
       subscription: {
         plan,
         status: 'active',
@@ -86,7 +78,7 @@ export async function activateUserPlan(userId: string, plan: 'pro' | 'elite') {
     })
   }
 
-  return user
+  return user || User.findById(userId).select('-password')
 }
 
 /** Admin: assign a plan (manual / support). Default term is 1 month for paid plans. */

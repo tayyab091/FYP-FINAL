@@ -28,7 +28,12 @@ export function isStripePublishableConfigured(): boolean {
 }
 
 export function isStripeConfigured(): boolean {
-  return isStripeSecretConfigured() && isStripePublishableConfigured()
+  // Hosted Checkout redirects to Stripe and does not need a browser key.
+  return isStripeSecretConfigured()
+}
+
+export function canSimulatePayments(): boolean {
+  return process.env.NODE_ENV !== 'production' && !isStripeConfigured()
 }
 
 let stripeClient: Stripe | null = null

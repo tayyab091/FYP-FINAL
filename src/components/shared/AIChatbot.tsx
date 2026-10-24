@@ -140,6 +140,18 @@ export function AIChatbot() {
   }, [pathname, user?.role, isLoading])
 
   useEffect(() => {
+    const root = document.documentElement
+    if (open && visible) {
+      root.dataset.aiChatOpen = 'true'
+    } else {
+      delete root.dataset.aiChatOpen
+    }
+    return () => {
+      delete root.dataset.aiChatOpen
+    }
+  }, [open, visible])
+
+  useEffect(() => {
     const mq = window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH}px)`)
     const syncMobile = () => setIsMobile(mq.matches)
     syncMobile()
@@ -201,6 +213,7 @@ export function AIChatbot() {
         body: JSON.stringify({ message: msg, history: messages.slice(-6) }),
       })
       const data = await res.json()
+      if (!res.ok && !data.reply) throw new Error(data.message || 'Coach unavailable')
       setMessages((m) => [...m, { role: 'assistant', content: data.reply || 'Sorry, try again.' }])
     } catch {
       setMessages((m) => [...m, { role: 'assistant', content: 'Connection error. Please try again.' }])

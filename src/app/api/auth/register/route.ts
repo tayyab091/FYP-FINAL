@@ -44,8 +44,8 @@ export async function POST(req: NextRequest) {
 
     const token = createToken({ userId: user._id.toString(), role: user.role, email: user.email })
     const body: {
-      message: string
       token: string
+      message: string
       user: { id: unknown; fullName: string; email: string; role: string; subscription: unknown }
       devLink?: string
     } = {

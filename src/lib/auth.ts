@@ -22,7 +22,11 @@ export function createToken(payload: TokenPayload): string {
 
 export function verifyToken(token: string): TokenPayload | null {
   try {
-    return jwt.verify(token, getJwtSecret()) as TokenPayload
+    const payload = jwt.verify(token, getJwtSecret(), { algorithms: ['HS256'] })
+    if (typeof payload === 'string' || typeof payload.userId !== 'string' ||
+      !/^[a-f\d]{24}$/i.test(payload.userId) || typeof payload.email !== 'string' ||
+      !['user', 'trainer', 'gym_owner', 'admin', 'super_admin'].includes(payload.role)) return null
+    return payload as TokenPayload
   } catch {
     return null
   }

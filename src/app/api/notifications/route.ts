@@ -9,7 +9,8 @@ export async function GET(req: NextRequest) {
     if (!tokenUser) return NextResponse.json({ message: 'Not authenticated' }, { status: 401 })
 
     const { searchParams } = new URL(req.url)
-    const limit = Math.min(Number(searchParams.get('limit') || 20), 50)
+    const requestedLimit = Number(searchParams.get('limit') || 20)
+    const limit = Number.isFinite(requestedLimit) ? Math.min(50, Math.max(1, Math.floor(requestedLimit))) : 20
 
     await connectDB()
 

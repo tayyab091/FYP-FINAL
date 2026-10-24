@@ -4,7 +4,7 @@ import WorkoutPlan from '@/models/WorkoutPlan'
 import Trainer from '@/models/Trainer'
 import Relationship from '@/models/Relationship'
 import { getUser } from '@/lib/auth'
-import { parseJsonBody, workoutPlanCreateSchema } from '@/lib/validation'
+import { workoutPlanCreateSchema } from '@/lib/validation'
 import { sanitizePlainText } from '@/lib/sanitize'
 import { z } from 'zod'
 
@@ -45,10 +45,13 @@ export async function POST(req: NextRequest) {
     if (!tokenUser) return NextResponse.json({ message: 'Not authenticated' }, { status: 401 })
 
     await connectDB()
+    const raw = await req.json().catch(() => null)
+    if (!raw || typeof raw !== 'object') {
+      return NextResponse.json({ message: 'Invalid JSON body' }, { status: 400 })
+    }
 
     if (tokenUser.role === 'user') {
-      const body = await req.json()
-      const parsed = selfPlanSchema.safeParse(body)
+      const parsed = selfPlanSchema.safeParse(raw)
       if (!parsed.success) {
         return NextResponse.json({ message: 'Invalid plan data' }, { status: 400 })
       }
@@ -80,8 +83,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
     }
 
-    const parsed = await parseJsonBody(req, workoutPlanCreateSchema)
-    if ('error' in parsed) return parsed.error
+    const parsed = workoutPlanCreateSchema.safeParse(raw)
+    if (!parsed.success) {
+      return NextResponse.json({ message: parsed.error.issues[0]?.message || 'Invalid plan data' }, { status: 400 })
+    }
     const { userId, relationshipId, title, goal, durationWeeks, difficulty, weeklySchedule } = parsed.data
 
     const trainer = await Trainer.findOne({ userId: tokenUser.userId })
