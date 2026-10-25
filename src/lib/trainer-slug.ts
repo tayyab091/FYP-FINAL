@@ -14,5 +14,6 @@ export function slugifyTrainerName(name: string): string {
 
 /** Public profile URL for a trainer card or notification link. */
 export function trainerPublicPath(trainer: { slug?: string; _id: string }): string {
-  return `/coaching/${trainer.slug ?? trainer._id}`
+  const slug = trainer.slug?.trim() || trainer._id
+  return `/coaching/${encodeURIComponent(slug)}`
 }

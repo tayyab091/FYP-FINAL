@@ -1,4 +1,5 @@
 import { createPublicSlug, slugify } from '@/lib/slug'
+import { defaultGymGallery, optimizeImageUrl } from '@/lib/media'
 
 export interface PublicGym {
   id: string
@@ -92,6 +93,8 @@ const previewData: Omit<PublicGym, 'slug'>[] = [
 export const PREVIEW_GYMS: PublicGym[] = previewData.map((gym) => ({
   ...gym,
   slug: slugify(gym.name),
+  coverImage: optimizeImageUrl(gym.coverImage || defaultGymGallery(gym.name, gym.city)[0]),
+  images: (gym.images.length ? gym.images : defaultGymGallery(gym.name, gym.city)).map((image) => optimizeImageUrl(image)),
 }))
 
 export function inferCity(address: string): string {
@@ -103,14 +106,17 @@ export function normalizeGym(doc: Record<string, unknown>): PublicGym {
   const rawId = String(doc._id || doc.id || '')
   const name = String(doc.name || 'Gym')
   const address = String(doc.address || '')
+  const existingSlug = typeof doc.slug === 'string' ? slugify(doc.slug) : ''
   const rawLocation = doc.location as { coordinates?: number[] } | undefined
   const coordinates = rawLocation?.coordinates
-  const images = Array.isArray(doc.images) ? doc.images.map(String).filter(Boolean) : []
-  const coverImage = String(doc.coverImage || doc.logo || images[0] || '') || undefined
+  const savedImages = Array.isArray(doc.images) ? doc.images.map(String).filter(Boolean) : []
+  const fallbackImages = defaultGymGallery(name, String(doc.city || inferCity(address)))
+  const images = (savedImages.length ? savedImages : fallbackImages).map((image) => optimizeImageUrl(image))
+  const coverImage = optimizeImageUrl(String(doc.coverImage || doc.logo || images[0] || fallbackImages[0] || '')) || undefined
 
   return {
     id: rawId,
-    slug: String(doc.slug || createPublicSlug(name, rawId)),
+    slug: existingSlug || createPublicSlug(name, rawId),
     name,
     address,
     city: String(doc.city || inferCity(address)),
@@ -120,7 +126,7 @@ export function normalizeGym(doc: Record<string, unknown>): PublicGym {
     email: doc.email ? String(doc.email) : undefined,
     logo: doc.logo ? String(doc.logo) : undefined,
     coverImage,
-    images: images.length ? images : coverImage ? [coverImage] : [],
+    images: images.length ? images : coverImage ? [coverImage] : fallbackImages,
     facilities: Array.isArray(doc.facilities) ? doc.facilities.map(String).filter(Boolean) : [],
     trainersCount: Array.isArray(doc.trainers) ? doc.trainers.length : Number(doc.trainersCount || 0),
     rating: Number(doc.rating || 0),

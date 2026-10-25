@@ -151,6 +151,42 @@ export async function uploadAvatarImage(
   return { url: result.secure_url, publicId: result.public_id }
 }
 
+export async function uploadGymImage(
+  file: File,
+  ownerId: string,
+): Promise<{ url: string; publicId: string }> {
+  if (!ALLOWED_MIME.has(file.type)) {
+    throw new Error('Only JPEG, PNG, WebP, and GIF images are allowed')
+  }
+  if (file.size > MAX_BYTES) {
+    throw new Error('Image must be 4MB or smaller')
+  }
+  if (!isCloudinaryConfigured()) {
+    throw new Error('Cloudinary storage is not configured (set CLOUDINARY_URL in .env.local)')
+  }
+
+  configureCloudinary()
+  const buffer = Buffer.from(await file.arrayBuffer())
+  const format = FORMAT_BY_MIME[file.type]
+  const folder = `gyms/${ownerId.replace(/[^a-zA-Z0-9_-]/g, '')}/gallery`
+
+  const result = await new Promise<{ secure_url: string; public_id: string }>((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder, resource_type: 'image', format, public_id: crypto.randomUUID(), overwrite: false },
+      (error, uploadResult) => {
+        if (error) return reject(error)
+        if (!uploadResult?.secure_url || !uploadResult.public_id) {
+          return reject(new Error('Cloudinary did not return an upload URL'))
+        }
+        resolve({ secure_url: uploadResult.secure_url, public_id: uploadResult.public_id })
+      },
+    )
+    stream.end(buffer)
+  })
+
+  return { url: result.secure_url, publicId: result.public_id }
+}
+
 export async function deleteCloudinaryAsset(publicId: string): Promise<void> {
   if (!publicId || !isCloudinaryConfigured()) return
   configureCloudinary()

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createPublicSlug } from '@/lib/slug'
+import { defaultGymGallery } from '@/lib/media'
 
 interface GooglePlace {
   id?: string
@@ -86,7 +87,7 @@ export async function GET(req: NextRequest) {
           ? 'Open now · Live result from Google Places'
           : 'Live result from Google Places',
         phone: place.nationalPhoneNumber,
-        images: [],
+        images: defaultGymGallery(name),
         facilities: [],
         trainersCount: 0,
         rating: place.rating || 0,

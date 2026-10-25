@@ -4,6 +4,7 @@ import { getUser } from '@/lib/auth'
 import Gym from '@/models/Gym'
 import { gymUpdateSchema, parseJsonBody } from '@/lib/validation'
 import { createPublicSlug } from '@/lib/slug'
+import { isCloudinaryConfigured, uploadGymImage } from '@/lib/cloudinary'
 
 export async function GET(req: NextRequest) {
   try {
@@ -19,6 +20,24 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(gym)
   } catch {
     return NextResponse.json({ message: 'Server error' }, { status: 500 })
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const tokenUser = await getUser(req)
+    if (!tokenUser) return NextResponse.json({ message: 'Not authenticated' }, { status: 401 })
+    if (tokenUser.role !== 'gym_owner') return NextResponse.json({ message: 'Gym owner access required' }, { status: 403 })
+    if (!isCloudinaryConfigured()) return NextResponse.json({ message: 'Cloudinary image storage is not configured' }, { status: 503 })
+
+    const form = await req.formData()
+    const file = form.get('file')
+    if (!(file instanceof File)) return NextResponse.json({ message: 'Choose an image file' }, { status: 400 })
+    const uploaded = await uploadGymImage(file, tokenUser.userId)
+    return NextResponse.json(uploaded, { status: 201 })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unable to upload image'
+    return NextResponse.json({ message }, { status: message.includes('Cloudinary') ? 503 : 400 })
   }
 }
 
