@@ -1,6 +1,7 @@
 node_modules/
 .next/
 .next-audit/
+.next-local*/
 .env.local
 .env
 dist/

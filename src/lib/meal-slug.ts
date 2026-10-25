@@ -1,14 +1,9 @@
-export function mealSlug(name: string, id: string): string {
-  const base = name
-    .trim()
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 80)
+import { slugify } from '@/lib/slug'
 
-  return base ? `${base}-${id}` : id
+export function mealSlug(name: string, id: string): string {
+  const base = slugify(name)
+  const safeId = String(id).trim().replace(/[^a-zA-Z0-9-]/g, '')
+  return base && safeId ? `${base}-${safeId}` : base || safeId || 'meal'
 }
 
 export function parseMealId(slugOrId: string): string {

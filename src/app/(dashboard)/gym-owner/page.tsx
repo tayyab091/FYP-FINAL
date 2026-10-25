@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { chartTheme } from '@/lib/chart-theme'
-import { Building2, Users, Star } from 'lucide-react'
+import { Building2, Users, Star, Upload } from 'lucide-react'
 import { AccessGate } from '@/components/shared/AccessGate'
 import { PageLoader } from '@/components/shared/PageLoader'
 import { StatCard } from '@/components/shared/StatCard'
@@ -76,6 +76,7 @@ export default function GymOwnerPage() {
   const [trainerEmail, setTrainerEmail] = useState('')
   const [adding, setAdding] = useState(false)
   const [savingGym, setSavingGym] = useState(false)
+  const [uploadingGallery, setUploadingGallery] = useState(false)
   const [analytics, setAnalytics] = useState<GymAnalytics | null>(null)
   const [gym, setGym] = useState<GymDetails>({
     name: '',
@@ -208,6 +209,23 @@ export default function GymOwnerPage() {
     }
   }
 
+  const uploadGalleryImage = async (file: File) => {
+    setUploadingGallery(true)
+    try {
+      const form = new FormData()
+      form.set('file', file)
+      const res = await fetch('/api/gym-owner/gym', { method: 'POST', body: form })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || 'Image upload failed')
+      setGym((current) => ({ ...current, images: [current.images, data.url].filter(Boolean).join(', ') }))
+      toast.success('Gallery image uploaded to Cloudinary')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Image upload failed')
+    } finally {
+      setUploadingGallery(false)
+    }
+  }
+
   const updateTrainer = async (trainerId: string, action: 'approve' | 'remove') => {
     try {
       const res = await fetch('/api/gym-owner/trainers', {
@@ -335,7 +353,14 @@ export default function GymOwnerPage() {
                   <div className="sm:col-span-2">
                     <Label htmlFor="gym-images">Gallery image URLs (comma-separated)</Label>
                     <textarea id="gym-images" value={gym.images} onChange={(event) => setGym((current) => ({ ...current, images: event.target.value }))} rows={2} placeholder="https://…/gym-floor.jpg, https://…/studio.jpg" className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary" />
-                    <p className="mt-1 text-[11px] text-muted-foreground">Add coordinates and HTTPS images to improve your Google Map and public marketplace listing.</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-3">
+                      <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs font-semibold hover:border-primary">
+                        <Upload className="size-3.5" />
+                        {uploadingGallery ? 'Uploading…' : 'Upload to Cloudinary'}
+                        <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="sr-only" disabled={uploadingGallery} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadGalleryImage(file); event.currentTarget.value = '' }} />
+                      </label>
+                      <p className="text-[11px] text-muted-foreground">Uploaded images receive optimized Cloudinary URLs automatically. Manual HTTPS URLs are still supported.</p>
+                    </div>
                   </div>
                   <div className="sm:col-span-2 flex items-center justify-between gap-3">
                     <Badge variant="outline" className="capitalize">
