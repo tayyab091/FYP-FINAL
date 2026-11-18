@@ -1,6 +1,6 @@
 'use client'
 
-import Image from 'next/image'
+import Image from '@/components/shared/OptimizedImage'
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Building2, Info, LocateFixed, MapPin, RotateCcw, Search, Star, Users } from 'lucide-react'

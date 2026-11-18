@@ -11,18 +11,21 @@ export function apaParagraph(...lines: string[]): string {
 }
 
 export function apaBullets(title: string, items: string[]): string {
-  const list = items.map(item => `• ${item}`).join('\n')
-  return `${title}\n\n${list}`
+  const list = items.map(item => `- ${item}`).join('\n')
+  return `### ${title}\n\n${list}`
 }
 
 export function apaNumbered(title: string, items: string[]): string {
   const list = items.map((item, index) => `${index + 1}. ${item}`).join('\n')
-  return `${title}\n\n${list}`
+  return `### ${title}\n\n${list}`
 }
 
 /** Join sections with blank lines; optionally append the standard Note. disclaimer. */
 export function apaReply(sections: string[], options?: { disclaimer?: boolean }): string {
-  const body = sections.filter(Boolean).join('\n\n')
+  const body = sections.filter(Boolean).map((section, index) => {
+    if (index === 0 && !section.includes('\n') && section.length <= 80 && !/[.!?]$/.test(section) && !/^#/.test(section)) return `## ${section}`
+    return section
+  }).join('\n\n')
   if (options?.disclaimer === false) return body
   if (body.includes('Note.')) return body
   return `${body}\n\n${APA_CHAT_DISCLAIMER}`

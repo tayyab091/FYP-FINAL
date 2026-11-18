@@ -37,7 +37,7 @@ export default async function ExerciseDetailPage({ params }: PageProps) {
   return (
     <>
       {exercise ? <JsonLd data={exerciseJsonLd(exercise)} /> : null}
-      <ExerciseDetailClient />
+      <ExerciseDetailClient exercise={exercise} />
     </>
   )
 }

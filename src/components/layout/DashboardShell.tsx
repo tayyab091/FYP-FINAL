@@ -3,6 +3,7 @@
 import type { ComponentType, ReactNode } from 'react'
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { usePathname, useSearchParams } from 'next/navigation'
 import {
   Activity,
@@ -26,10 +27,11 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { getRoleHomePath } from '@/lib/access'
-import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { Avatar } from '@/components/shared/Avatar'
 import { ThemeToggle } from '@/components/shared/ThemeToggle'
 import { BrandMark } from '@/components/shared/BrandMark'
+
+const NotificationBell = dynamic(() => import('@/components/notifications/NotificationBell').then(module => module.NotificationBell), { ssr: false })
 
 type UserRole = 'user' | 'trainer' | 'gym_owner' | 'admin' | 'super_admin'
 

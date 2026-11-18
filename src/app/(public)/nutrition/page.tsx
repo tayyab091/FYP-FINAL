@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
 import { Salad, ClipboardList, UtensilsCrossed, ChevronDown, ChevronUp, Globe, Trash2 } from 'lucide-react'
@@ -62,6 +63,7 @@ const MEAL_TYPES = [
 ]
 
 export default function NutritionPage() {
+  const queryClient = useQueryClient()
   const { user, isLoading: authLoading } = useAuth()
   const [todayMeals, setTodayMeals] = useState<MealEntry[]>([])
   const [totals, setTotals] = useState<DailyTotals>({ calories: 0, protein: 0, carbs: 0, fat: 0 })
@@ -314,6 +316,7 @@ export default function NutritionPage() {
         signal: controller.signal,
       })
       if (res.ok) {
+        void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
         toast.success('Meal logged!')
         setLoggingFood(null)
         setSearchQuery('')
@@ -344,6 +347,7 @@ export default function NutritionPage() {
         signal: controller.signal,
       })
       if (res.ok) {
+        void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
         toast.success('Meal deleted')
         await fetchTodayMeals()
       } else {
@@ -359,7 +363,11 @@ export default function NutritionPage() {
   }
 
   const calorieProgress = Math.min(100, Math.round((totals.calories / calorieGoal) * 100))
-  const todayLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+  const [todayLabel, setTodayLabel] = useState('')
+
+  useEffect(() => {
+    setTodayLabel(new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }))
+  }, [])
 
   return (
     <div className="min-h-screen pt-8 pb-28 px-4 lg:px-8">
@@ -368,7 +376,7 @@ export default function NutritionPage() {
           <div className="page-hero px-6 py-10 sm:px-10 md:py-14 gym-floor">
             <span className="eyebrow">Nutrition Intelligence</span>
             <h1 className="display-title text-4xl md:text-6xl text-foreground mt-3">Fuel Every Ambition</h1>
-            <p className="mt-3 text-muted-foreground">Track meals, understand your macros, and stay aligned with your goals · {todayLabel}</p>
+            <p className="mt-3 text-muted-foreground">Track meals, understand your macros, and stay aligned with your goals{todayLabel ? ` · ${todayLabel}` : ''}</p>
             <p className="workout-label mt-3 text-primary/70">Macros · Meals · Momentum</p>
           </div>
         </FadeIn>

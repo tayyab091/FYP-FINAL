@@ -5,15 +5,15 @@ import { rateLimitAi } from '@/lib/rate-limit'
 import { connectDB } from '@/lib/mongodb'
 import User from '@/models/User'
 import { generateChatFallback, getWeightConflictMessage } from '@/lib/chat-fallback-engine'
-import { APA_CHAT_DISCLAIMER } from '@/lib/chat-apa-format'
+import { APA_CHAT_DISCLAIMER, apaNumbered, apaReply } from '@/lib/chat-apa-format'
 
 const GEMINI_APA_INSTRUCTIONS = `You are a professional fitness and nutrition coach for T.E.S.T., a Pakistani fitness platform.
 
-Format every answer using APA-style structure:
-- Start with a short title line (plain text, no markdown #).
-- Use section headings on their own line (title case, no emoji).
+Format every answer as readable Markdown:
+- Start with a short ## title and use ### section headings when useful.
 - Use numbered lists (1. 2. 3.) for sequential steps or ranked recommendations.
-- Use bullet points (•) for non-sequential items.
+- Use Markdown bullet points (-) for non-sequential items.
+- Use **bold** sparingly for key numbers and labels, and tables only for comparisons.
 - Separate sections and paragraphs with blank lines.
 - End with: ${APA_CHAT_DISCLAIMER}
 - Keep answers concise (about 120–180 words), practical, and encouraging.
@@ -71,6 +71,13 @@ function localCoachReply(message: string, profile?: FitnessContext | null): stri
   return null
 }
 
+function fallbackReply(message: string, profile?: FitnessContext | null): string {
+  const local = localCoachReply(message, profile)
+  if (!local) return generateChatFallback(message)
+  const steps = local.split(/(?<=[.!?])\s+(?=[A-Z])/)
+  return apaReply(['Fitness Guidance', apaNumbered('Recommended Steps', steps)])
+}
+
 export async function POST(req: NextRequest) {
   try {
     const limited = rateLimitAi(req)
@@ -99,7 +106,7 @@ export async function POST(req: NextRequest) {
 
     const apiKey = process.env.GEMINI_API_KEY
     if (!apiKey || apiKey === 'PASTE_GEMINI_KEY_HERE') {
-      return NextResponse.json({ reply: localCoachReply(message, profile) || generateChatFallback(message), source: 'local-coach' })
+      return NextResponse.json({ reply: fallbackReply(message, profile), source: 'local-coach' })
     }
 
     const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
@@ -127,19 +134,22 @@ export async function POST(req: NextRequest) {
             })),
             { role: 'user', parts: [{ text: message }] },
           ],
-          generationConfig: { maxOutputTokens: 350 },
+          generationConfig: { maxOutputTokens: 900 },
         }),
         cache: 'no-store',
+        signal: AbortSignal.timeout(12000),
       },
-    )
+    ).catch(() => null)
 
-    const data = await response.json() as {
+    if (!response) return NextResponse.json({ reply: fallbackReply(message, profile), source: 'local-fallback' })
+
+    const data = await response.json().catch(() => ({})) as {
       candidates?: { content?: { parts?: { text?: string }[] } }[]
       error?: { message?: string }
     }
     if (!response.ok) {
       console.error('Gemini API error:', data.error?.message || response.status)
-      return NextResponse.json({ reply: localCoachReply(message, profile) || generateChatFallback(message), source: 'local-fallback' })
+      return NextResponse.json({ reply: fallbackReply(message, profile), source: 'local-fallback' })
     }
 
     const reply = data.candidates?.[0]?.content?.parts
@@ -147,11 +157,11 @@ export async function POST(req: NextRequest) {
       .join('\n')
       .trim()
     return NextResponse.json({
-      reply: reply || localCoachReply(message, profile) || generateChatFallback(message),
+      reply: reply || fallbackReply(message, profile),
       source: reply ? 'gemini' : 'local-fallback',
     })
   } catch (error) {
     console.error('AI chat error:', error)
-    return NextResponse.json({ reply: 'The coach is temporarily unavailable. Please try again.' }, { status: 500 })
+    return NextResponse.json({ reply: apaReply(['Coach Unavailable', 'The coach is temporarily unavailable. Please try again.'], { disclaimer: false }) }, { status: 500 })
   }
 }

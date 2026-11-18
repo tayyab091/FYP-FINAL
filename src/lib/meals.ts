@@ -74,6 +74,7 @@ function toDetail(meal: Record<string, string | null | undefined>): MealDetail {
 async function fetchMealDb(path: string) {
   const res = await fetch(`${MEALDB_BASE}/${path}`, {
     next: { revalidate: 3600 },
+    signal: AbortSignal.timeout(6000),
   })
   if (!res.ok) throw new Error(`MealDB request failed: ${res.status}`)
   return res.json()
@@ -282,8 +283,7 @@ export async function queryMeals(options: {
   }
 
   warmMealCatalog()
-  const meta = await getMealMetaFast()
-  const meals = await fetchMealsDirect(options)
+  const [meta, meals] = await Promise.all([getMealMetaFast(), fetchMealsDirect(options)])
   const warmed = getCached<MealCatalog>('meal-catalog-v3')
   const catalogMeta: MealCatalogMeta = {
     ...meta,

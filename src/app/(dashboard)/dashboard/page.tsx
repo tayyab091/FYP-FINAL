@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
@@ -17,14 +18,28 @@ function greetingForHour(hour: number) {
   return 'Good evening'
 }
 
+const EMPTY_CALORIES = { calories: 0, protein: 0, carbs: 0, fat: 0 }
+type RecentLog = { _id: string; date: string; plan?: { title?: string }; exercises?: Array<{ name: string }> }
+async function fetchDashboardData<T>(url: string, signal: AbortSignal): Promise<T> {
+  const response = await fetch(url, { signal: AbortSignal.any([signal, AbortSignal.timeout(8000)]) })
+  if (!response.ok) throw new Error('Unable to load dashboard data')
+  return response.json() as Promise<T>
+}
+
 export default function DashboardPage() {
   const { user, isLoading } = useAuth()
   const router = useRouter()
-  const [plan, setPlan] = useState<WorkoutPlan | null>(null)
-  const [calories, setCalories] = useState({ calories: 0, protein: 0, carbs: 0, fat: 0 })
-  const [gamification, setGamification] = useState<GamificationMeResponse | null>(null)
-  const [recentLogs, setRecentLogs] = useState<Array<{ _id: string; date: string; plan?: { title?: string }; exercises?: Array<{ name: string }> }>>([])
-  const [loading, setLoading] = useState(true)
+  const enabled = user?.role === 'user'
+  const planQuery = useQuery({ queryKey: ['dashboard', 'plan', user?.id], enabled, queryFn: ({ signal }) => fetchDashboardData<WorkoutPlan | { plan: WorkoutPlan | null } | null>('/api/tracking/plans/my-plan', signal) })
+  const mealsQuery = useQuery({ queryKey: ['dashboard', 'meals', user?.id], enabled, queryFn: ({ signal }) => fetchDashboardData<{ totals?: typeof EMPTY_CALORIES }>('/api/tracking/meal-logs/today', signal) })
+  const gamificationQuery = useQuery({ queryKey: ['dashboard', 'gamification', user?.id], enabled, queryFn: ({ signal }) => fetchDashboardData<GamificationMeResponse>('/api/gamification/me', signal) })
+  const historyQuery = useQuery({ queryKey: ['dashboard', 'history', user?.id], enabled, queryFn: ({ signal }) => fetchDashboardData<{ logs?: RecentLog[] }>('/api/tracking/logs?limit=3', signal) })
+  const planData = planQuery.data
+  const plan = (planData && 'plan' in planData ? planData.plan : planData) as WorkoutPlan | null | undefined
+  const calories = mealsQuery.data?.totals ?? EMPTY_CALORIES
+  const gamification = gamificationQuery.data ?? null
+  const recentLogs = historyQuery.data?.logs?.slice(0, 3) ?? []
+  const queries = [planQuery, mealsQuery, gamificationQuery, historyQuery]
 
   useEffect(() => {
     if (isLoading) return
@@ -41,39 +56,6 @@ export default function DashboardPage() {
       router.replace('/gym-owner')
     }
   }, [isLoading, user, router])
-
-  useEffect(() => {
-    if (!user || user.role !== 'user') return
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 8000)
-
-    Promise.all([
-      fetch('/api/tracking/plans/my-plan', { signal: controller.signal }).then((r) => (r.ok ? r.json() : null)),
-      fetch('/api/tracking/meal-logs/today', { signal: controller.signal }).then((r) =>
-        r.ok ? r.json() : { totals: { calories: 0, protein: 0, carbs: 0, fat: 0 } },
-      ),
-      fetch('/api/gamification/me', { signal: controller.signal }).then((r) => (r.ok ? r.json() : null)),
-      fetch('/api/tracking/logs?limit=3', { signal: controller.signal }).then((r) => (r.ok ? r.json() : { logs: [] })),
-    ])
-      .then(([planData, mealData, gamificationData, historyData]) => {
-        if (planData?.plan === null) setPlan(null)
-        else if (planData?._id) setPlan(planData)
-        else if (planData?.plan) setPlan(planData.plan)
-        setCalories(mealData?.totals || { calories: 0, protein: 0, carbs: 0, fat: 0 })
-        if (gamificationData?.xp !== undefined) setGamification(gamificationData)
-        setRecentLogs(Array.isArray(historyData?.logs) ? historyData.logs.slice(0, 3) : [])
-      })
-      .catch(() => {})
-      .finally(() => {
-        clearTimeout(timeout)
-        setLoading(false)
-      })
-
-    return () => {
-      clearTimeout(timeout)
-      controller.abort()
-    }
-  }, [user])
 
   if (isLoading) return <PageLoader label="Opening your workspace" />
   if (!user) return <SignInGate redirectLabel="Sign in to open your dashboard" />
@@ -103,18 +85,19 @@ export default function DashboardPage() {
         </div>
 
         <GamificationBar data={gamification} />
+        {queries.some(query => query.isError) && <div role="alert" className="tile"><p className="text-sm text-muted-foreground">Some dashboard data could not be loaded.</p><button type="button" className="mt-2 text-sm font-semibold text-primary" onClick={() => { queries.filter(query => query.isError).forEach(query => { void query.refetch() }) }}>Retry</button></div>}
 
         <div className="stat-card-grid">
           {[
-            { label: "Today's Calories", value: `${calories.calories} kcal`, color: '#ff6b6b' },
-            { label: 'Active Plan', value: plan?.title || 'None', color: '#00ff87' },
-            { label: 'Streak', value: `${gamification?.streak || 0} days`, color: '#ffd93d' },
-            { label: 'Level', value: gamification?.level || 1, color: '#00d4ff' },
+            { label: "Today's Calories", loading: mealsQuery.isPending, value: `${calories.calories} kcal`, color: '#ff6b6b' },
+            { label: 'Active Plan', loading: planQuery.isPending, value: plan?.title || 'None', color: '#00ff87' },
+            { label: 'Streak', loading: gamificationQuery.isPending, value: `${gamification?.streak || 0} days`, color: '#ffd93d' },
+            { label: 'Level', loading: gamificationQuery.isPending, value: gamification?.level || 1, color: '#00d4ff' },
           ].map((stat) => (
             <div key={stat.label} className="tile">
               <p className="text-xs uppercase tracking-wider text-muted-foreground">{stat.label}</p>
               <p className="mt-2 text-2xl font-black truncate" style={{ color: stat.color }}>
-                {loading ? '—' : stat.value}
+                {stat.loading ? '—' : stat.value}
               </p>
             </div>
           ))}
@@ -124,7 +107,7 @@ export default function DashboardPage() {
           <div className="tile min-h-[240px]">
             <p className="section-eyebrow">Training</p>
             <h2 className="mb-4 text-xl font-bold text-foreground">Today&apos;s Workout</h2>
-            {loading ? (
+            {planQuery.isPending ? (
               <p className="text-sm text-muted-foreground">Loading...</p>
             ) : !plan ? (
               <div className="flex flex-1 flex-col items-start justify-center gap-3">
@@ -166,7 +149,7 @@ export default function DashboardPage() {
                 { label: 'Fat', value: `${Math.round(calories.fat)}g` },
               ].map((m) => (
                 <div key={m.label} className="rounded-xl border border-border bg-white/[.02] p-3">
-                  <p className="text-lg font-bold text-primary">{m.value}</p>
+                  <p className="text-lg font-bold text-primary">{mealsQuery.isPending ? '—' : m.value}</p>
                   <p className="text-xs text-muted-foreground">{m.label}</p>
                 </div>
               ))}
@@ -180,7 +163,7 @@ export default function DashboardPage() {
         <div className="tile">
           <p className="section-eyebrow">History</p>
           <h2 className="mb-4 text-xl font-bold text-foreground">Recent Activity</h2>
-          {recentLogs.length === 0 ? (
+          {historyQuery.isPending ? <p className="text-sm text-muted-foreground">Loading recent activity...</p> : recentLogs.length === 0 ? (
             <p className="text-sm text-muted-foreground">No workouts logged yet. Complete a session in My Fitness.</p>
           ) : (
             <ul className="space-y-3">

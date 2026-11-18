@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
@@ -8,10 +9,11 @@ import { ArrowUpRight, Menu, X } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { shouldHidePublicNavbar } from '@/lib/shell-routes'
 import { easeTransition } from '@/lib/motion'
-import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { ThemeToggle } from '@/components/shared/ThemeToggle'
 import { BrandMark } from '@/components/shared/BrandMark'
 import { getRoleHomePath } from '@/lib/access'
+
+const NotificationBell = dynamic(() => import('@/components/notifications/NotificationBell').then(module => module.NotificationBell), { ssr: false })
 
 const NAV_LINKS = [
   { label: 'Find Trainers', href: '/coaching' },

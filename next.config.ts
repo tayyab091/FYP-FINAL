@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next'
 import path from 'path'
+import { OPTIMIZED_IMAGE_HOSTS } from './src/lib/image-optimization'
 
 const projectRoot = path.resolve(__dirname)
 
@@ -11,16 +12,8 @@ const nextConfig: NextConfig = {
     root: projectRoot,
   },
   images: {
-    remotePatterns: [
-      { protocol: 'https', hostname: 'randomuser.me' },
-      { protocol: 'https', hostname: 'images.unsplash.com' },
-      { protocol: 'https', hostname: 'upload.wikimedia.org' },
-      { protocol: 'https', hostname: 'media1.tenor.com' },
-      { protocol: 'https', hostname: 'res.cloudinary.com' },
-      { protocol: 'https', hostname: 'www.themealdb.com' },
-      { protocol: 'https', hostname: 'static.exercisedb.dev' },
-    ],
-    unoptimized: true,
+    remotePatterns: OPTIMIZED_IMAGE_HOSTS.map(hostname => ({ protocol: 'https' as const, hostname })),
+    qualities: [75],
   },
   async headers() {
     const csp = [

@@ -1,6 +1,6 @@
 'use client'
 
-import Image from 'next/image'
+import Image from '@/components/shared/OptimizedImage'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { resolveAvatarUrl, withCloudinaryAvatarTransform } from '@/lib/avatar'

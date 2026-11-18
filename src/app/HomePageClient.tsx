@@ -6,7 +6,6 @@ import { useReducedMotion } from 'framer-motion'
 import { useAuth } from '@/hooks/useAuth'
 import { ScrollProgress } from '@/components/motion'
 import { LandingHero } from '@/components/landing/LandingHero'
-import { LandingLoader } from '@/components/landing/LandingLoader'
 import { LandingMarquee } from '@/components/landing/LandingMarquee'
 import { LandingAbout } from '@/components/landing/LandingAbout'
 import { LandingStats } from '@/components/landing/LandingStats'
@@ -42,7 +41,6 @@ function GuestLanding() {
 
   return (
     <>
-      <LandingLoader />
       <div className={`landing-page${reduceMotion ? ' landing-page--reduced' : ''}`}>
         <div className="landing-scroll-progress">
           <ScrollProgress />

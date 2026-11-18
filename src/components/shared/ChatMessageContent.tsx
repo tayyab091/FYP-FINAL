@@ -12,7 +12,7 @@ const STAT_LABEL_PATTERN =
   /^(BMR|TDEE|BMI|Protein(?:\s+target)?|Recommended|Healthy\s+weight\s+range)(?::|\s*\()/i
 
 /** Normalize APA-style and fallback-engine text for markdown rendering. */
-function normalizeContent(content: string): string {
+function normalizeProse(content: string): string {
   let text = content.replace(/\r\n/g, '\n').replace(/^(\s*)•\s+/gm, '$1- ')
 
   // APA Note / Reference disclaimers -> blockquote
@@ -20,7 +20,7 @@ function normalizeContent(content: string): string {
 
   // Promote short standalone title lines (APA heading) when followed by a blank line
   text = text.replace(
-    /^([A-Z][^\n.!?]{2,68})\n\n(?=[A-Za-z])/gm,
+    /^([A-Z][^\n.!?]{2,68})\n\n(?=[A-Za-z\d*\-])/gm,
     '### $1\n\n',
   )
 
@@ -48,6 +48,13 @@ function normalizeContent(content: string): string {
   return text
 }
 
+/** Leave fenced examples intact while normalizing legacy plain-text coach replies. */
+export function normalizeChatMarkdown(content: string): string {
+  return content.split(/(```[^\n]*\n[\s\S]*?```|~~~[^\n]*\n[\s\S]*?~~~)/g)
+    .map((part, index) => index % 2 ? part : normalizeProse(part))
+    .join('')
+}
+
 function buildComponents(variant: 'user' | 'bot'): Components {
   const isUser = variant === 'user'
 
@@ -66,13 +73,16 @@ function buildComponents(variant: 'user' | 'bot'): Components {
     h3: ({ children }) => (
       <h3 className="ai-chatbot__md-heading ai-chatbot__md-heading--h3">{children}</h3>
     ),
+    h4: ({ children }) => <h4 className="ai-chatbot__md-heading">{children}</h4>,
+    h5: ({ children }) => <h5 className="ai-chatbot__md-heading">{children}</h5>,
+    h6: ({ children }) => <h6 className="ai-chatbot__md-heading">{children}</h6>,
     ul: ({ children }) => (
       <ul className={`ai-chatbot__md-list ${isUser ? 'ai-chatbot__md-list--user' : ''}`}>
         {children}
       </ul>
     ),
-    ol: ({ children }) => (
-      <ol className="ai-chatbot__md-list ai-chatbot__md-list--ordered">{children}</ol>
+    ol: ({ children, start }) => (
+      <ol start={start} className="ai-chatbot__md-list ai-chatbot__md-list--ordered">{children}</ol>
     ),
     li: ({ children }) => {
       const childText =
@@ -138,7 +148,7 @@ export function ChatMessageContent({ content, variant = 'bot' }: ChatMessageCont
         remarkPlugins={[remarkGfm, remarkBreaks]}
         components={buildComponents(variant)}
       >
-        {normalizeContent(content)}
+        {variant === 'bot' ? normalizeChatMarkdown(content) : content}
       </ReactMarkdown>
     </div>
   )

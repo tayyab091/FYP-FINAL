@@ -12,6 +12,7 @@
     "test:e2e": "playwright test",
     "live-verify": "node scripts/live-verify.mjs",
     "backfill-trainer-slugs": "node scripts/backfill-trainer-slugs.mjs",
+    "refresh:exercises": "node scripts/refresh-exercise-catalog.mjs",
     "test-form-checker-offline": "tsx scripts/test-form-checker-offline.ts",
     "test-form-checker-analyze": "tsx scripts/test-form-checker-offline.ts --analyze-only",
     "test-form-checker-analyze-new": "tsx scripts/test-form-checker-offline.ts --analyze-only --new-only",

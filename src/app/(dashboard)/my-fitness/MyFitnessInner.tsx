@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
@@ -11,14 +12,15 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { chartTheme } from '@/lib/chart-theme'
+import dynamic from 'next/dynamic'
+
 import { PageLoader } from '@/components/shared/PageLoader'
 import { SignInGate } from '@/components/shared/AccessGate'
 import { GamificationBar } from '@/components/gamification/GamificationBar'
 import { Avatar } from '@/components/shared/Avatar'
 import type { GamificationMeResponse } from '@/types/gamification'
-import { AIGeneratorTab } from './AIGeneratorTab'
+const AIGeneratorTab = dynamic(() => import('./AIGeneratorTab').then(module => module.AIGeneratorTab), { loading: () => <Skeleton className="h-64 rounded-2xl" /> })
+const WeightProgressChart = dynamic(() => import('./WeightProgressChart').then(module => module.WeightProgressChart), { loading: () => <Skeleton className="h-[220px] rounded-xl" />, ssr: false })
 
 interface FoodResult {
   name: string
@@ -63,6 +65,7 @@ export default function MyFitnessInner({
   initialTab: string
   planId: string | null
 }) {
+  const queryClient = useQueryClient()
   const { user, isLoading: authLoading } = useAuth()
   const router = useRouter()
   const tab = ['workout', 'nutrition', 'progress', 'ai-generator'].includes(initialTab) ? initialTab : 'workout'
@@ -250,6 +253,7 @@ export default function MyFitnessInner({
         const data = await res.json().catch(() => ({}))
         throw new Error(data.message || 'Failed to save progress')
       }
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       toast.success('Progress logged!')
       setWeightForm({
         date: new Date().toISOString().slice(0, 10),
@@ -271,6 +275,7 @@ export default function MyFitnessInner({
       const res = await fetch(`/api/tracking/progress/${id}`, { method: 'DELETE' })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.message || 'Failed to delete')
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       toast.success('Progress entry deleted')
       // The DELETE already confirmed removal server-side, so the local list is
       // updated directly instead of calling reloadData(). reloadData() re-fetches
@@ -316,6 +321,7 @@ export default function MyFitnessInner({
       setWorkoutStarted(true)
       setCompletedExercises([])
       setCompletedTodayLog(null)
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       toast.success('Workout started')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to start workout')
@@ -381,6 +387,7 @@ export default function MyFitnessInner({
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.message)
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       toast.success(`Workout completed!${data.xpAwarded ? ` +${data.xpAwarded} XP` : ''}`)
       setWorkoutStarted(false)
       setActiveLogId(null)
@@ -445,6 +452,7 @@ export default function MyFitnessInner({
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.message)
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       toast.success(`Meal logged${data.xpAwarded ? ` +${data.xpAwarded} XP` : ''}`)
       setSelectedFood(null)
       setFoodResults([])
@@ -744,21 +752,7 @@ export default function MyFitnessInner({
                     <p className="section-eyebrow">Trend</p>
                     <h3 className="mb-4 font-bold text-foreground">Weight Progress</h3>
                     {chartData.length > 0 ? (
-                      <ResponsiveContainer width="100%" height={220}>
-                        <LineChart data={chartData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
-                          <XAxis dataKey="date" stroke={chartTheme.axis} fontSize={12} />
-                          <YAxis stroke={chartTheme.axis} fontSize={12} />
-                          <Tooltip
-                            contentStyle={{
-                              background: chartTheme.tooltip.background,
-                              border: `1px solid ${chartTheme.tooltip.border}`,
-                              borderRadius: chartTheme.tooltip.borderRadius,
-                            }}
-                          />
-                          <Line type="monotone" dataKey="weight" stroke={chartTheme.primary} strokeWidth={2} />
-                        </LineChart>
-                      </ResponsiveContainer>
+                      <WeightProgressChart data={chartData} />
                     ) : (
                       <p className="text-sm text-muted-foreground">No progress data yet. Log your first entry.</p>
                     )}

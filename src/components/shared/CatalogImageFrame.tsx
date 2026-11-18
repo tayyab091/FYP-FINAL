@@ -1,6 +1,6 @@
 'use client'
 
-import Image from 'next/image'
+import Image from '@/components/shared/OptimizedImage'
 import { useState, type ReactNode } from 'react'
 import { ImageOff } from 'lucide-react'
 

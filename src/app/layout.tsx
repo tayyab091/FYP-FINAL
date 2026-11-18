@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Manrope, Space_Grotesk } from 'next/font/google'
+import localFont from 'next/font/local'
 import './globals.css'
 import { Providers } from './providers'
 import { Navbar } from '@/components/layout/Navbar'
@@ -16,8 +16,8 @@ import {
   SITE_TAGLINE,
 } from '@/lib/seo'
 
-const manrope = Manrope({ subsets: ['latin'], variable: '--font-body' })
-const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-display' })
+const manrope = localFont({ src: './fonts/manrope-latin.woff2', weight: '200 800', display: 'swap', variable: '--font-body' })
+const spaceGrotesk = localFont({ src: './fonts/space-grotesk-latin.woff2', weight: '300 700', display: 'swap', variable: '--font-display' })
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
   title: {

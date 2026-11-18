@@ -1,4 +1,4 @@
-import Image from 'next/image'
+import Image from '@/components/shared/OptimizedImage'
 
 export function BrandMark({ className = 'size-9' }: { className?: string }) {
   return (

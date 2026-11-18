@@ -1,10 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
 import { Dumbbell, Wrench, ArrowLeft } from 'lucide-react'
-import { PageLoader } from '@/components/shared/PageLoader'
 import { CatalogImageFrame } from '@/components/shared/CatalogImageFrame'
 import { FadeIn } from '@/components/motion'
 import { FitnessBadge } from '@/components/motion/FitnessBadge'
@@ -34,21 +32,8 @@ function titleCase(value: string) {
   return value.replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
-export default function ExerciseDetailClient() {
-  const { id } = useParams<{ id: string }>()
-  const [exercise, setExercise] = useState<ExerciseDetail | null>(null)
-  const [loading, setLoading] = useState(true)
+export default function ExerciseDetailClient({ exercise }: { exercise: ExerciseDetail | null }) {
   const [imgError, setImgError] = useState(false)
-
-  useEffect(() => {
-    if (!id) return
-    fetch(`/api/exercises?id=${encodeURIComponent(id)}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => setExercise(data))
-      .finally(() => setLoading(false))
-  }, [id])
-
-  if (loading) return <PageLoader />
 
   if (!exercise) {
     return (
