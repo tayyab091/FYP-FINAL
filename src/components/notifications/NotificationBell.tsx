@@ -85,10 +85,15 @@ export function NotificationBell() {
 
   useEffect(() => {
     if (!user) return
-    void fetchNotifications()
-    const interval = setInterval(() => void fetchNotifications(), POLL_MS)
+    const refreshVisible = () => {
+      if (document.visibilityState === 'visible') void fetchNotifications()
+    }
+    refreshVisible()
+    const interval = setInterval(refreshVisible, POLL_MS)
+    document.addEventListener('visibilitychange', refreshVisible)
     return () => {
       clearInterval(interval)
+      document.removeEventListener('visibilitychange', refreshVisible)
       abortRef.current?.abort()
     }
   }, [fetchNotifications, user])

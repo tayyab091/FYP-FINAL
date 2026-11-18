@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { memo, useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { Dumbbell, Wrench, ChevronDown, ChevronUp, Search, X, Filter } from 'lucide-react'
 import { FitnessBadge } from '@/components/motion/FitnessBadge'
@@ -84,7 +84,7 @@ function titleCase(value: string) {
   return value.replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
-function ExerciseCard({ exercise }: { exercise: Exercise }) {
+const ExerciseCard = memo(function ExerciseCard({ exercise }: { exercise: Exercise }) {
   const [expanded, setExpanded] = useState(false)
   const [imgError, setImgError] = useState(false)
 
@@ -164,7 +164,7 @@ function ExerciseCard({ exercise }: { exercise: Exercise }) {
       </div>
     </div>
   )
-}
+})
 
 function FilterSelect({
   label,
@@ -239,7 +239,7 @@ export default function ExercisesPage() {
       if (filters.equipment !== 'All') params.set('equipment', filters.equipment)
       return params.toString()
     },
-    [debouncedSearch, filters],
+    [debouncedSearch, filters.muscle, filters.bodyPart, filters.target, filters.equipment],
   )
 
   useEffect(() => {
@@ -250,7 +250,7 @@ export default function ExercisesPage() {
     fetch(`/api/exercises?meta=true&${buildQuery(1)}`, { signal: controller.signal })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (!data) return
+        if (!data || controller.signal.aborted) return
         setExercises(data.exercises || [])
         setTotal(data.total ?? 0)
         setTotalPages(data.totalPages ?? 1)
@@ -260,7 +260,7 @@ export default function ExercisesPage() {
         }
       })
       .catch(() => {})
-      .finally(() => setLoading(false))
+      .finally(() => { if (!controller.signal.aborted) setLoading(false) })
 
     return () => controller.abort()
   }, [buildQuery])

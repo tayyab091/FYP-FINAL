@@ -331,7 +331,7 @@ h1, h2, h3, h4, h5, h6 {
     radial-gradient(circle at 90% 80%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 14rem),
     linear-gradient(145deg, color-mix(in srgb, var(--card) 95%, white), var(--card));
   box-shadow: 0 20px 60px color-mix(in srgb, var(--foreground) 8%, transparent);
-  animation: page-enter .7s cubic-bezier(.22,1,.36,1) both;
+  animation: page-enter .22s cubic-bezier(.22,1,.36,1) both;
 }
 
 .dark .page-hero {

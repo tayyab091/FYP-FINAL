@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchExerciseById, getLastFilteredRemovedCount, queryExercises } from '@/lib/exercises-api'
 
+const catalogResponse = (data: unknown) => NextResponse.json(data, {
+  headers: { 'Cache-Control': 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400' },
+})
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = req.nextUrl
@@ -17,7 +21,7 @@ export async function GET(req: NextRequest) {
     if (id) {
       const exercise = await fetchExerciseById(id)
       if (!exercise) return NextResponse.json({ message: 'Exercise not found' }, { status: 404 })
-      return NextResponse.json(exercise)
+      return catalogResponse(exercise)
     }
 
     if (metaOnly) {
@@ -31,7 +35,7 @@ export async function GET(req: NextRequest) {
         limit,
         includeMeta: true,
       })
-      return NextResponse.json({
+      return catalogResponse({
         meta: { ...result.meta!, filteredRemoved: getLastFilteredRemovedCount() },
         exercises: result.exercises,
         total: result.total,
@@ -52,7 +56,7 @@ export async function GET(req: NextRequest) {
       includeMeta: searchParams.get('meta') === 'true' || searchParams.has('includeMeta'),
     })
 
-    return NextResponse.json(result)
+    return catalogResponse(result)
   } catch {
     return NextResponse.json({ message: 'Failed to fetch exercises' }, { status: 500 })
   }

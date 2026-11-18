@@ -14,8 +14,10 @@ export async function GET(req: NextRequest) {
     }
 
     await connectDB()
-    const subscription = await syncUserSubscription(tokenUser.userId)
-    const user = await User.findById(tokenUser.userId).select('-password').lean()
+    const [subscription, user] = await Promise.all([
+      syncUserSubscription(tokenUser.userId),
+      User.findById(tokenUser.userId).select('-password').lean(),
+    ])
     if (!user) {
       return NextResponse.json({ message: 'User not found' }, { status: 404 })
     }

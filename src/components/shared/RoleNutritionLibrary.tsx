@@ -91,26 +91,6 @@ export function RoleNutritionLibrary({
   }, [search])
 
   useEffect(() => {
-    let cancelled = false
-    Promise.all([
-      fetch('/api/meals?categories=true').then((r) => (r.ok ? r.json() : null)),
-      fetch('/api/meals?areas=true').then((r) => (r.ok ? r.json() : null)),
-    ])
-      .then(([categoriesData, areasData]) => {
-        if (cancelled) return
-        setMeta((prev) => ({
-          categories: categoriesData?.categories || prev?.categories || [],
-          areas: areasData?.areas || prev?.areas || [],
-          total: prev?.total ?? 0,
-        }))
-      })
-      .catch(() => {})
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  useEffect(() => {
     if (!showTrainerPlans) return
     setPlansLoading(true)
     fetch('/api/meal-plans', { credentials: 'include' })

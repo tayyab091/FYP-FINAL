@@ -8,6 +8,10 @@ import {
   searchMeals,
 } from '@/lib/meals'
 
+const catalogResponse = (data: unknown) => NextResponse.json(data, {
+  headers: { 'Cache-Control': 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400' },
+})
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = req.nextUrl
@@ -25,18 +29,18 @@ export async function GET(req: NextRequest) {
 
     if (categories === 'true') {
       const list = await listCategories()
-      return NextResponse.json({ categories: list })
+      return catalogResponse({ categories: list })
     }
 
     if (areas === 'true') {
       const list = await listAreas()
-      return NextResponse.json({ areas: list })
+      return catalogResponse({ areas: list })
     }
 
     if (id) {
       const meal = await getMealById(id)
       if (!meal) return NextResponse.json({ message: 'Meal not found' }, { status: 404 })
-      return NextResponse.json(meal)
+      return catalogResponse(meal)
     }
 
     if (metaOnly) {
