@@ -82,7 +82,11 @@ function normalizeMuscle(bodyPart?: string): string {
 
 function normalizeEquipment(equipment?: string): string {
   if (!equipment) return 'Bodyweight'
-  return equipment
+  const cleaned = equipment.trim().toLowerCase().replace(/\s+/g, ' ')
+  // ExerciseDB lists "bodyweight" and "body weight" interchangeably.
+  if (cleaned === 'bodyweight' || cleaned === 'body weight') return 'Bodyweight'
+  if (cleaned === 'ez barbell' || cleaned === 'ez bar') return 'EZ Bar'
+  return cleaned
     .split(' ')
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(' ')
@@ -189,7 +193,7 @@ function applyExerciseFilters(
     filtered = filtered.filter((e) => e.targetMuscles.some((m) => m.toLowerCase() === t))
   }
   if (options.equipment && options.equipment !== 'All') {
-    const eq = options.equipment.toLowerCase()
+    const eq = normalizeEquipment(options.equipment).toLowerCase()
     filtered = filtered.filter((e) => e.equipment.toLowerCase() === eq)
   }
 
@@ -234,8 +238,10 @@ async function fetchJson<T>(url: string, retries = 1): Promise<T> {
   throw new Error('ExerciseDB unavailable')
 }
 
+const CATALOG_CACHE_KEY = 'exercise-catalog-v5'
+
 export async function getExerciseCatalog(): Promise<ExerciseCatalog> {
-  return getOrFetch('exercise-catalog-v4', CACHE_TTL, async () => {
+  return getOrFetch(CATALOG_CACHE_KEY, CACHE_TTL, async () => {
     const exercises = filterExercisesByPattern(catalogSnapshot.exercises.map(mapExercise))
     return { exercises, meta: buildMeta(exercises) }
   })
@@ -251,7 +257,7 @@ export async function queryExercises(options: {
   limit?: number
   includeMeta?: boolean
 }): Promise<ExerciseQueryResult> {
-  const cached = getCached<ExerciseCatalog>('exercise-catalog-v4')
+  const cached = getCached<ExerciseCatalog>(CATALOG_CACHE_KEY)
   if (cached) return applyExerciseFilters(cached, options)
   try {
     return applyExerciseFilters(await getExerciseCatalog(), options)

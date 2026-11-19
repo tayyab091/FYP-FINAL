@@ -127,7 +127,7 @@ test('payment replay uses an atomic chronological guard and a payment-anchored e
 
 test('metadata does not change exercise page size or skip exercises', async () => {
   const exercises = Array.from({ length: 80 }, (_, i) => ({ id: String(i), name: `Exercise ${i}`, muscle: 'Legs', equipment: 'Bodyweight', bodyParts: ['legs'], targetMuscles: ['quads'] }))
-  setCached('exercise-catalog-v4', { exercises, meta: { total: 80 } }, 60_000)
+  setCached('exercise-catalog-v5', { exercises, meta: { total: 80 } }, 60_000)
   const first = await (await exercisesGET(new NextRequest('http://localhost/api/exercises?meta=true&limit=36&page=1'))).json()
   const second = await (await exercisesGET(new NextRequest('http://localhost/api/exercises?meta=true&limit=36&page=2'))).json()
   assert.equal(first.exercises.length, 36)
