@@ -1,8 +1,10 @@
 'use client'
+import { PagePhoto } from '@/components/shared/PagePhoto'
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/hooks/useAuth'
+import { useActivityRefresh } from '@/hooks/useActivityRefresh'
 import { usePublicData } from '@/hooks/usePublicData'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -31,6 +33,7 @@ interface Trainer {
   bio?: string
   profileImage?: string
   gymName?: string
+  distanceKm?: number
   isFallback?: boolean
 }
 
@@ -68,6 +71,8 @@ function TrainerCard({
 
   const name = trainer.name || trainer.fullName || 'Trainer'
   const specialties = Array.isArray(trainer.specialty) ? trainer.specialty : [trainer.specialty].filter(Boolean)
+
+
 
   const handleConnect = async () => {
     if (status !== 'idle') return
@@ -112,7 +117,7 @@ function TrainerCard({
             <Link href={isPreview ? '/coaching' : trainerPublicPath(trainer)}>
               <h3 className="font-bold text-foreground text-base hover:text-primary transition-colors">{name}</h3>
             </Link>
-            <p className="text-muted-foreground text-xs mt-0.5">{trainer.country}{trainer.gymName ? ` · ${trainer.gymName}` : ''}</p>
+            <p className="text-muted-foreground text-xs mt-0.5">{trainer.distanceKm !== undefined ? trainer.distanceKm + ' km away - ' : ''}{trainer.country}{trainer.gymName ? ` · ${trainer.gymName}` : ''}</p>
           </div>
           <div className="flex items-center gap-1 bg-muted px-2 py-1 rounded-lg">
             <span className="text-yellow-400 text-xs">★</span>
@@ -191,6 +196,16 @@ export default function CoachingPage() {
   const [specialty, setSpecialty] = useState('All')
   const [country, setCountry] = useState('All')
   const [search, setSearch] = useState('')
+  const [center, setCenter] = useState<{ latitude: number; longitude: number } | null>(null)
+  const [radius, setRadius] = useState(10)
+  const findNearby = () => {
+    if (!navigator.geolocation) { toast.error('Location is unavailable in this browser'); return }
+    navigator.geolocation.getCurrentPosition(
+      position => setCenter({ latitude: position.coords.latitude, longitude: position.coords.longitude }),
+      () => toast.error('Allow location access to find trainers nearby.'),
+      { timeout: 8000 },
+    )
+  }
 
   const refreshRelationships = useCallback(async () => {
     if (!user || user.role !== 'user') {
@@ -216,6 +231,11 @@ export default function CoachingPage() {
     if (specialty !== 'All') params.set('specialty', specialty)
     if (country !== 'All') params.set('country', country)
     if (search.trim()) params.set('search', search.trim())
+    if (center) {
+      params.set('lat', String(center.latitude))
+      params.set('lng', String(center.longitude))
+      params.set('radius', String(radius))
+    }
 
     publicData<unknown>(`/api/trainers${params.size ? '?' + params : ''}`, controller.signal)
       .then(data => {
@@ -228,7 +248,9 @@ export default function CoachingPage() {
       .finally(() => { clearTimeout(timeout); if (active) setLoading(false) })
 
     return () => { active = false; controller.abort(); clearTimeout(timeout) }
-  }, [specialty, country, search, publicData])
+  }, [specialty, country, search, publicData, center, radius])
+
+  useActivityRefresh(refreshRelationships, Boolean(user))
 
   const handleConnect = async (trainerId: string) => {
     if (!user) {
@@ -268,7 +290,8 @@ export default function CoachingPage() {
   return (
     <div className="min-h-screen pt-8 pb-24">
       <FadeIn>
-        <div className="page-hero max-w-6xl mx-4 px-6 py-10 sm:mx-6 sm:px-10 md:mx-auto md:py-14 gym-floor min-h-[14rem] md:min-h-[16rem]">
+        <div className="page-hero fitness-photo-hero max-w-6xl mx-4 px-6 py-10 sm:mx-6 sm:px-10 md:mx-auto md:py-14 gym-floor min-h-[14rem] md:min-h-[16rem]">
+            <PagePhoto kind="coaching" />
           <p className="eyebrow mb-3">Trainer Marketplace</p>
           <h1 className="display-title text-balance text-4xl md:text-6xl text-foreground mb-4">Find Your Perfect Trainer</h1>
           <p className="max-w-xl text-muted-foreground">Discover verified coaches matched to your goals, training style, and location.</p>
@@ -277,6 +300,16 @@ export default function CoachingPage() {
       </FadeIn>
 
       <div className="elite-panel max-w-6xl mx-4 mt-6 space-y-4 p-4 sm:mx-6 sm:p-5 md:mx-auto">
+        <div className="flex flex-wrap items-center gap-3">
+          <button type="button" onClick={findNearby} className="btn-accent">Near me</button>
+          <label className="flex items-center gap-2 text-sm">Within
+            <select aria-label="Trainer distance radius" value={radius} onChange={event => setRadius(Number(event.target.value))} className="select-native">
+              {[2, 5, 10, 25, 50, 100].map(value => <option key={value} value={value}>{value} km</option>)}
+            </select>
+          </label>
+          {center && <button type="button" onClick={() => setCenter(null)} className="text-sm text-primary underline">Clear location filter</button>}
+          {center && <p className="text-xs text-muted-foreground">Distances use the trainer gym location. Profiles without coordinates are excluded.</p>}
+        </div>
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}

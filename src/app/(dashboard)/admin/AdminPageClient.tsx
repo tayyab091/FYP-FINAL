@@ -1,7 +1,9 @@
 'use client'
+import { PagePhoto } from '@/components/shared/PagePhoto'
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useActivityRefresh } from '@/hooks/useActivityRefresh'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
@@ -111,6 +113,8 @@ export default function AdminPageClient() {
   const searchParams = useSearchParams()
   const tabParam = searchParams.get('tab') || 'overview'
   const rawActive = VALID_TABS.includes(tabParam as (typeof VALID_TABS)[number]) ? tabParam : 'overview'
+  const [refreshKey, setRefreshKey] = useState(0)
+  useActivityRefresh(() => { setRefreshKey(key => key + 1) }, Boolean(user && ['admin', 'super_admin'].includes(user.role)), 15000)
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [users, setUsers] = useState<AdminUser[]>([])
   const [trainers, setTrainers] = useState<AdminTrainer[]>([])
@@ -166,7 +170,7 @@ export default function AdminPageClient() {
       controller.abort()
       clearTimeout(timeout)
     }
-  }, [user])
+  }, [user, refreshKey])
 
   const verifyTrainer = async (id: string, action: 'verify' | 'reject') => {
     const res = await fetch(`/api/admin/trainers/${id}/verify`, {
@@ -384,7 +388,8 @@ export default function AdminPageClient() {
   return (
     <div className="min-h-screen px-4 pb-24 pt-6 sm:px-6">
       <div className="mx-auto max-w-6xl space-y-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="page-hero fitness-photo-hero flex flex-wrap items-start justify-between gap-4 px-6 py-6 sm:px-8">
+          <PagePhoto kind="gym" />
           <div>
             <p className="section-eyebrow">Platform Control</p>
             <h1 className="text-3xl font-black text-foreground">Admin Console</h1>

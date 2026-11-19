@@ -82,7 +82,8 @@ Optional integrations (see `.env.example`):
 | `CLOUDINARY_UPLOAD_FOLDER` | Optional Cloudinary folder for chat images |
 | `BLOB_READ_WRITE_TOKEN` | Optional legacy profile image uploads (Vercel Blob) |
 | `OPENROUTER_API_KEY` / `OPENROUTER_MODELS` | AI chatbot with ordered free model fallbacks; optional comma-separated `:free` model overrides |
-| `GEMINI_API_KEY` / `GEMINI_MODEL` | Optional chatbot provider after OpenRouter; AI workout generation |
+| `ANTHROPIC_API_KEY` (or `CLAUDE_API_KEY`) / `CLAUDE_MODEL` | Primary Claude chat provider; OpenRouter is tried if Claude is unavailable |
+| `GEMINI_API_KEY` / `GEMINI_MODEL` | Existing workout generation and other AI tools; not used by the chat route |
 | `GOOGLE_MAPS_API_KEY` / `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Gym search and map display |
 | `SPOONACULAR_API_KEY` | Enhanced food search |
 
@@ -94,7 +95,9 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). For production on Vercel, set the env vars above in the project settings.
 
-The chatbot tries Nemotron 3.5 Lightning, Ling 3.2 Flash, Gemma 4 26B A4B, and Gemma 4 31B through OpenRouter's ordered model fallback routing, then `openrouter/free`. Only free model IDs are accepted and requests set a zero maximum provider price. Online attempts share a time limit below the chat UI's timeout; Gemini (when configured) and formatted local guidance remain available afterward. Free models share account quotas, so model fallbacks cannot bypass an exhausted daily allowance. Keep `OPENROUTER_API_KEY` in `.env.local` locally and in server environment settings on Vercel, never in a `NEXT_PUBLIC_` variable.
+The chatbot tries Claude first using ANTHROPIC_API_KEY (CLAUDE_API_KEY is accepted as an alias), then OpenRouter using OPENROUTER_API_KEY. CLAUDE_MODEL defaults to claude-haiku-4-5-20251001. OpenRouter keeps its ordered free-model routing and zero provider price ceiling. Online requests share a time budget below the UI timeout. No canned fitness guidance or Gemini responses are returned by this chat route. If both providers fail, the API returns HTTP 503 with source: unavailable and the UI offers Retry. Other AI features retain their existing provider behavior.
+
+A successful /api/ai/chat response identifies source: claude or source: openrouter and the model. Runtime Logs record sanitized provider status metadata, never keys or member prompts. Set the server keys in the correct Vercel project and Production environment, and redeploy after environment changes. Existing deployments keep their previous environment snapshot. Keep all provider keys private and never use NEXT_PUBLIC_ for them.
 
 4. **Seed the database** (recommended for demos)
 

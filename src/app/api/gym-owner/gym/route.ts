@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import { getUser } from '@/lib/auth'
 import Gym from '@/models/Gym'
+import { namePattern, normalizedName } from '@/lib/unique-name'
 import { gymUpdateSchema, parseJsonBody } from '@/lib/validation'
 import { createPublicSlug } from '@/lib/slug'
 import { isCloudinaryConfigured, uploadGymImage } from '@/lib/cloudinary'
@@ -54,10 +55,14 @@ export async function PUT(req: NextRequest) {
     const body = parsed.data
 
     await connectDB()
+    if (await Gym.exists({ name: namePattern(body.name), ownerId: { $ne: tokenUser.userId } })) {
+      return NextResponse.json({ message: 'This gym name already exists. Please choose another gym name.' }, { status: 409 })
+    }
     const gym = await Gym.findOneAndUpdate(
       { ownerId: tokenUser.userId },
       {
         name: body.name,
+        nameKey: normalizedName(body.name),
         slug: createPublicSlug(body.name, tokenUser.userId),
         address: body.address,
         city: body.city || '',

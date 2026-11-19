@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import { getUser } from '@/lib/auth'
+import { syncStripeSubscription } from '@/lib/stripe-subscription'
 import { activateUserPlan } from '@/lib/subscription-server'
 import { getStripe, isStripeConfigured } from '@/lib/stripe'
 import { addMonths } from '@/lib/calendar'
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
     const stripe = getStripe()
     const session = await stripe.checkout.sessions.retrieve(sessionId)
 
-    if (session.payment_status !== 'paid') {
+    if (session.payment_status !== 'paid' && !(session.payment_status === 'no_payment_required' && session.mode === 'subscription' && session.subscription)) {
       return NextResponse.json({ message: 'Payment not completed' }, { status: 400 })
     }
     if (addMonths(new Date(session.created * 1000), 1) <= new Date()) {
@@ -49,7 +50,9 @@ export async function GET(req: NextRequest) {
     }
 
     await connectDB()
-    const user = await activateUserPlan(tokenUser.userId, plan, session)
+    const user = session.subscription
+      ? await syncStripeSubscription(typeof session.subscription === 'string' ? session.subscription : session.subscription.id, { userId: tokenUser.userId, plan })
+      : await activateUserPlan(tokenUser.userId, plan, session)
     if (!user) {
       return NextResponse.json({ message: 'User not found' }, { status: 404 })
     }

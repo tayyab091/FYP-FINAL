@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
+import { useActivityRefresh } from '@/hooks/useActivityRefresh'
 import { useAuth } from '@/hooks/useAuth'
 
 export function FloatingChat() {
@@ -24,6 +25,12 @@ export function FloatingChat() {
       .catch(() => {})
     return () => controller.abort()
   }, [user, pathname])
+
+  const refreshUnread = useCallback(async () => {
+    const response = await fetch('/api/chat/unread-count', { cache: 'no-store' })
+    if (response.ok) setUnread((await response.json()).count || 0)
+  }, [])
+  useActivityRefresh(refreshUnread, Boolean(user), 5000)
 
   if (!user) return null
   if (pathname.startsWith('/chat')) return null

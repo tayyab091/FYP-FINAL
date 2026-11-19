@@ -1,3 +1,4 @@
+import { createNotification } from './notifications'
 import GamificationProfile from '@/models/GamificationProfile'
 import WorkoutLog from '@/models/WorkoutLog'
 import MealLog from '@/models/MealLog'
@@ -29,11 +30,9 @@ export const XP_REWARDS = {
 export type XpAction = keyof typeof XP_REWARDS
 
 export async function getOrCreateProfile(userId: string) {
-  let profile = await GamificationProfile.findOne({ userId })
-  if (!profile) {
-    profile = await GamificationProfile.create({ userId })
-  }
-  return profile
+  return GamificationProfile.findOneAndUpdate(
+    { userId }, { $setOnInsert: { userId } }, { upsert: true, new: true },
+  )
 }
 
 export async function computeWorkoutStreak(userId: string): Promise<number> {
@@ -223,48 +222,63 @@ export async function checkAndUnlockAchievements(userId: string) {
   const newlyUnlocked: string[] = []
 
   for (const def of ACHIEVEMENT_DEFINITIONS) {
-    if (unlockedIds.has(def.id)) continue
-    if (shouldUnlockAchievement(def.id, ctx)) {
-      profile.achievements.push({ id: def.id, unlockedAt: new Date() })
+    if (unlockedIds.has(def.id) || !shouldUnlockAchievement(def.id, ctx)) continue
+    const unlockedAt = new Date()
+    const result = await GamificationProfile.updateOne(
+      { userId, 'achievements.id': { $ne: def.id } },
+      { $push: { achievements: { id: def.id, unlockedAt } } },
+    )
+    if (result.modifiedCount) {
+      profile.achievements.push({ id: def.id, unlockedAt })
       newlyUnlocked.push(def.id)
+      await createNotification({
+        userId, title: 'Achievement unlocked',
+        message: 'You earned ' + def.id.replaceAll('_', ' ') + '.',
+        type: 'system', link: '/my-fitness', preferenceKey: 'achievements',
+        dedupKey: 'achievement:' + def.id,
+      }).catch(() => {})
     }
-  }
-
-  if (newlyUnlocked.length > 0) {
-    await profile.save()
   }
 
   return { profile, newlyUnlocked }
 }
 
-export async function awardXp(userId: string, amount: number) {
+export async function awardXp(userId: string, amount: number, source?: string): Promise<GamificationMeResponse & { lastAwardedXp?: number }> {
   if (amount <= 0) return getGamificationMe(userId)
 
-  const profile = await getOrCreateProfile(userId)
-  profile.xp += amount
-  const levelInfo = levelFromXp(profile.xp)
-  profile.level = levelInfo.level
-  await profile.save()
+  await getOrCreateProfile(userId)
+  const profile = await GamificationProfile.findOneAndUpdate(
+    { userId, ...(source ? { rewardKeys: { $ne: source } } : {}) },
+    { $inc: { xp: amount }, ...(source ? { $addToSet: { rewardKeys: source } } : {}) }, { new: true },
+  )
+  if (profile) await GamificationProfile.updateOne({ _id: profile._id, xp: profile.xp }, { $set: { level: levelFromXp(profile.xp).level } })
 
   await checkAndUnlockAchievements(userId)
-  return getGamificationMe(userId)
+  return { ...await getGamificationMe(userId), lastAwardedXp: profile ? amount : 0 }
 }
 
-export async function awardWorkoutXp(userId: string) {
+export async function awardWorkoutXp(userId: string, source?: string) {
   const streak = await computeWorkoutStreak(userId)
   const streakBonus = Math.min(streak, 7) * 5
   const total = XP_REWARDS.workout_complete + streakBonus
-
-  const profile = await getOrCreateProfile(userId)
-  profile.xp += total
-  profile.streakBonusXp += streakBonus
-  const levelInfo = levelFromXp(profile.xp)
-  profile.level = levelInfo.level
-  await profile.save()
-
+  await getOrCreateProfile(userId)
+  const awarded = await GamificationProfile.findOneAndUpdate(
+    { userId, ...(source ? { rewardKeys: { $ne: source } } : {}) },
+    {
+      $inc: { xp: total, streakBonusXp: streakBonus },
+      ...(source ? { $addToSet: { rewardKeys: source } } : {}),
+    },
+    { new: true },
+  )
+  if (awarded) {
+    await GamificationProfile.updateOne(
+      { _id: awarded._id, xp: awarded.xp },
+      { $set: { level: levelFromXp(awarded.xp).level } },
+    )
+  }
   const { newlyUnlocked } = await checkAndUnlockAchievements(userId)
   const gamification = await getGamificationMe(userId)
-  return { gamification, xpAwarded: total, streakBonus, newlyUnlocked }
+  return { gamification, xpAwarded: awarded ? total : 0, streakBonus: awarded ? streakBonus : 0, newlyUnlocked }
 }
 
 export async function recordFormCheckSession(userId: string, reps: number) {

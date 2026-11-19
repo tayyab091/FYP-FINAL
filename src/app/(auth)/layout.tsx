@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { NO_INDEX_METADATA } from '@/lib/seo'
 import { BrandMark } from '@/components/shared/BrandMark'
+import { PagePhoto } from '@/components/shared/PagePhoto'
 
 export const metadata = NO_INDEX_METADATA
 
@@ -16,8 +17,6 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   return (
     <div className="grid min-h-screen xl:grid-cols-[minmax(22rem,0.9fr)_1.1fr]">
       <aside className="relative hidden overflow-hidden border-r border-border bg-card p-10 xl:flex xl:flex-col xl:justify-between xl:p-14">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_15%,rgba(8,122,86,0.12),transparent_23rem),radial-gradient(circle_at_85%_78%,rgba(15,138,97,0.07),transparent_20rem)] dark:bg-[radial-gradient(circle_at_15%_15%,rgba(34,211,147,.18),transparent_23rem),radial-gradient(circle_at_85%_78%,rgba(61,189,255,.1),transparent_20rem)]" />
-        <div className="absolute inset-0 opacity-30 [background-image:linear-gradient(color-mix(in_srgb,var(--primary)_6%,transparent)_1px,transparent_1px),linear-gradient(90deg,color-mix(in_srgb,var(--primary)_6%,transparent)_1px,transparent_1px)] [background-size:58px_58px] dark:[background-image:linear-gradient(rgba(255,255,255,.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.035)_1px,transparent_1px)]" />
 
         <div className="relative flex items-center gap-3">
           <BrandMark className="size-10" />
@@ -44,6 +43,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           </div>
         </div>
 
+        <div className="auth-photo"><PagePhoto kind="coaching" /></div>
         <p className="relative text-xs text-muted-foreground">Built for ambitious people who want measurable progress.</p>
       </aside>
       <div className="relative min-w-0">

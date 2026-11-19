@@ -1,5 +1,6 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { PagePhoto } from '@/components/shared/PagePhoto'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -81,6 +82,7 @@ export default function NutritionPage() {
   const [logMealType, setLogMealType] = useState('breakfast')
   const [logQuantity, setLogQuantity] = useState('100')
   const [submittingLog, setSubmittingLog] = useState(false)
+  const requestKey = useRef<string | null>(null)
   const calorieGoal = user?.calorieGoal ?? calculateDailyCalories(user || {})
   const [recipeMeals, setRecipeMeals] = useState<MealSummary[]>([])
   const [mealsLoading, setMealsLoading] = useState(true)
@@ -355,7 +357,8 @@ export default function NutritionPage() {
     <div className="min-h-screen pt-8 pb-28 px-4 lg:px-8">
       <div className="max-w-4xl mx-auto space-y-8">
         <FadeIn>
-          <div className="page-hero px-6 py-10 sm:px-10 md:py-14 gym-floor">
+          <div className="page-hero fitness-photo-hero px-6 py-10 sm:px-10 md:py-14 gym-floor">
+            <PagePhoto kind="nutrition" />
             <span className="eyebrow">Nutrition Intelligence</span>
             <h1 className="display-title text-4xl md:text-6xl text-foreground mt-3">Fuel Every Ambition</h1>
             <p className="mt-3 text-muted-foreground">Track meals, understand your macros, and stay aligned with your goals{todayLabel ? ` · ${todayLabel}` : ''}</p>
@@ -482,7 +485,7 @@ export default function NutritionPage() {
                         <p className="text-muted-foreground text-xs mt-1">P: {item.protein}g · C: {item.carbs}g · F: {item.fat}g</p>
                       </div>
                       <button
-                        onClick={() => { setLoggingFood(loggingFood?.name === item.name ? null : item); setLogQuantity('100') }}
+                        onClick={() => { setLoggingFood(loggingFood?.name === item.name ? null : item); setLogQuantity('100'); requestKey.current = null }}
                         className="text-xs px-4 py-2 rounded-xl bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 font-medium shrink-0">
                         Log This
                       </button>

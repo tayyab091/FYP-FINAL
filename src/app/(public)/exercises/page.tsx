@@ -1,6 +1,8 @@
 'use client'
+import { PagePhoto } from '@/components/shared/PagePhoto'
 import { memo, useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
+import { exerciseDetailPath } from '@/lib/exercise-slug'
 import { toast } from 'sonner'
 import { Dumbbell, Wrench, ChevronDown, ChevronUp, Search, X, Filter } from 'lucide-react'
 import { FitnessBadge } from '@/components/motion/FitnessBadge'
@@ -93,7 +95,7 @@ const ExerciseCard = memo(function ExerciseCard({ exercise }: { exercise: Exerci
 
   return (
     <div className="elite-panel interactive-lift card-athletic flex flex-col self-start rounded-2xl overflow-hidden">
-      <Link href={`/exercises/${exercise.id}`} className="block">
+      <Link href={exerciseDetailPath(exercise)} className="block">
         <CatalogImageFrame
           src={exercise.gifUrl}
           alt={`${exercise.name} — ${exercise.muscle} exercise demo`}
@@ -119,7 +121,7 @@ const ExerciseCard = memo(function ExerciseCard({ exercise }: { exercise: Exerci
 
       <div className="flex flex-1 flex-col p-4">
         <div className="flex items-start justify-between mb-2 gap-2">
-          <Link href={`/exercises/${exercise.id}`} className="font-bold text-foreground leading-tight hover:text-primary transition-colors">
+          <Link href={exerciseDetailPath(exercise)} className="font-bold text-foreground leading-tight hover:text-primary transition-colors">
             {exercise.name}
           </Link>
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${MUSCLE_COLORS[exercise.muscle] || 'bg-muted text-muted-foreground'}`}>
@@ -142,7 +144,7 @@ const ExerciseCard = memo(function ExerciseCard({ exercise }: { exercise: Exerci
         </div>
 
         <Link
-          href={`/exercises/${exercise.id}`}
+          href={exerciseDetailPath(exercise)}
           className="mt-2 inline-block text-xs text-primary hover:text-primary/80 font-medium"
         >
           View full details →
@@ -305,7 +307,8 @@ export default function ExercisesPage() {
     <div className="min-h-screen pt-8 pb-24">
       <div className="max-w-6xl mx-auto px-6">
         <FadeIn>
-          <div className="page-hero mb-6 px-6 py-10 sm:px-10 md:py-14 gym-floor min-h-[14rem] md:min-h-[16rem]">
+          <div className="page-hero fitness-photo-hero mb-6 px-6 py-10 sm:px-10 md:py-14 gym-floor min-h-[14rem] md:min-h-[16rem]">
+            <PagePhoto kind="training" />
             <p className="eyebrow mb-3">Exercise Library</p>
             <h1 className="display-title text-4xl md:text-6xl text-foreground mb-3">Master Every Movement</h1>
             <p className="max-w-xl text-muted-foreground">

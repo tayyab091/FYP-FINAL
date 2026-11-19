@@ -1,7 +1,10 @@
 import type { Metadata, Viewport } from 'next'
 import localFont from 'next/font/local'
 import './globals.css'
+import './site-theme.css'
+import './home-refresh.css'
 import { Providers } from './providers'
+import { MemberCatalogWorkspace } from '@/components/layout/MemberCatalogWorkspace'
 import { Navbar } from '@/components/layout/Navbar'
 import { BottomNav } from '@/components/layout/BottomNav'
 import { SiteFooter } from '@/components/layout/SiteFooter'
@@ -68,7 +71,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </a>
         <Providers>
           <Navbar />
-          <main id="main-content" tabIndex={-1} className="flex min-h-screen flex-col">{children}</main>
+          <main id="main-content" tabIndex={-1} className="flex min-h-screen flex-col"><MemberCatalogWorkspace>{children}</MemberCatalogWorkspace></main>
           <SiteFooter />
           <BottomNav />
           <FloatingChat />

@@ -66,13 +66,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         rating: review.rating,
         comment: review.comment,
         createdAt: review.createdAt,
-        authorName: (review.userId as { fullName?: string } | null)?.fullName || 'Anonymous',
-        authorImage:
+        authorName: review.anonymous ? 'Anonymous member' : (review.userId as { fullName?: string } | null)?.fullName || 'Anonymous',
+        authorImage: review.anonymous ? '' : (
           resolveAvatarUrl(
             review.userId as { avatarUrl?: string; profileImage?: string } | null,
           ) ||
           (review.userId as { profileImage?: string } | null)?.profileImage ||
-          '',
+          ''),
       })),
       averageRating: reviewCount > 0 ? Math.round(averageRating * 10) / 10 : 0,
       reviewCount,
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const parsed = await parseJsonBody(req, reviewSchema)
     if ('error' in parsed) return parsed.error
-    const { rating, comment } = parsed.data
+    const { rating, comment, anonymous } = parsed.data
 
     await connectDB()
 
@@ -132,6 +132,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       userId: tokenUser.userId,
       rating,
       comment,
+      anonymous,
     })
 
     const { averageRating, reviewCount } = await getReviewStats(trainerId)
@@ -143,7 +144,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       await createNotification({
         userId: trainer.userId,
         title: 'New review received',
-        message: `${user.fullName} left you a ${rating}-star review`,
+        message: `${anonymous ? 'An anonymous member' : user.fullName} left you a ${rating}-star review`,
         type: 'trainer',
         link: `/coaching/${slug || createPublicSlug(trainer.name || 'trainer', trainerId)}`,
       })
@@ -155,8 +156,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         rating: review.rating,
         comment: review.comment,
         createdAt: review.createdAt,
-        authorName: user.fullName,
-        authorImage: resolveAvatarUrl(user) || user.profileImage || '',
+        authorName: anonymous ? 'Anonymous member' : user.fullName,
+        authorImage: anonymous ? '' : resolveAvatarUrl(user) || user.profileImage || '',
       },
       averageRating: roundedRating,
       reviewCount,

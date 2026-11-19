@@ -2,6 +2,7 @@ import mongoose, { Schema } from 'mongoose'
 
 const NotificationSchema = new Schema({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  dedupKey: { type: String },
   title: { type: String, required: true },
   message: { type: String, required: true },
   type: {
@@ -17,5 +18,6 @@ const NotificationSchema = new Schema({
 // filters by userId and sorts by createdAt for the list, and counts unread by
 // userId for the badge — both covered by this compound index.
 NotificationSchema.index({ userId: 1, createdAt: -1 })
+NotificationSchema.index({ userId: 1, dedupKey: 1 }, { unique: true, partialFilterExpression: { dedupKey: { $type: 'string' } } })
 
 export default mongoose.models.Notification || mongoose.model('Notification', NotificationSchema)

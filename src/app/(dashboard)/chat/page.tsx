@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
+import { useActivityRefresh } from '@/hooks/useActivityRefresh'
 import { useAuth } from '@/hooks/useAuth'
 import { Conversation } from '@/types'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -15,13 +16,17 @@ export default function ChatListPage() {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
+  const refresh = useCallback(async () => {
     if (!user) return
-    fetch('/api/chat/conversations')
-      .then(r => r.ok ? r.json() : [])
-      .then(data => setConversations(Array.isArray(data) ? data : []))
-      .finally(() => setLoading(false))
+    const response = await fetch('/api/chat/conversations', { cache: 'no-store' })
+    if (response.ok) {
+      const data = await response.json()
+      setConversations(Array.isArray(data) ? data : [])
+    }
+    setLoading(false)
   }, [user])
+  useEffect(() => { void refresh().catch(() => setLoading(false)) }, [refresh])
+  useActivityRefresh(refresh, Boolean(user))
 
   if (authLoading) return <PageLoader />
   if (!user) return <SignInGate redirectLabel="Sign in to chat" />

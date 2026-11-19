@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Pusher from 'pusher-js'
+import { toast } from 'sonner'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   Bell,
   CheckCheck,
@@ -18,7 +20,7 @@ import type { AppNotification } from '@/types'
 import { useAuth } from '@/hooks/useAuth'
 
 const FETCH_LIMIT = 10
-const POLL_MS = 60_000
+const POLL_MS = 5_000
 const FETCH_TIMEOUT_MS = 8_000
 
 function formatTime(dateStr: string) {
@@ -54,6 +56,7 @@ function typeIcon(type: AppNotification['type']) {
 
 export function NotificationBell() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const { user } = useAuth()
   const [open, setOpen] = useState(false)
   const [notifications, setNotifications] = useState<AppNotification[]>([])
@@ -61,27 +64,93 @@ export function NotificationBell() {
   const [loading, setLoading] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const seen = useRef(new Set<string>())
+  const initialized = useRef(false)
+  const fetching = useRef(false)
+  const audio = useRef<AudioContext | null>(null)
+  const [soundEnabled, setSoundEnabled] = useState(true)
+  const soundPreference = useRef(true)
+
+  useEffect(() => {
+    const enabled = localStorage.getItem('notification-sound') !== 'off'
+    setSoundEnabled(enabled)
+    soundPreference.current = enabled
+    const unlock = () => {
+      try {
+        audio.current ||= new AudioContext()
+        void audio.current.resume()
+      } catch { /* Browsers can block audio until interaction. */ }
+    }
+    window.addEventListener('pointerdown', unlock)
+    window.addEventListener('keydown', unlock)
+    return () => {
+      window.removeEventListener('pointerdown', unlock)
+      window.removeEventListener('keydown', unlock)
+      void audio.current?.close()
+      audio.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    abortRef.current?.abort()
+    seen.current.clear()
+    initialized.current = false
+    setNotifications([])
+    setUnreadCount(0)
+  }, [user?.id])
+
+  const announce = useCallback((notification: AppNotification) => {
+    toast(notification.title, {
+      description: notification.message,
+      action: notification.link ? { label: 'View', onClick: () => router.push(notification.link!) } : undefined,
+      duration: 6000,
+    })
+    window.dispatchEvent(new CustomEvent('app:activity', { detail: notification }))
+    void queryClient.invalidateQueries()
+    const context = audio.current
+    if (!soundPreference.current || !context || context.state !== 'running') return
+    const gain = context.createGain()
+    const oscillator = context.createOscillator()
+    oscillator.connect(gain)
+    gain.connect(context.destination)
+    gain.gain.setValueAtTime(0.08, context.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.35)
+    oscillator.frequency.setValueAtTime(660, context.currentTime)
+    oscillator.frequency.setValueAtTime(880, context.currentTime + 0.12)
+    oscillator.start()
+    oscillator.stop(context.currentTime + 0.35)
+  }, [queryClient, router])
 
   const fetchNotifications = useCallback(async () => {
-    abortRef.current?.abort()
+    if (fetching.current) return
+    fetching.current = true
     const controller = new AbortController()
     abortRef.current = controller
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
 
     try {
       const res = await fetch(`/api/notifications?limit=${FETCH_LIMIT}`, {
+        cache: 'no-store',
         signal: controller.signal,
       })
       if (!res.ok) return
       const data = await res.json()
-      setNotifications(Array.isArray(data.notifications) ? data.notifications : [])
+      if (controller.signal.aborted) return
+      const items: AppNotification[] = Array.isArray(data.notifications) ? data.notifications : []
+      for (const item of [...items].reverse()) {
+        if (initialized.current && !seen.current.has(item._id) && !item.isRead) announce(item)
+        seen.current.add(item._id)
+      }
+      initialized.current = true
+      setNotifications(items)
       setUnreadCount(typeof data.unreadCount === 'number' ? data.unreadCount : 0)
     } catch {
       // ignore fetch errors / aborts silently for bell polling
     } finally {
       clearTimeout(timeoutId)
+      fetching.current = false
     }
-  }, [])
+  }, [announce])
 
   useEffect(() => {
     if (!user) return
@@ -112,7 +181,9 @@ export function NotificationBell() {
     const channel = pusher.subscribe(channelName)
 
     channel.bind('notification', (notification: AppNotification) => {
-      if (!notification?._id) return
+      if (!notification?._id || seen.current.has(notification._id)) return
+      seen.current.add(notification._id)
+      announce(notification)
       setNotifications((prev) => {
         if (prev.some((item) => item._id === notification._id)) return prev
         return [notification, ...prev].slice(0, FETCH_LIMIT)
@@ -127,7 +198,7 @@ export function NotificationBell() {
       pusher.unsubscribe(channelName)
       pusher.disconnect()
     }
-  }, [user?.id, user?._id])
+  }, [user?.id, user?._id, announce])
 
   useEffect(() => {
     if (!open) return
@@ -146,6 +217,13 @@ export function NotificationBell() {
       document.removeEventListener('keydown', onKeyDown)
     }
   }, [open])
+
+  const toggleSound = () => {
+    const enabled = !soundEnabled
+    setSoundEnabled(enabled)
+    soundPreference.current = enabled
+    localStorage.setItem('notification-sound', enabled ? 'on' : 'off')
+  }
 
   const handleOpen = async () => {
     setOpen((prev) => !prev)
@@ -200,6 +278,7 @@ export function NotificationBell() {
         <div id="notifications-panel" role="dialog" aria-label="Notifications" className="absolute right-0 top-[calc(100%+.5rem)] z-50 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-border bg-card/98 shadow-2xl backdrop-blur-2xl">
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <p className="text-sm font-bold text-foreground">Notifications</p>
+              <button type="button" onClick={toggleSound} className="text-xs text-primary" aria-pressed={soundEnabled}>{soundEnabled ? 'Sound on' : 'Sound off'}</button>
             {unreadCount > 0 && (
               <button
                 type="button"

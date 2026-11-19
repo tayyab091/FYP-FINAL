@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     const parsed = await parseJsonBody(req, mealLogSchema)
     if ('error' in parsed) return parsed.error
 
-    const { mealType, foods } = parsed.data
+    const { mealType, foods, requestKey } = parsed.data
     await connectDB()
 
     const totalCalories = foods.reduce((sum, food) => sum + (food.calories || 0), 0)
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
     const totalCarbs = foods.reduce((sum, food) => sum + (food.carbs || 0), 0)
     const totalFat = foods.reduce((sum, food) => sum + (food.fat || 0), 0)
 
-    const meal = await MealLog.create({
+    const payload = {
       userId: tokenUser.userId,
       mealType,
       foods,
@@ -65,12 +65,19 @@ export async function POST(req: NextRequest) {
       totalCarbs,
       totalFat,
       date: new Date(),
-    })
+    }
+    const meal = requestKey
+      ? await MealLog.findOneAndUpdate(
+          { userId: tokenUser.userId, requestKey },
+          { $setOnInsert: { ...payload, requestKey } },
+          { upsert: true, new: true },
+        )
+      : await MealLog.create(payload)
 
-    const gamification = await awardXp(tokenUser.userId, XP_REWARDS.meal_log)
+    const gamification = await awardXp(tokenUser.userId, XP_REWARDS.meal_log, 'meal:' + meal._id.toString())
 
     return NextResponse.json(
-      { ...meal.toObject(), xpAwarded: XP_REWARDS.meal_log, gamification },
+      { ...meal.toObject(), xpAwarded: gamification.lastAwardedXp ?? XP_REWARDS.meal_log, gamification },
       { status: 201 },
     )
   } catch {

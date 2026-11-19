@@ -58,7 +58,6 @@ export function StatCard({
   return (
     <Card className={cn('dashboard-stat-card metric-glow card-athletic interactive-lift h-full overflow-hidden gap-0 py-0', className)}>
       <CardContent className="relative flex h-full min-h-32 flex-col p-4 sm:min-h-[9.5rem] sm:p-5">
-        <div className={cn('pointer-events-none absolute inset-0 bg-gradient-to-br', styles.gradient)} />
         <div className="relative flex items-start justify-between gap-2">
           <p className="workout-label min-h-[2.5em] flex-1 break-words leading-snug text-muted-foreground">{label}</p>
           {Icon && (

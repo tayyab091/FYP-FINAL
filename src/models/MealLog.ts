@@ -11,6 +11,7 @@ const FoodItemSchema = new Schema({
 }, { _id: false })
 
 const MealLogSchema = new Schema({
+  requestKey: { type: String },
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   date: { type: Date, default: Date.now },
   mealType: {
@@ -28,5 +29,7 @@ const MealLogSchema = new Schema({
 
 // meal-logs/today and analytics/summary both filter by userId + date range.
 MealLogSchema.index({ userId: 1, date: -1 })
+
+MealLogSchema.index({ userId: 1, requestKey: 1 }, { unique: true, partialFilterExpression: { requestKey: { $type: 'string' } } })
 
 export default mongoose.models.MealLog || mongoose.model('MealLog', MealLogSchema)

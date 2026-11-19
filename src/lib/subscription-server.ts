@@ -49,6 +49,7 @@ export async function activateUserPlan(userId: string, plan: 'pro' | 'elite', pa
   const user = await User.findOneAndUpdate(
     {
       _id: userId,
+      stripeSubscriptionId: { $exists: false },
       $or: [
         { lastStripeCheckoutCreatedAt: { $exists: false } },
         { lastStripeCheckoutCreatedAt: { $lt: startDate } },

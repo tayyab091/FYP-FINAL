@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import User from '@/models/User'
 import { writeAuditLog } from '@/lib/audit-log'
+import { createNotification } from '@/lib/notifications'
 import { getUser } from '@/lib/auth'
 import { parseJsonBody, parseObjectIdParam, suspendSchema } from '@/lib/validation'
 
@@ -34,6 +35,11 @@ export async function PUT(
     target.isSuspended = suspend
     await target.save()
 
+    await createNotification({
+      userId: target._id, title: suspend ? 'Account suspended' : 'Account restored',
+      message: suspend ? 'Your account has been suspended.' + (reason ? ' ' + reason : '') : 'Your account access has been restored.',
+      type: 'system', link: '/settings',
+    }).catch(() => {})
     await writeAuditLog({
       actorId: tokenUser.userId,
       action: suspend ? 'USER_SUSPENDED' : 'USER_UNSUSPENDED',

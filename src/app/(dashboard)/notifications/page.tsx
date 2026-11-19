@@ -17,6 +17,7 @@ import { SignInGate } from '@/components/shared/AccessGate'
 import { PageLoader } from '@/components/shared/PageLoader'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
+import { useActivityRefresh } from '@/hooks/useActivityRefresh'
 import type { AppNotification } from '@/types'
 
 function formatTime(dateStr: string) {
@@ -92,6 +93,14 @@ export default function NotificationsPage() {
       })
       .finally(() => setLoading(false))
   }, [user])
+
+  useActivityRefresh(async () => {
+    const response = await fetch('/api/notifications?limit=50', { cache: 'no-store' })
+    if (!response.ok) return
+    const data = await response.json()
+    setNotifications(data.notifications || [])
+    setUnreadCount(data.unreadCount || 0)
+  }, Boolean(user))
 
   const grouped = useMemo(() => groupNotifications(notifications), [notifications])
 

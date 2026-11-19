@@ -1,7 +1,9 @@
 'use client'
+import { PagePhoto } from '@/components/shared/PagePhoto'
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useActivityRefresh } from '@/hooks/useActivityRefresh'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
@@ -122,10 +124,16 @@ export default function TrainerDashboardPage() {
   const [progressClient, setProgressClient] = useState<Client | null>(null)
   const [loadingProgress, setLoadingProgress] = useState(false)
   const [activeTab, setActiveTab] = useState('overview')
+  useEffect(() => {
+    const tab = new URLSearchParams(window.location.search).get('tab')
+    if (tab && ['overview', 'requests', 'clients', 'meal-plans', 'availability', 'chat'].includes(tab)) {
+      setActiveTab(tab)
+    }
+  }, [])
 
-  const loadData = () => {
-    setLoading(true)
-    Promise.all([
+  const loadData = (background = false) => {
+    if (!background) setLoading(true)
+    return Promise.all([
       fetch('/api/relationships/pending-requests').then(r => r.ok ? r.json() : []),
       fetch('/api/relationships?status=active').then(r => r.ok ? r.json() : []),
       fetch('/api/chat/conversations').then(r => r.ok ? r.json() : []),
@@ -143,6 +151,8 @@ export default function TrainerDashboardPage() {
   useEffect(() => {
     if (user?.role === 'trainer') loadData()
   }, [user])
+
+  useActivityRefresh(() => loadData(true), user?.role === 'trainer')
 
   const handleAccept = async (id: string) => {
     try {
@@ -355,7 +365,8 @@ export default function TrainerDashboardPage() {
   return (
     <div className="dashboard-fab-reserve min-h-screen px-4 pt-6 sm:px-6">
       <div className="max-w-7xl mx-auto">
-        <div className="page-hero mb-6 flex flex-wrap items-start justify-between gap-4 px-6 py-8 sm:px-8">
+        <div className="page-hero fitness-photo-hero mb-6 flex flex-wrap items-start justify-between gap-4 px-6 py-8 sm:px-8">
+            <PagePhoto kind="coaching" />
           <div>
             <p className="eyebrow mb-2">Coaching Workspace</p>
             <h1 className="display-title text-3xl md:text-4xl">Welcome, {user.fullName.split(' ')[0]}</h1>

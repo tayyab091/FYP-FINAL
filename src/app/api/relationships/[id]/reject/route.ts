@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/mongodb'
 import Relationship from '@/models/Relationship'
 import Trainer from '@/models/Trainer'
 import User from '@/models/User'
+import { createNotification } from '@/lib/notifications'
 import { getUser } from '@/lib/auth'
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -34,6 +35,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       { $inc: { freeChatsUsed: -1 } },
     )
 
+    await createNotification({
+      userId: relationship.userId, title: 'Connection request declined',
+      message: 'Your trainer connection request was declined. You can connect with another trainer.',
+      type: 'trainer', link: '/coaching',
+    }).catch(() => {})
     return NextResponse.json({ message: 'Request rejected' })
   } catch {
     return NextResponse.json({ message: 'Server error' }, { status: 500 })

@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/mongodb'
 import Gym from '@/models/Gym'
 import Trainer from '@/models/Trainer'
 import User from '@/models/User'
+import { createNotification } from '@/lib/notifications'
 import { getUser } from '@/lib/auth'
 import {
   gymOwnerLinkSchema,
@@ -93,6 +94,11 @@ export async function PUT(req: NextRequest) {
       await Gym.updateOne({ _id: gym._id }, { $pull: { trainers: trainer._id } })
     }
     await trainer.save()
+    await createNotification({
+      userId: trainer.userId, title: 'Gym connection updated',
+      message: action === 'approve' ? 'Your gym affiliation has been approved.' : 'Your gym affiliation has been removed.',
+      type: 'trainer', link: '/trainer-dashboard',
+    }).catch(() => {})
 
     return NextResponse.json({
       message: action === 'approve' ? 'Trainer approved' : 'Trainer removed',

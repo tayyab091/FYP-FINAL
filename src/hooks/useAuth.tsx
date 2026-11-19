@@ -19,7 +19,7 @@ interface AuthUser {
   calorieGoal?: number
   profileImage?: string
   avatarUrl?: string
-  subscription?: { plan: string; status: string }
+  subscription?: { plan: string; status: string; endDate?: string }
 }
 
 interface AuthContextType {
@@ -106,6 +106,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refreshUser()
   }, [refreshUser])
+
+  useEffect(() => {
+    const update = (event: Event) => {
+      if ((event as CustomEvent).detail?.type === 'payment') void refreshUser()
+    }
+    window.addEventListener('app:activity', update)
+    return () => window.removeEventListener('app:activity', update)
+  }, [refreshUser])
+
+  useEffect(() => {
+    const end = user?.subscription?.endDate
+    if (!end || user?.subscription?.plan === 'basic') return
+    const refreshExpired = () => {
+      if (document.visibilityState === 'visible' && Date.now() >= new Date(end).getTime()) void refreshUser()
+    }
+    const timer = setInterval(refreshExpired, 30000)
+    document.addEventListener('visibilitychange', refreshExpired)
+    return () => {
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', refreshExpired)
+    }
+  }, [user?.subscription?.endDate, user?.subscription?.plan, refreshUser])
 
   const login = useCallback(async (email: string, password: string) => {
     try {

@@ -47,14 +47,14 @@ export default function LeaderboardPage() {
   if (!user) return <SignInGate redirectLabel="Sign in to view the leaderboard" />
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
+    <div className="max-w-3xl mx-auto px-4 py-8 pb-28">
         <div className="mb-8">
           <p className="section-eyebrow">Community</p>
           <h1 className="text-3xl font-black text-foreground">Leaderboard 🏆</h1>
           <p className="text-muted-foreground mt-1">Top performers ranked by XP earned</p>
         </div>
 
-        <div className="flex gap-2 mb-6">
+        <div className="flex flex-wrap gap-2 mb-6">
           {(['week', 'month', 'all'] as const).map((p) => (
             <button
               key={p}
@@ -95,12 +95,12 @@ export default function LeaderboardPage() {
               return (
                 <div
                   key={leader._id || index}
-                  className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${
+                  className={`flex items-center gap-2 p-3 sm:gap-4 sm:p-4 rounded-2xl border transition-all ${
                     rank <= 3
                       ? `bg-gradient-to-r ${RANK_STYLES[rank - 1]}`
                       : isCurrentUser
                         ? 'border-primary/30 bg-primary/5'
-                        : 'tile min-h-0'
+                        : 'border-border bg-card'
                   }`}
                 >
                   <div className="w-10 text-center flex-shrink-0">
@@ -120,7 +120,7 @@ export default function LeaderboardPage() {
                   />
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
                       <p
                         className={`font-bold text-sm truncate ${isCurrentUser ? 'text-primary' : 'text-foreground'}`}
                       >
@@ -131,7 +131,7 @@ export default function LeaderboardPage() {
                         <span className="badge-accent text-xs capitalize flex-shrink-0">{leader.role}</span>
                       )}
                     </div>
-                    <div className="flex items-center gap-3 mt-0.5">
+                    <div className="flex flex-wrap items-center gap-1 sm:gap-3 mt-0.5">
                       <span className="text-xs text-muted-foreground">Level {leader.level || 1}</span>
                       {(leader.streak || 0) > 0 && (
                         <span className="text-xs text-orange-400">🔥 {leader.streak} day streak</span>

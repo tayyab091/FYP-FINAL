@@ -1,4 +1,5 @@
 import { cache } from 'react'
+import { exerciseIdFromPath } from './exercise-slug'
 import catalogSnapshot from '@/data/exercises.json'
 import { getCached, getOrFetch, paginate } from '@/lib/server-cache'
 
@@ -280,7 +281,8 @@ export async function fetchExercises(options?: {
   return result.exercises.length > 0 ? result.exercises : FALLBACK_EXERCISES
 }
 
-export const fetchExerciseById = cache(async (id: string): Promise<LibraryExercise | null> => {
+export const fetchExerciseById = cache(async (path: string): Promise<LibraryExercise | null> => {
+  const id = exerciseIdFromPath(path)
   const { exercises } = await getExerciseCatalog()
   const cached = exercises.find((e) => e.id === id) || FALLBACK_EXERCISES.find((e) => e.id === id)
   if (cached) return cached

@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ArrowUpRight, Menu, X } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
-import { shouldHidePublicNavbar } from '@/lib/shell-routes'
+import { isMemberCatalogPath, shouldHidePublicNavbar } from '@/lib/shell-routes'
 import { easeTransition } from '@/lib/motion'
 import { ThemeToggle } from '@/components/shared/ThemeToggle'
 import { BrandMark } from '@/components/shared/BrandMark'
@@ -51,7 +51,7 @@ export function Navbar() {
     }
   }, [menuOpen])
 
-  if (shouldHidePublicNavbar(pathname)) return null
+  if (shouldHidePublicNavbar(pathname) || ((isLoading || user?.role === 'user') && isMemberCatalogPath(pathname))) return null
 
   const dashboardHref = user ? getRoleHomePath(user.role) : '/login'
 
@@ -59,7 +59,9 @@ export function Navbar() {
     <>
       <nav
         className={`fixed inset-x-0 top-0 z-50 h-16 border-b transition-colors duration-300 ${
-          scrolled || menuOpen
+          pathname === '/'
+            ? 'border-border bg-background'
+            : scrolled || menuOpen
             ? 'border-border bg-background/92 shadow-[0_12px_40px_rgba(0,0,0,.15)] backdrop-blur-2xl'
             : 'border-transparent bg-background/72 backdrop-blur-xl'
         }`}

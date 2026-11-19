@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import User from '@/models/User'
+import { notifyAdministrators } from '@/lib/notifications'
+import { namePattern } from '@/lib/unique-name'
 import Gym from '@/models/Gym'
 import bcrypt from 'bcryptjs'
 import mongoose from 'mongoose'
@@ -26,6 +28,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'Email already registered' }, { status: 409 })
     }
 
+    if (await User.exists({ fullName: namePattern(fullName) })) {
+      return NextResponse.json({ message: 'This name is already taken. Please use another username.' }, { status: 409 })
+    }
+    if (await Gym.exists({ name: namePattern(gymName) })) {
+      return NextResponse.json({ message: 'This gym name already exists. Please choose another gym name.' }, { status: 409 })
+    }
     const hashedPassword = await bcrypt.hash(password, 12)
     const verifyToken = createSecureToken()
     const session = await mongoose.startSession()
@@ -54,6 +62,7 @@ export async function POST(req: NextRequest) {
     }).finally(() => session.endSession())
     if (!user) throw new Error('Gym registration transaction did not complete')
 
+    await notifyAdministrators('Gym application received', fullName + ' submitted an application for review.', '/admin?tab=gyms', 'adminGymVerification').catch(() => {})
     void sendVerificationEmail(email, verifyToken).catch((err) => {
       console.error('Verification email error:', err)
     })
@@ -67,6 +76,9 @@ export async function POST(req: NextRequest) {
     response.cookies.set('token', token, cookieOptions())
     return response
   } catch (error) {
+    if ((error as { code?: number })?.code === 11000) {
+      return NextResponse.json({ message: 'This email or name is already taken. Please choose another.' }, { status: 409 })
+    }
     console.error('Register gym owner error:', error)
     return NextResponse.json({ message: 'Server error' }, { status: 500 })
   }

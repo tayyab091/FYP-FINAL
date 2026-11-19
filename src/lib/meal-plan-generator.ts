@@ -125,7 +125,7 @@ function scaleMeals(meals: MealTemplate[], targetCalories: number): MealTemplate
     protein: Math.round(meal.protein * ratio * 10) / 10,
     carbs: Math.round(meal.carbs * ratio * 10) / 10,
     fat: Math.round(meal.fat * ratio * 10) / 10,
-    notes: meal.notes || '',
+    notes: [meal.notes, 'Calories and macros are for one planned serving, scaled to your daily target.'].filter(Boolean).join(' ? '),
   }))
 }
 

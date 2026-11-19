@@ -1,4 +1,5 @@
 'use client'
+import { PagePhoto } from '@/components/shared/PagePhoto'
 
 import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -76,7 +77,8 @@ export default function DashboardPage() {
   return (
     <div className="dashboard-fab-reserve-with-nav min-h-screen px-4 pt-6 sm:px-6">
       <div className="mx-auto max-w-6xl space-y-6">
-        <div>
+        <div className="page-hero fitness-photo-hero px-6 py-6 sm:px-8">
+          <PagePhoto kind="progress" />
           <p className="section-eyebrow">Your Home</p>
           <h1 className="text-3xl font-black text-foreground md:text-4xl">
             {greeting}, {firstName}! 💪
@@ -112,8 +114,8 @@ export default function DashboardPage() {
             ) : !plan ? (
               <div className="flex flex-1 flex-col items-start justify-center gap-3">
                 <p className="text-sm text-muted-foreground">No workout plan yet</p>
-                <Link href="/coaching" className="btn-accent px-5 py-2 text-sm">
-                  Find a Trainer
+                  <Link href="/my-trainers" className="btn-accent px-5 py-2 text-sm">
+                    Ask my trainers
                 </Link>
               </div>
             ) : todaySchedule?.isRestDay ? (

@@ -43,6 +43,7 @@ function isMobileViewport(): boolean {
 interface Message {
   role: 'user' | 'assistant'
   content: string
+  failed?: boolean
 }
 
 const GUEST_OPENING = apaReply([
@@ -212,16 +213,16 @@ export function AIChatbotPanel() {
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: msg, history: messages.slice(-6) }),
-        signal: AbortSignal.timeout(20000),
+        body: JSON.stringify({ message: msg, history: messages.filter(m => !m.failed).slice(-6).map(m => ({ role: m.role, content: m.content.slice(0, 1000) })) }),
+        signal: AbortSignal.timeout(24000),
       })
       const data = await res.json()
       if (!res.ok) setFailedMessage(msg)
       const reply = data.reply || apaReply(['## Coach Unavailable', data.message || 'Please try again shortly.'], { disclaimer: false })
-      setMessages((m) => [...m, { role: 'assistant', content: reply }])
+      setMessages((m) => [...m, { role: 'assistant', content: reply, failed: !res.ok }])
     } catch {
       setFailedMessage(msg)
-      setMessages((m) => [...m, { role: 'assistant', content: apaReply(['## Connection Error', 'The coach could not respond in time. Please try again.'], { disclaimer: false }) }])
+      setMessages((m) => [...m, { role: 'assistant', content: apaReply(['## Connection Error', 'The coach could not respond in time. Please try again.'], { disclaimer: false }), failed: true }])
     } finally {
       setLoading(false)
     }

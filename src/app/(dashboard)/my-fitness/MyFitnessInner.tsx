@@ -1,10 +1,12 @@
 'use client'
+import { PagePhoto } from '@/components/shared/PagePhoto'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { useActivityRefresh } from '@/hooks/useActivityRefresh'
 import { useAuth } from '@/hooks/useAuth'
 import { WorkoutPlan, ProgressRecord, MealLog } from '@/types'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -99,6 +101,7 @@ export default function MyFitnessInner({
   // empty (see BUG_REPORT.md — checklist unchecked after completing).
   const [completedTodayLog, setCompletedTodayLog] = useState<{
     _id: string
+    planId?: string
     exercises?: Array<{ name: string; completed?: boolean }>
   } | null>(null)
   const [foodSearch, setFoodSearch] = useState('')
@@ -108,6 +111,8 @@ export default function MyFitnessInner({
   const [mealType, setMealType] = useState('breakfast')
   const [foodQuantity, setFoodQuantity] = useState('100')
   const [loggingMeal, setLoggingMeal] = useState(false)
+  const mealRequestKey = useRef<string | null>(null)
+  const workoutRequestKey = useRef<string | null>(null)
   const [gamification, setGamification] = useState<GamificationMeResponse | null>(null)
   const [showLogMeal, setShowLogMeal] = useState(false)
   const [activeTab, setActiveTab] = useState(tab)
@@ -208,6 +213,15 @@ export default function MyFitnessInner({
 
   const reloadData = () => setRefreshKey((k) => k + 1)
 
+  useActivityRefresh(async () => {
+    if (workoutStarted) return
+    const response = await fetch('/api/tracking/plans/my-plan', { cache: 'no-store' })
+    if (response.ok) {
+      const data = await response.json()
+      setPlan(data.plan === null ? null : data.plan || (data._id ? data : null))
+    }
+  }, Boolean(user), 15000)
+
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long' })
   const todaySchedule = plan?.weeklySchedule?.find((d) => d.day.toLowerCase() === today.toLowerCase())
   const todayGrouped = useMemo(
@@ -215,24 +229,24 @@ export default function MyFitnessInner({
     [todaySchedule],
   )
 
+  const completedForCurrentPlan = completedTodayLog && (!completedTodayLog.planId || completedTodayLog.planId === plan?._id)
   const completedTodayNames = useMemo(
     () =>
       new Set(
-        (completedTodayLog?.exercises || []).filter((exercise) => exercise.completed).map((exercise) => exercise.name),
+        (completedForCurrentPlan ? completedTodayLog?.exercises || [] : []).filter((exercise) => exercise.completed).map((exercise) => exercise.name),
       ),
-    [completedTodayLog],
+    [completedTodayLog, completedForCurrentPlan],
   )
-
-  const chartData = progress.map((r) => ({
-    date: new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    weight: r.weight,
-    bodyFat: r.bodyFat,
-  }))
 
   const recentProgress = useMemo(
-    () => [...progress].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5),
+    () => [...progress].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime() || b._id.localeCompare(a._id)).slice(0, 5),
     [progress],
   )
+  const chartData = [...recentProgress].reverse().map(record => ({
+    date: new Date(record.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    weight: record.weight,
+    bodyFat: record.bodyFat,
+  }))
 
   const handleAddProgress = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -294,7 +308,7 @@ export default function MyFitnessInner({
   }
 
   const handleStartWorkout = async () => {
-    if (!plan) return
+    if (!plan || startingWorkout || completingWorkout) return
     setStartingWorkout(true)
     try {
       const exercises =
@@ -310,6 +324,7 @@ export default function MyFitnessInner({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           planId: plan._id,
+          requestKey: workoutRequestKey.current ||= crypto.randomUUID(),
           date: new Date().toISOString(),
           exercises,
         }),
@@ -318,6 +333,13 @@ export default function MyFitnessInner({
       if (!res.ok) throw new Error(data.message || 'Failed to start workout')
       const logId = data.log?._id as string | undefined
       if (!logId) throw new Error('Workout log id missing')
+      if (data.log.status === 'completed') {
+        setCompletedTodayLog(data.log)
+        setWorkoutStarted(false)
+        setActiveLogId(null)
+        toast.info('This workout is already completed for today')
+        return
+      }
       setActiveLogId(logId)
       setWorkoutStarted(true)
       setCompletedExercises([])
@@ -348,22 +370,30 @@ export default function MyFitnessInner({
     })
   }
 
-  const handleCancelWorkout = () => {
-    const logId = activeLogId
-    setWorkoutStarted(false)
-    setActiveLogId(null)
-    setCompletedExercises([])
-    if (logId) {
-      fetch(`/api/tracking/logs/${logId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+  const handleCancelWorkout = async () => {
+    if (!activeLogId || completingWorkout) return
+    setCompletingWorkout(true)
+    try {
+      const response = await fetch('/api/tracking/logs/' + activeLogId, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'skipped' }),
-      }).catch(() => {})
-    }
+      })
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({}))
+        throw new Error(result.message || 'Unable to cancel workout')
+      }
+      workoutRequestKey.current = null
+      setWorkoutStarted(false)
+      setActiveLogId(null)
+      setCompletedExercises([])
+      toast.info('Workout canceled')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to cancel workout')
+    } finally { setCompletingWorkout(false) }
   }
 
   const handleCompleteWorkout = async () => {
-    if (!plan || !todaySchedule || todaySchedule.isRestDay) return
+    if (completingWorkout || !plan || !todaySchedule || todaySchedule.isRestDay) return
     if (!activeLogId) {
       toast.error('Start the workout first')
       return
@@ -393,7 +423,14 @@ export default function MyFitnessInner({
       setWorkoutStarted(false)
       setActiveLogId(null)
       setCompletedExercises([])
-      reloadData()
+      setCompletedTodayLog(data.log)
+      workoutRequestKey.current = null
+      if (data.gamification) setGamification(data.gamification)
+      setWorkoutHistory(current => ({
+        logs: [data.log, ...(current?.logs || []).filter(log => log._id !== data.log._id)],
+        totalCompleted: (current?.totalCompleted || 0) + (current?.logs.some(log => log._id === data.log._id) ? 0 : 1),
+        streak: data.gamification?.streak ?? current?.streak ?? 0,
+      }))
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to complete workout')
     } finally {
@@ -415,6 +452,7 @@ export default function MyFitnessInner({
       const data = await res.json()
       if (!res.ok) throw new Error(data.message)
       setFoodResults(Array.isArray(data.results) ? data.results : [])
+      if (!data.results?.length) toast.info(data.message || 'No matching foods found')
     } catch {
       setFoodResults([])
       toast.error('Food search failed')
@@ -424,7 +462,7 @@ export default function MyFitnessInner({
   }
 
   const logFood = async () => {
-    if (!selectedFood) return
+    if (!selectedFood || loggingMeal) return
     const quantity = Number(foodQuantity)
     if (!Number.isFinite(quantity) || quantity <= 0) {
       toast.error('Enter a valid quantity')
@@ -438,6 +476,7 @@ export default function MyFitnessInner({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           mealType,
+          requestKey: mealRequestKey.current ||= crypto.randomUUID(),
           foods: [
             {
               name: selectedFood.name,
@@ -459,7 +498,21 @@ export default function MyFitnessInner({
       setFoodResults([])
       setFoodSearch('')
       setShowLogMeal(false)
-      reloadData()
+      mealRequestKey.current = null
+      if (data.gamification) setGamification(data.gamification)
+      setMeals(current => {
+        const entries = [...(current?.meals || []).filter(meal => meal._id !== data._id), data]
+        return {
+          meals: entries,
+          totals: entries.reduce((totals, meal) => ({
+            calories: totals.calories + (meal.totalCalories || 0),
+            protein: totals.protein + (meal.totalProtein || 0),
+            carbs: totals.carbs + (meal.totalCarbs || 0),
+            fat: totals.fat + (meal.totalFat || 0),
+          }), { calories: 0, protein: 0, carbs: 0, fat: 0 }),
+        }
+      })
+
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to log meal')
     } finally {
@@ -473,7 +526,8 @@ export default function MyFitnessInner({
   return (
     <div className="min-h-screen overflow-x-hidden px-4 pb-28 pt-6 sm:px-6">
       <div className="mx-auto max-w-6xl space-y-6 overflow-x-hidden">
-        <div className="page-hero px-6 py-8 sm:px-8">
+        <div className="page-hero fitness-photo-hero px-6 py-8 sm:px-8">
+            <PagePhoto kind="training" />
           <div className="flex flex-wrap items-center gap-4">
             <Avatar
               name={user.fullName}
@@ -570,7 +624,7 @@ export default function MyFitnessInner({
                       <p className="text-muted-foreground">Rest day — recover and recharge</p>
                     ) : (
                       <div className="space-y-5">
-                        {!workoutStarted && completedTodayLog && (
+                        {!workoutStarted && completedForCurrentPlan && (
                           <div className="rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-primary">
                             ✓ Today&apos;s workout is already completed — checklist below reflects what you finished.
                             Start a new session if you want to log another one.
@@ -594,7 +648,7 @@ export default function MyFitnessInner({
                                       <input
                                         type="checkbox"
                                         checked={isChecked}
-                                        disabled={!workoutStarted}
+                                        disabled={!workoutStarted || completingWorkout}
                                         onChange={(event) =>
                                           handleToggleExercise(globalIndex, event.target.checked)
                                         }
@@ -639,7 +693,7 @@ export default function MyFitnessInner({
                               </Button>
                               <Button
                                 variant="outline"
-                                onClick={handleCancelWorkout}
+                                onClick={handleCancelWorkout} disabled={completingWorkout}
                               >
                                 Cancel
                               </Button>
@@ -683,8 +737,8 @@ export default function MyFitnessInner({
             ) : (
               <div className="tile items-center py-16 text-center">
                 <p className="mb-4 text-muted-foreground">No workout plan assigned yet</p>
-                <Link href="/coaching" className="btn-accent px-6 py-2">
-                  Find a Trainer
+                <Link href="/my-trainers" className="btn-accent px-6 py-2">
+                  Ask my trainers
                 </Link>
               </div>
             )}
@@ -700,7 +754,7 @@ export default function MyFitnessInner({
                   type="button"
                   onClick={() => setShowLogMeal(true)}
                   className="w-full rounded-2xl py-3 font-bold text-primary-foreground"
-                  style={{ background: 'linear-gradient(135deg, #00ff87, #00d4ff)' }}
+                  style={{ background: 'var(--primary)' }}
                 >
                   + Log a Meal
                 </button>
@@ -751,7 +805,7 @@ export default function MyFitnessInner({
               <div className="space-y-6">
                 <div className="grid gap-6 lg:grid-cols-2">
                   <div className="tile min-h-[280px]">
-                    <p className="section-eyebrow">Trend</p>
+                    <p className="section-eyebrow">Trend ? Last 5 entries</p>
                     <h3 className="mb-4 font-bold text-foreground">Weight Progress</h3>
                     {chartData.length > 0 ? (
                       <WeightProgressChart data={chartData} />
@@ -902,7 +956,7 @@ export default function MyFitnessInner({
                   <button
                     key={`${food.name}-${food.per}`}
                     type="button"
-                    onClick={() => setSelectedFood(food)}
+                    onClick={() => { mealRequestKey.current = null; setSelectedFood(food) }}
                     className="rounded-xl border border-border bg-muted/40 p-3 text-left hover:border-primary/50"
                   >
                     <div className="font-medium text-foreground">{food.name}</div>
@@ -942,6 +996,7 @@ export default function MyFitnessInner({
                     className="mt-1"
                   />
                 </div>
+                <p className="text-sm text-primary">{Math.round(selectedFood.calories * Number(foodQuantity || 0) / 100)} kcal for {foodQuantity || 0} g</p>
                 <Button
                   type="button"
                   onClick={logFood}

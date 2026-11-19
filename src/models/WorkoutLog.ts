@@ -1,6 +1,7 @@
 import mongoose, { Schema } from 'mongoose'
 
 const WorkoutLogSchema = new Schema({
+  sessionKey: { type: String },
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   planId: { type: Schema.Types.ObjectId, ref: 'WorkoutPlan' },
   date: { type: Date, default: Date.now },
@@ -32,5 +33,6 @@ const WorkoutLogSchema = new Schema({
 // and sorts by date, so this compound index covers all of them without a
 // collection scan.
 WorkoutLogSchema.index({ userId: 1, status: 1, date: -1 })
+WorkoutLogSchema.index({ userId: 1, sessionKey: 1 }, { unique: true, partialFilterExpression: { sessionKey: { $type: 'string' } } })
 
 export default mongoose.models.WorkoutLog || mongoose.model('WorkoutLog', WorkoutLogSchema)

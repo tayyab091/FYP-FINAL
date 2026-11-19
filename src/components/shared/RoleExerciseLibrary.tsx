@@ -1,8 +1,10 @@
 'use client'
+import { PagePhoto } from '@/components/shared/PagePhoto'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { CatalogImageFrame } from '@/components/shared/CatalogImageFrame'
 import Link from 'next/link'
+import { exerciseDetailPath } from '@/lib/exercise-slug'
 import { Dumbbell, ExternalLink, Filter, Search } from 'lucide-react'
 import { StatCard } from '@/components/shared/StatCard'
 import { StaggerChildren } from '@/components/motion'
@@ -126,7 +128,8 @@ export function RoleExerciseLibrary({
   return (
     <div className="min-h-screen px-4 pb-12 pt-6 sm:px-6">
       <div className="mx-auto max-w-7xl">
-        <div className="page-hero mb-6 px-6 py-8 sm:px-8">
+        <div className="page-hero fitness-photo-hero mb-6 px-6 py-8 sm:px-8">
+            <PagePhoto kind="training" />
           <p className="eyebrow mb-2">{eyebrow}</p>
           <h1 className="display-title text-3xl md:text-4xl">{title}</h1>
           <p className="mt-2 max-w-2xl text-muted-foreground">{description}</p>
@@ -201,7 +204,7 @@ export function RoleExerciseLibrary({
               {exercises.map((exercise) => (
                 <Link
                   key={exercise.id}
-                  href={`/exercises/${exercise.id}`}
+                  href={exerciseDetailPath(exercise)}
                   className="elite-panel card-athletic flex h-full min-h-[280px] flex-col overflow-hidden rounded-2xl transition-colors hover:border-primary/30"
                 >
                   <CatalogImageFrame src={exercise.gifUrl} alt={exercise.name} fit="contain" />

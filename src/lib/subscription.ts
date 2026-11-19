@@ -3,6 +3,7 @@ import type { PlanId } from '@/lib/plans'
 export interface ResolvedSubscription {
   plan: PlanId
   status: 'active' | 'inactive'
+  cancelAtPeriodEnd?: boolean
   startDate?: Date
   endDate?: Date
 }
@@ -46,6 +47,7 @@ export function resolveSubscriptionFromUser(user: {
   subscription?: {
     plan?: string
     status?: string
+    cancelAtPeriodEnd?: boolean
     startDate?: Date
     endDate?: Date
   }
@@ -63,6 +65,7 @@ export function resolveSubscriptionFromUser(user: {
   return {
     plan,
     status: user.subscription?.status === 'inactive' ? 'inactive' : 'active',
+    cancelAtPeriodEnd: Boolean(user.subscription?.cancelAtPeriodEnd),
     startDate: user.subscription?.startDate,
     endDate,
   }

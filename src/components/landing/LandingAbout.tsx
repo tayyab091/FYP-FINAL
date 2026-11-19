@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { ArrowRight } from 'lucide-react'
 import { LandingSection } from './LandingSection'
 import { LandingReveal } from './LandingReveal'
@@ -28,6 +29,10 @@ export function LandingAbout() {
         </LandingReveal>
 
         <LandingReveal direction="right" delay={0.1} className="landing-editorial__quote-wrap">
+          <div className="landing-editorial__photo">
+            <Image src="/images/home/gym-floor.jpg" alt="A gym equipped with free weights and strength training equipment" fill sizes="(min-width: 900px) 45vw, 100vw" />
+            <Link href="/gyms" className="landing-editorial__photo-link">Find your training space <ArrowRight className="size-4" aria-hidden /></Link>
+          </div>
           <blockquote className="landing-editorial__quote">
             <span className="landing-editorial__quote-mark" aria-hidden>&ldquo;</span>
             <p>

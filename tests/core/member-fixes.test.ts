@@ -8,6 +8,8 @@ import User from '../../src/models/User'
 import Gym from '../../src/models/Gym'
 import GymReview from '../../src/models/GymReview'
 import MealPlan from '../../src/models/MealPlan'
+import WorkoutPlan from '../../src/models/WorkoutPlan'
+import { GET as getMyPlan } from '../../src/app/api/tracking/plans/my-plan/route'
 import { POST as chat } from '../../src/app/api/ai/chat/route'
 import { POST as generateDiet } from '../../src/app/api/meal-plans/route'
 import { POST as reviewGym } from '../../src/app/api/gyms/[slug]/reviews/route'
@@ -37,22 +39,51 @@ test('optional work returns on deadline and handles late failures', async () => 
   assert.equal(await withDeadline(Promise.reject(new Error('Offline')), 10, null), null)
 })
 
+test('member plan selection prioritizes an active plan over a newer draft', async () => {
+  const request = session()
+  mock.method(WorkoutPlan, 'findOne', (filter: Record<string, unknown>) => {
+    assert.deepEqual(filter.status, { $in: ['active', 'draft'] })
+    return { sort: (sort: Record<string, number>) => {
+      const candidates = [
+        { title: 'Newer draft', status: 'draft', updatedAt: 200 },
+        { title: 'Trainer plan', status: 'active', updatedAt: 100 },
+      ]
+      candidates.sort((a, b) => {
+        for (const [key, direction] of Object.entries(sort)) {
+          const left = a[key as keyof typeof a]
+          const right = b[key as keyof typeof b]
+          if (left !== right) return (left < right ? -1 : 1) * direction
+        }
+        return 0
+      })
+      return { lean: async () => candidates[0] }
+    } }
+  })
+  const response = await getMyPlan(request('/api/tracking/plans/my-plan', {}))
+  assert.equal(response.status, 200)
+  assert.equal((await response.json()).plan.title, 'Trainer plan')
+})
+
 test('chat still answers when an authenticated member profile cannot be read', async () => {
   const request = session()
   delete process.env.GEMINI_API_KEY
   mock.method(User, 'findById', () => { throw new Error('Database unavailable') })
+  process.env.OPENROUTER_API_KEY = 'fixture-openrouter'
+  delete process.env.ANTHROPIC_API_KEY
+  delete process.env.CLAUDE_API_KEY
+  mock.method(globalThis, 'fetch', async () => Response.json({ choices: [{ message: { content: '## Training\n\nUse a modest surplus.' } }] }))
   const response = await chat(request('/api/ai/chat', { message: 'How do I gain muscle?', history: [] }))
   assert.equal(response.status, 200)
   assert.match((await response.json()).reply, /surplus/i)
 })
 
-test('chat has formatted fallback guidance when its AI provider fails', async () => {
+test('chat returns a retryable error when its AI providers fail', async () => {
   const request = session()
   process.env.GEMINI_API_KEY = 'fixture-only'
   mock.method(globalThis, 'fetch', async () => { throw new Error('Provider unavailable') })
   const response = await chat(request('/api/ai/chat', { message: 'How do I lose fat?', history: [] }))
-  assert.equal(response.status, 200)
-  assert.match((await response.json()).reply, /## Fitness Guidance/)
+  assert.equal(response.status, 503)
+  assert.equal((await response.json()).source, 'unavailable')
 })
 
 for (const plan of ['pro', 'elite']) test(`${plan}: a seven-day diet plan saves and activates without an AI key`, async () => {
@@ -124,4 +155,29 @@ test('preview fallback streams catalog GIFs and never proxies arbitrary URLs', a
   assert.match(response.headers.get('cache-control')!, /public/)
   assert.equal((await preview(new NextRequest('http://localhost'), { params: Promise.resolve({ id: 'https://private.test' }) })).status, 404)
   assert.equal(remote.mock.callCount(), 1)
+})
+
+test('anonymous gym reviews persist privacy and hide the author in their response', async () => {
+  const request = session()
+  mock.method(Gym, 'findOne', () => ({ lean: async () => ({ _id: new mongoose.Types.ObjectId(gymId), ownerId: 'another-user' }) }))
+  mock.method(GymReview, 'create', async (payload: Record<string, unknown>) => {
+    assert.equal(payload.anonymous, true)
+    assert.equal(payload.userId, memberId)
+    return { _id: gymId, createdAt: new Date(), ...payload }
+  })
+  mock.method(GymReview, 'aggregate', async () => [{ rating: 5, count: 1 }])
+  mock.method(Gym, 'updateOne', async () => ({}))
+  const response = await reviewGym(request('/api/gyms/fixture/reviews', { rating: 5, comment: 'Clean equipment and friendly helpful staff.', anonymous: true }), { params: Promise.resolve({ slug: 'fixture' }) })
+  assert.equal(response.status, 201)
+  const body = await response.json()
+  assert.equal(body.review.authorName, 'Anonymous member')
+  assert.equal(body.review.userId, undefined)
+})
+
+test('exercise links preserve case-sensitive identifiers and support legacy IDs', async () => {
+  const { exerciseDetailPath, exerciseIdFromPath } = await import('../../src/lib/exercise-slug')
+  const exercise = { id: '01qpYSe', name: 'Barbell Bench Press' }
+  assert.equal(exerciseDetailPath(exercise), '/exercises/barbell-bench-press--01qpYSe')
+  assert.equal(exerciseIdFromPath('barbell-bench-press--01qpYSe'), exercise.id)
+  assert.equal(exerciseIdFromPath(exercise.id), exercise.id)
 })

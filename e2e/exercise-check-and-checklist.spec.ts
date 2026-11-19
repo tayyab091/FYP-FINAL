@@ -1,7 +1,13 @@
 import { test, expect, Page, APIRequestContext } from '@playwright/test'
 
 const BASE = 'http://localhost:3000'
-const USER = { email: 'user1@test.com', password: 'User@123' }
+const USER = { email: process.env.E2E_MUTATION_EMAIL || '', password: process.env.E2E_MUTATION_PASSWORD || '' }
+
+// These tests activate plans, change subscriptions, and award XP. Never use presentation accounts.
+test.beforeEach(() => {
+  test.skip(process.env.E2E_ALLOW_MUTATIONS !== '1' || !/^e2e[+._-]/i.test(USER.email) || !USER.password,
+    'Requires E2E_ALLOW_MUTATIONS=1 and a disposable e2e-prefixed account in E2E_MUTATION_EMAIL/PASSWORD.')
+})
 
 async function loginUI(page: Page) {
   await page.goto(`${BASE}/login`)

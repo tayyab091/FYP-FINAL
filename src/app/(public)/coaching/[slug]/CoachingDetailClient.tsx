@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { StarRatingInput } from '@/components/shared/StarRatingInput'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
@@ -97,39 +98,6 @@ function StarRating({ rating, size = 'sm' }: { rating: number; size?: 'sm' | 'md
   return <p className={className}>{'★'.repeat(rating)}{'☆'.repeat(5 - rating)}</p>
 }
 
-function InteractiveStarRating({
-  value,
-  onChange,
-  disabled,
-}: {
-  value: number
-  onChange: (rating: number) => void
-  disabled?: boolean
-}) {
-  const [hover, setHover] = useState(0)
-
-  return (
-    <div className="flex items-center gap-1">
-      {[1, 2, 3, 4, 5].map(star => {
-        const active = star <= (hover || value)
-        return (
-          <button
-            key={star}
-            type="button"
-            disabled={disabled}
-            onClick={() => onChange(star)}
-            onMouseEnter={() => setHover(star)}
-            onMouseLeave={() => setHover(0)}
-            className={`text-xl transition-colors ${active ? 'text-yellow-400' : 'text-muted-foreground/40'} ${disabled ? 'cursor-not-allowed opacity-60' : 'hover:text-yellow-300'}`}
-            aria-label={`Rate ${star} stars`}
-          >
-            ★
-          </button>
-        )
-      })}
-    </div>
-  )
-}
 
 function formatReviewDate(date: string) {
   return new Date(date).toLocaleDateString('en-PK', {
@@ -190,6 +158,7 @@ export function CoachingDetailClient({ slug }: { slug: string }) {
   const [connectStatus, setConnectStatus] = useState<ConnectUiStatus>('idle')
   const [hasActiveRelationship, setHasActiveRelationship] = useState(false)
   const [submittingReview, setSubmittingReview] = useState(false)
+  const [anonymous, setAnonymous] = useState(false)
   const [reviewRating, setReviewRating] = useState(5)
   const [reviewComment, setReviewComment] = useState('')
   const [availabilitySlots, setAvailabilitySlots] = useState<
@@ -314,8 +283,8 @@ export function CoachingDetailClient({ slug }: { slug: string }) {
       return
     }
     const trimmed = reviewComment.trim()
-    if (trimmed.length < 20) {
-      toast.error('Comment must be at least 20 characters')
+    if (trimmed.length < 3) {
+      toast.error('Comment must be at least 3 characters')
       return
     }
 
@@ -327,7 +296,7 @@ export function CoachingDetailClient({ slug }: { slug: string }) {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rating: reviewRating, comment: trimmed }),
+        body: JSON.stringify({ rating: reviewRating, comment: trimmed, anonymous }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
@@ -564,24 +533,25 @@ export function CoachingDetailClient({ slug }: { slug: string }) {
                 {canLeaveReview && (
                   <form onSubmit={handleSubmitReview} className="mb-4 rounded-xl border border-border p-4 space-y-3">
                     <p className="text-sm font-medium text-foreground">Leave a Review</p>
-                    <InteractiveStarRating value={reviewRating} onChange={setReviewRating} disabled={submittingReview} />
+                    <label className="mb-3 flex items-center gap-2 text-sm"><input type="checkbox" checked={anonymous} onChange={event => setAnonymous(event.target.checked)} />Post anonymously (hide my name and photo)</label>
+                    <StarRatingInput value={reviewRating} onChange={setReviewRating} disabled={submittingReview} />
                     <textarea
                       value={reviewComment}
                       onChange={e => setReviewComment(e.target.value)}
                       rows={3}
                       maxLength={1000}
-                      minLength={20}
+                      minLength={3}
                       disabled={submittingReview}
-                      placeholder="What was coaching like? Share at least 20 characters about results, communication, or programming..."
+                      placeholder="What was coaching like? Share at least 3 characters about results, communication, or programming..."
                       className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground text-sm placeholder:text-muted-foreground outline-none focus:border-primary transition-colors resize-none disabled:opacity-60"
                     />
                     <div className="flex items-center justify-between gap-3">
-                      <p className={`text-xs ${reviewComment.trim().length < 20 ? 'text-muted-foreground' : 'text-primary'}`}>
-                        {reviewComment.trim().length}/20 min
+                      <p className={`text-xs ${reviewComment.trim().length < 3 ? 'text-muted-foreground' : 'text-primary'}`}>
+                        {reviewComment.trim().length}/3 min
                       </p>
                       <Button
                         type="submit"
-                        disabled={submittingReview || reviewComment.trim().length < 20}
+                        disabled={submittingReview || reviewComment.trim().length < 3}
                         className="bg-primary text-primary-foreground hover:brightness-95 font-semibold"
                       >
                         {submittingReview ? 'Submitting...' : 'Submit review'}

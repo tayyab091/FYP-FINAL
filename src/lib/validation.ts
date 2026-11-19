@@ -252,6 +252,7 @@ export const aiPlanRequestSchema = z.object({
 })
 
 export const reviewSchema = z.object({
+  anonymous: z.boolean().optional().default(false),
   rating: z.number().int().min(1).max(5),
   comment: plainTextSchema(1000, 1),
 })
@@ -348,6 +349,7 @@ export const formCheckSchema = z.object({
 })
 
 export const mealLogSchema = z.object({
+  requestKey: z.string().trim().min(1).max(200).optional(),
   mealType: z.string().min(1).max(40).transform((v) => sanitizePlainText(v, 40)),
   foods: z
     .array(
@@ -453,6 +455,7 @@ export const generatedWorkoutPlanSchema = workoutPlanCreateSchema.omit({ userId:
 })
 
 export const workoutLogStartSchema = z.object({
+  requestKey: z.string().trim().min(1).max(200).optional(),
   planId: objectIdSchema('planId'),
   date: z.string().min(1).max(64).optional(),
   exercises: z

@@ -8,7 +8,7 @@ interface DataTableProps {
 
 export function DataTable({ children, className }: DataTableProps) {
   return (
-    <div className="overflow-x-auto rounded-2xl border border-border bg-gradient-to-br from-muted/40 to-transparent">
+    <div className="overflow-x-auto rounded-2xl border border-border site-solid-table">
       <table className={cn('w-full text-sm', className)}>{children}</table>
     </div>
   )

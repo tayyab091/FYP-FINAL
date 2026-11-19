@@ -1,3 +1,4 @@
+import { withDeadline } from './with-deadline'
 import Notification from '@/models/Notification'
 import User from '@/models/User'
 import mongoose from 'mongoose'
@@ -16,6 +17,7 @@ interface CreateNotificationInput {
   message: string
   type?: NotificationType
   link?: string
+  dedupKey?: string
   preferenceKey?: NotificationPreferenceKey
 }
 
@@ -63,15 +65,23 @@ export async function createNotification(input: CreateNotificationInput) {
   const enabled = await isNotificationEnabled(input)
   if (!enabled) return null
 
-  const notification = await Notification.create({
+  const payload = {
     userId: input.userId,
     title: input.title,
     message: input.message,
     type: input.type || 'system',
     link: input.link,
-  })
+  }
+  const notification = input.dedupKey
+    ? await Notification.findOneAndUpdate({ userId: input.userId, dedupKey: input.dedupKey }, { $setOnInsert: { ...payload, dedupKey: input.dedupKey } }, { new: true, upsert: true })
+    : await Notification.create(payload)
 
   const shaped = shapeNotification(notification)
-  await publishNotification(shaped.userId, shaped).catch(() => {})
+  await withDeadline(publishNotification(shaped.userId, shaped), 1500, undefined)
   return shaped
+}
+
+export async function notifyAdministrators(title: string, message: string, link: string, preferenceKey: NotificationPreferenceKey) {
+  const admins = await User.find({ role: { $in: ['admin', 'super_admin'] }, isActive: { $ne: false }, isSuspended: { $ne: true } }).select('_id').lean()
+  await Promise.all(admins.map(admin => createNotification({ userId: admin._id, title, message, link, type: 'system', preferenceKey })))
 }

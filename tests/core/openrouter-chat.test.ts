@@ -13,6 +13,8 @@ beforeEach(() => {
   process.env.PLAYWRIGHT_TEST = '1'
   delete process.env.OPENROUTER_MODELS
   delete process.env.GEMINI_API_KEY
+  delete process.env.ANTHROPIC_API_KEY
+  delete process.env.CLAUDE_API_KEY
 })
 afterEach(() => {
   mock.restoreAll()
@@ -114,23 +116,43 @@ test('chat preserves conversation roles and formatting with an OpenRouter reply'
   assert.doesNotMatch(JSON.stringify(result), /fixture-openrouter-key/)
 })
 
-test('all OpenRouter failures still yield formatted local guidance', async () => {
+test('all OpenRouter failures return a retryable error without canned advice', async () => {
   mock.method(globalThis, 'fetch', async () => Response.json({}, { status: 503 }))
   const response = await chat(request({ message: 'How do I build muscle?', history: [] }))
   const result = await response.json()
-  assert.equal(response.status, 200)
-  assert.equal(result.source, 'local-fallback')
-  assert.match(result.reply, /^## Fitness Guidance/)
-  assert.match(result.reply, /surplus/)
+  assert.equal(response.status, 503)
+  assert.equal(result.source, 'unavailable')
+  assert.equal(result.code, 'AI_PROVIDER_UNAVAILABLE')
+  assert.doesNotMatch(result.reply, /surplus|Recommended Steps/)
 })
 
-test('Gemini remains available after free OpenRouter models fail', async () => {
-  process.env.GEMINI_API_KEY = 'fixture-gemini-key'
-  mock.method(globalThis, 'fetch', async (url: unknown) => String(url).startsWith('https://openrouter.ai/')
-    ? Response.json({}, { status: 503 })
-    : Response.json({ candidates: [{ content: { parts: [{ text: '## Recovery\n\n1. Sleep consistently.' }] } }] }))
-  const response = await chat(request({ message: 'How should I recover?', history: [] }))
-  assert.equal((await response.json()).source, 'gemini')
+test('authentication failures expose a safe reason without leaking provider details', async () => {
+  const warnings: unknown[][] = []
+  mock.method(console, 'warn', (...args: unknown[]) => { warnings.push(args) })
+  mock.method(globalThis, 'fetch', async () => Response.json({ error: { message: 'fixture-openrouter-key private-provider-details' } }, { status: 401 }))
+  const response = await chat(request({ message: 'How do I build muscle?', history: [] }))
+  const result = await response.json()
+  assert.equal(result.source, 'unavailable')
+  assert.deepEqual(warnings, [['[ai-chat] OpenRouter unavailable', { reason: 'authentication', status: 401 }]])
+  assert.doesNotMatch(JSON.stringify([result, warnings]), /fixture-openrouter-key|private-provider-details/)
+})
+
+test('missing deployment key is distinguished from a provider outage', async () => {
+  delete process.env.OPENROUTER_API_KEY
+  const remote = mock.method(globalThis, 'fetch', async () => success())
+  const response = await chat(request({ message: 'Give me a warmup', history: [] }))
+  const result = await response.json()
+  assert.equal(result.source, 'unavailable')
+  assert.equal(response.status, 503)
+  assert.equal(remote.mock.callCount(), 0)
+})
+
+test('an account error inside a successful HTTP envelope is diagnosed without retrying', async () => {
+  const failures: unknown[] = []
+  const remote = mock.method(globalThis, 'fetch', async () => Response.json({ error: { code: 402, message: 'Private quota details' } }))
+  assert.equal(await requestOpenRouterChat(messages, 1000, undefined, failure => failures.push(failure)), null)
+  assert.equal(remote.mock.callCount(), 1)
+  assert.deepEqual(failures, [{ reason: 'credits', status: 402 }])
 })
 
 test('invalid chat inputs never reach model providers', async () => {
@@ -138,4 +160,50 @@ test('invalid chat inputs never reach model providers', async () => {
   const response = await chat(request({ message: '', history: [] }))
   assert.equal(response.status, 400)
   assert.equal(remote.mock.callCount(), 0)
+})
+
+test('Claude receives system instructions, history, and a private server credential', async () => {
+  process.env.ANTHROPIC_API_KEY = 'fixture-claude-key'
+  const remote = mock.method(globalThis, 'fetch', async (url: unknown, init?: RequestInit) => {
+    assert.equal(url, 'https://api.anthropic.com/v1/messages')
+    const headers = new Headers(init?.headers)
+    assert.equal(headers.get('x-api-key'), 'fixture-claude-key')
+    assert.equal(headers.get('anthropic-version'), '2023-06-01')
+    const body = JSON.parse(init!.body as string)
+    assert.match(body.system, /professional fitness/)
+    assert.deepEqual(body.messages, [{ role: 'user', content: 'How should I warm up?' }])
+    return Response.json({ model: 'fixture-claude-model', content: [{ type: 'thinking', text: 'Private reasoning' }, { type: 'text', text: '## Warmup\n\nWalk gently first.' }] })
+  })
+  const response = await chat(request({ message: 'How should I warm up?', history: [] }))
+  const result = await response.json()
+  assert.equal(response.status, 200)
+  assert.equal(result.source, 'claude')
+  assert.equal(result.model, 'fixture-claude-model')
+  assert.doesNotMatch(JSON.stringify(result), /fixture-claude-key|Private reasoning/)
+  assert.equal(remote.mock.callCount(), 1)
+})
+
+test('a Claude error recovers through OpenRouter, including the CLAUDE_API_KEY alias', async () => {
+  process.env.CLAUDE_API_KEY = 'fixture-alias-key'
+  const calls: string[] = []
+  mock.method(globalThis, 'fetch', async (url: unknown) => {
+    calls.push(String(url))
+    return String(url).includes('anthropic.com') ? Response.json({}, { status: 401 }) : success()
+  })
+  const response = await chat(request({ message: 'How do I build muscle?', history: [] }))
+  assert.equal((await response.json()).source, 'openrouter')
+  assert.deepEqual(calls, ['https://api.anthropic.com/v1/messages', 'https://openrouter.ai/api/v1/chat/completions'])
+})
+
+test('both provider failures never produce local guidance or contact Gemini', async () => {
+  process.env.ANTHROPIC_API_KEY = 'fixture-claude'
+  process.env.GEMINI_API_KEY = 'fixture-gemini'
+  const calls: string[] = []
+  mock.method(globalThis, 'fetch', async (url: unknown) => { calls.push(String(url)); return Response.json({}, { status: 503 }) })
+  const response = await chat(request({ message: 'I weigh 70 kg and want to lose weight to 90 kg', history: [] }))
+  const result = await response.json()
+  assert.equal(response.status, 503)
+  assert.equal(result.source, 'unavailable')
+  assert.doesNotMatch(result.reply, /kcal|protein|weight|##/)
+  assert.ok(calls.every(url => /anthropic.com|openrouter.ai/.test(url)))
 })

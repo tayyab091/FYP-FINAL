@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
+import { useActivityRefresh } from '@/hooks/useActivityRefresh'
 import { useParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
@@ -26,7 +27,6 @@ interface ConversationInfo {
   lastMessageTime?: string
 }
 
-const POLL_INTERVAL_MS = 5000
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024
 
 function mergeIncomingMessage(prev: Message[], incoming: Message) {
@@ -58,7 +58,6 @@ export default function ChatConversationPage() {
   const [otherUserTyping, setOtherUserTyping] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const loadMessages = useCallback(async () => {
@@ -69,10 +68,14 @@ export default function ChatConversationPage() {
         const data = await res.json()
         setMessages(Array.isArray(data) ? data : [])
       }
+    } catch {
+      // Keep the current conversation while a background refresh is unavailable.
     } finally {
       setLoading(false)
     }
   }, [id])
+
+  useActivityRefresh(loadMessages, Boolean(user && id), 3000)
 
   const handleIncomingMessage = useCallback((message: Message) => {
     setMessages((prev) => mergeIncomingMessage(prev, message))
@@ -103,22 +106,6 @@ export default function ChatConversationPage() {
     }
   }, [user, id, loadMessages])
 
-  useEffect(() => {
-    if (pollRef.current) {
-      clearInterval(pollRef.current)
-      pollRef.current = null
-    }
-
-    if (!user || !id) return
-
-    if (!connected) {
-      pollRef.current = setInterval(loadMessages, POLL_INTERVAL_MS)
-    }
-
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current)
-    }
-  }, [user, id, connected, loadMessages])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -295,7 +282,7 @@ export default function ChatConversationPage() {
                 )}
                 <div className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-sm ${
                   isMine
-                    ? 'bg-gradient-to-br from-[#55ffb1] to-primary text-primary-foreground rounded-br-md shadow-[0_10px_28px_rgba(34,245,154,.12)]'
+                    ? 'site-solid-button text-primary-foreground rounded-br-md shadow-[0_10px_28px_rgba(34,245,154,.12)]'
                     : 'bg-muted border border-border text-foreground rounded-bl-md'
                 } ${isOptimistic ? 'opacity-70' : ''}`}>
                   {!isMine && (

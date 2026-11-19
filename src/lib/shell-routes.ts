@@ -1,10 +1,12 @@
 /** Routes that use DashboardShell (public Navbar/Footer should hide). */
 export const DASHBOARD_SHELL_PREFIXES = [
   '/dashboard',
+  '/leaderboard',
   '/admin',
   '/gym-owner',
   '/trainer-dashboard',
   '/my-fitness',
+  '/my-trainers',
   '/chat',
   '/settings',
   '/meal-plans',
@@ -43,4 +45,10 @@ export function shouldHidePublicNavbar(pathname: string) {
 /** Hide SiteFooter on app shell + auth screens. */
 export function shouldHideSiteFooter(pathname: string) {
   return isDashboardShellPath(pathname) || isAuthPath(pathname)
+}
+
+export function isMemberCatalogPath(pathname: string) {
+  return ['/gyms', '/nutrition', '/exercises', '/coaching'].some(
+    path => pathname === path || pathname.startsWith(path + '/'),
+  )
 }

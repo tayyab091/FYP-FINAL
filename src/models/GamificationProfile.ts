@@ -11,6 +11,7 @@ const UnlockedAchievementSchema = new Schema(
 const GamificationProfileSchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
+    rewardKeys: { type: [String], default: [], select: false },
     xp: { type: Number, default: 0, min: 0 },
     level: { type: Number, default: 1, min: 1 },
     achievements: { type: [UnlockedAchievementSchema], default: [] },

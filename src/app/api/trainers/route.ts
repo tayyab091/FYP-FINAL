@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { connectDBWithTimeout } from '@/lib/mongodb'
 import Trainer from '@/models/Trainer'
+import '@/models/Gym'
+import { locationFilter, distanceKm } from '@/lib/location'
 import { createPublicSlug } from '@/lib/slug'
 import { getOrFetch } from '@/lib/server-cache'
 
@@ -17,6 +19,8 @@ const FALLBACK_TRAINERS = [
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
+  const nearby = locationFilter(searchParams)
+  if (nearby && 'error' in nearby) return NextResponse.json({ message: nearby.error }, { status: 400 })
   const specialty = (searchParams.get('specialty') || '').trim().slice(0, 80)
   const country = (searchParams.get('country') || '').trim().slice(0, 80)
   const search = (searchParams.get('search') || '').trim().slice(0, 100)
@@ -25,7 +29,7 @@ export async function GET(req: NextRequest) {
   const featured = Boolean(searchParams.get('featured'))
 
   const fallbackResponse = () => {
-    let fallback = FALLBACK_TRAINERS
+    let fallback = nearby ? [] : FALLBACK_TRAINERS
     if (specialty) fallback = fallback.filter(t => t.specialty.some(s => s.toLowerCase().includes(specialty.toLowerCase())))
     if (country) fallback = fallback.filter(t => t.country.toLowerCase().includes(country.toLowerCase()))
     if (search) fallback = fallback.filter(t => t.name.toLowerCase().includes(search.toLowerCase()) || t.bio.toLowerCase().includes(search.toLowerCase()))
@@ -49,12 +53,14 @@ export async function GET(req: NextRequest) {
     }
 
     const trainers = await getOrFetch<Array<Record<string, unknown>>>(
-      `public-trainers:${JSON.stringify([specialty, country, search, limit, featured])}`, 30_000,
+      `public-trainers:${JSON.stringify([specialty, country, search, limit, featured, Boolean(nearby)])}`, 30_000,
       async () => {
         await connectDBWithTimeout(4000)
-        return Trainer.find(query)
-          .select('name slug specialty country rating bio isFullyVerified isActive isFeatured profileImage gymName totalClients experience certifications hourlyRate languages')
-          .limit(limit).lean()
+        const listing = Trainer.find(query)
+          .select('name slug specialty country rating bio isFullyVerified isActive isFeatured profileImage gymName totalClients experience certifications hourlyRate languages gymId').limit(nearby ? 0 : limit)
+
+        if (nearby) listing.populate('gymId', 'location')
+        return listing.lean()
       },
     )
 
@@ -64,12 +70,20 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({
-      trainers: trainers.map(trainer => ({
+      trainers: trainers.map(trainer => {
+        const gym = trainer.gymId as { location?: { coordinates?: number[] } } | null
+        const coordinates = gym?.location?.coordinates
+        const distance = nearby && coordinates?.length === 2
+          ? distanceKm(nearby, { latitude: coordinates[1], longitude: coordinates[0] }) : undefined
+        const profile = { ...trainer }
+        delete profile.gymId
+        return { ...profile, ...(distance !== undefined ? { distanceKm: Math.round(distance * 10) / 10 } : {}) } as Record<string, unknown> & { distanceKm?: number }
+      }).filter(trainer => !nearby || (trainer.distanceKm !== undefined && trainer.distanceKm <= nearby.radius)).slice(0, limit).map(trainer => ({
         ...trainer,
         slug: trainer.slug || createPublicSlug(String(trainer.name), String(trainer._id)),
       })),
       meta: { source: 'database', connectable: true },
-    }, { headers: { 'Cache-Control': 'public, max-age=30, s-maxage=60, stale-while-revalidate=30' } })
+    }, { headers: { 'Cache-Control': nearby ? 'private, no-store' : 'public, max-age=30, s-maxage=60, stale-while-revalidate=30' } })
   } catch (error) {
     console.error('Trainers error:', error)
     return fallbackResponse()

@@ -4,6 +4,7 @@ type UserRole = 'user' | 'trainer' | 'gym_owner' | 'admin' | 'super_admin'
 export const PROTECTED_ROUTES = [
   '/dashboard',
   '/my-fitness',
+  '/my-trainers',
   '/trainer-dashboard',
   '/gym-owner',
   '/admin',
@@ -36,6 +37,7 @@ export const ROLE_ROUTE_RESTRICTIONS: ReadonlyArray<{
   { prefix: '/trainer-dashboard', roles: ['trainer'] },
   { prefix: '/gym-owner', roles: ['gym_owner'] },
   { prefix: '/my-fitness', roles: ['user'] },
+  { prefix: '/my-trainers', roles: ['user'] },
   { prefix: '/dashboard', roles: ['user'] },
   { prefix: '/reviews', roles: ['user'] },
 ]

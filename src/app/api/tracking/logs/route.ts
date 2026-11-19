@@ -31,14 +31,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'Invalid date' }, { status: 400 })
     }
 
-    const log = await WorkoutLog.create({
+    const start = new Date(date)
+    start.setHours(0, 0, 0, 0)
+    const end = new Date(start)
+    end.setDate(end.getDate() + 1)
+    const existing = await WorkoutLog.findOne({
+      userId: tokenUser.userId, planId: plan._id,
+      date: { $gte: start, $lt: end }, status: 'in_progress',
+    })
+    if (existing) return NextResponse.json({ message: 'Workout already started', log: existing })
+    const sessionKey = parsed.data.requestKey || crypto.randomUUID()
+    let log = await WorkoutLog.findOneAndUpdate({ userId: tokenUser.userId, sessionKey }, { $setOnInsert: {
       userId: tokenUser.userId,
       planId: plan._id,
       status: 'in_progress',
       exercises: parsed.data.exercises,
       date,
-    })
+      sessionKey,
+    } }, { upsert: true, new: true })
 
+    if (log.status === 'skipped') {
+      log = await WorkoutLog.findOneAndUpdate(
+        { _id: log._id, status: 'skipped' },
+        { $set: { status: 'in_progress', exercises: parsed.data.exercises, date } }, { new: true },
+      ) || await WorkoutLog.findOne({ userId: tokenUser.userId, sessionKey })
+    }
     return NextResponse.json({ message: 'Workout started', log }, { status: 201 })
   } catch {
     return NextResponse.json({ message: 'Server error' }, { status: 500 })

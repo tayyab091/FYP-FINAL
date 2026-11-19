@@ -3,6 +3,7 @@ import { randomBytes } from 'crypto'
 import bcrypt from 'bcryptjs'
 import { connectDB } from '@/lib/mongodb'
 import User from '@/models/User'
+import { namePattern } from '@/lib/unique-name'
 import { createToken, cookieOptions } from '@/lib/auth'
 import { getAppUrl } from '@/lib/email'
 import { getRoleDashboardPath } from '@/lib/route-access'
@@ -103,8 +104,14 @@ export async function GET(req: NextRequest) {
 
     if (!user) {
       const randomPassword = await bcrypt.hash(randomBytes(32).toString('hex'), 12)
+      const displayName = (profile.name || email.split('@')[0] || 'Google User').trim()
+      if (await User.exists({ fullName: namePattern(displayName) })) {
+        const response = NextResponse.redirect(new URL('/login?error=name_taken', appUrl))
+        clearOAuthState(response)
+        return response
+      }
       user = await User.create({
-        fullName: (profile.name || email.split('@')[0] || 'Google User').trim(),
+        fullName: displayName,
         email,
         password: randomPassword,
         role: 'user',

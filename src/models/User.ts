@@ -1,6 +1,7 @@
 import mongoose, { Schema } from 'mongoose'
 
 const UserSchema = new Schema({
+  nameKey: { type: String },
   fullName: { type: String, required: true, trim: true },
   email: { type: String, required: true, unique: true, lowercase: true },
   /** Optional for OAuth users (they store a random hash). */
@@ -11,6 +12,9 @@ const UserSchema = new Schema({
     default: 'user'
   },
   country: { type: String, default: 'Pakistan' },
+  lastStripeSubscriptionCreated: { type: Number },
+  stripeSubscriptionId: { type: String },
+  stripeCustomerId: { type: String },
   lastStripeCheckoutId: { type: String, select: false },
   lastStripeCheckoutCreatedAt: { type: Date, select: false },
   profileImage: { type: String, default: '' },
@@ -20,6 +24,7 @@ const UserSchema = new Schema({
   subscription: {
     plan: { type: String, enum: ['basic', 'pro', 'elite'], default: 'basic' },
     status: { type: String, enum: ['active', 'inactive'], default: 'active' },
+    cancelAtPeriodEnd: { type: Boolean, default: false },
     startDate: Date,
     endDate: Date,
   },
@@ -68,5 +73,11 @@ const UserSchema = new Schema({
     adminSubscriptionUpgrades: { type: Boolean, default: true },
   },
 }, { timestamps: true })
+
+
+UserSchema.pre('validate', function () {
+  if (this.fullName && (this.isNew || this.isModified('fullName'))) this.nameKey = this.fullName.normalize('NFKC').trim().toLowerCase().replace(/\s+/g, ' ')
+})
+UserSchema.index({ nameKey: 1 }, { unique: true, partialFilterExpression: { nameKey: { $type: 'string' } } })
 
 export default mongoose.models.User || mongoose.model('User', UserSchema)

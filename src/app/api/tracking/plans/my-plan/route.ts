@@ -15,7 +15,8 @@ export async function GET(req: NextRequest) {
     const plan = await WorkoutPlan.findOne({
       userId: tokenUser.userId,
       status: { $in: ['active', 'draft'] },
-    }).sort({ updatedAt: -1 }).lean()
+    // Active plans must win over newer unactivated drafts.
+    }).sort({ status: 1, updatedAt: -1 }).lean()
 
     if (!plan) return NextResponse.json({ plan: null })
     return NextResponse.json({ plan })

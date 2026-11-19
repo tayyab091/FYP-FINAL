@@ -103,24 +103,26 @@ for (const role of ['user', 'trainer', 'gym_owner', 'admin', 'super_admin']) {
 }
 
 for (const message of ['How do I gain weight?', 'How do I lose fat?', 'Tell me about protein', 'How should I squat?', 'How can I sleep better?', 'Calculate my calories', 'I am 25, 75 kg, 178 cm, male', 'Hello']) {
-  test(`all local chatbot reply types have readable headings: ${message}`, async () => {
+  test(`chat never returns canned advice without provider credentials: ${message}`, async () => {
     process.env.PLAYWRIGHT_TEST = '1'
     delete process.env.GEMINI_API_KEY
+    delete process.env.ANTHROPIC_API_KEY
+    delete process.env.CLAUDE_API_KEY
+    delete process.env.OPENROUTER_API_KEY
     const response = await chat(new NextRequest('http://localhost/api/ai/chat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ message, history: [] }) }))
-    assert.equal(response.status, 200)
+    assert.equal(response.status, 503)
     const { reply } = await response.json()
-    assert.match(reply, /^#{2,3} /)
-    assert.ok(reply.includes('\n\n'))
+    assert.match(reply, /temporarily unavailable/)
   })
 }
 
-test('a failed AI provider falls back to a formatted local answer', async () => {
+test('a failed AI provider returns an explicit error instead of local advice', async () => {
   process.env.GEMINI_API_KEY = 'fixture-key'
   process.env.PLAYWRIGHT_TEST = '1'
   mock.method(globalThis, 'fetch', async () => { throw new Error('Upstream timeout') })
   const response = await chat(new NextRequest('http://localhost/api/ai/chat', { method: 'POST', body: JSON.stringify({ message: 'How should I recover?', history: [] }) }))
   const body = await response.json()
-  assert.equal(body.source, 'local-fallback')
-  assert.match(body.reply, /^## /)
-  assert.match(body.reply, /1\. /)
+  assert.equal(response.status, 503)
+  assert.equal(body.source, 'unavailable')
+  assert.doesNotMatch(body.reply, /^## |1\. /)
 })

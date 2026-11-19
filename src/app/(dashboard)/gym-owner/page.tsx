@@ -1,7 +1,9 @@
 'use client'
+import { PagePhoto } from '@/components/shared/PagePhoto'
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useActivityRefresh } from '@/hooks/useActivityRefresh'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
@@ -104,9 +106,9 @@ export default function GymOwnerPage() {
     router.replace(qs ? `/gym-owner?${qs}` : '/gym-owner', { scroll: false })
   }
 
-  const loadTrainers = () => {
-    setLoading(true)
-    fetch('/api/gym-owner/trainers')
+  const loadTrainers = (background = false) => {
+    if (!background) setLoading(true)
+    return fetch('/api/gym-owner/trainers')
       .then(r => r.ok ? r.json() : [])
       .then(data => setTrainers(Array.isArray(data) ? data : []))
       .catch(() => toast.error('Unable to load trainers. Please retry.'))
@@ -151,6 +153,16 @@ export default function GymOwnerPage() {
       loadAnalytics()
     }
   }, [user])
+
+  useActivityRefresh(async () => {
+    await loadTrainers(true)
+    const response = await fetch('/api/gym-owner/gym', { cache: 'no-store' })
+    if (response.ok) {
+      const data = await response.json()
+      setGym(current => ({ ...current, verificationStatus: data.verificationStatus }))
+    }
+    loadAnalytics()
+  }, user?.role === 'gym_owner')
 
   const gymName = gym.name || trainers[0]?.gymName || 'My Gym'
   const verifiedCount = trainers.filter(t => t.isFullyVerified).length
@@ -260,7 +272,8 @@ export default function GymOwnerPage() {
   return (
     <div className="dashboard-fab-reserve min-h-screen px-4 pt-6 sm:px-6">
       <div className="max-w-7xl mx-auto">
-        <div className="page-hero mb-6 flex flex-wrap items-start justify-between gap-4 px-6 py-8 sm:px-8">
+        <div className="page-hero fitness-photo-hero mb-6 flex flex-wrap items-start justify-between gap-4 px-6 py-8 sm:px-8">
+            <PagePhoto kind="gym" />
           <div>
             <p className="eyebrow mb-2">Facility Workspace</p>
             <h1 className="display-title text-3xl md:text-4xl">{gymName}</h1>

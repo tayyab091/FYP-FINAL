@@ -47,13 +47,14 @@ const roleNavigation: Record<UserRole, NavItem[]> = {
   user: [
     { label: 'Home', href: '/dashboard', icon: Home, exact: true },
     { label: 'Find Trainers', href: '/coaching', icon: Users },
+    { label: 'My Trainers', href: '/my-trainers', icon: Users },
     { label: 'Find Gyms', href: '/gyms', icon: Building2 },
     { label: 'Exercise Library', href: '/exercises', icon: Dumbbell },
     { label: 'My Fitness', href: '/my-fitness', icon: LayoutDashboard },
     { label: 'Form Checker', href: '/exercise-check', icon: Camera },
     { label: 'Meal Plans', href: '/meal-plans', icon: UtensilsCrossed },
     { label: 'My Reviews', href: '/reviews', icon: Star },
-    { label: 'Nutrition', href: '/my-fitness?tab=nutrition', icon: Apple },
+    { label: 'Nutrition', href: '/nutrition', icon: Apple },
     { label: 'Messages', href: '/chat', icon: MessageCircle },
     { label: 'Community', href: '/community', icon: Users },
     { label: 'Leaderboard', href: '/leaderboard', icon: Trophy },
@@ -108,6 +109,7 @@ const pageTitles: Record<string, string> = {
   '/community': 'Community',
   '/leaderboard': 'Leaderboard',
   '/analytics': 'Analytics',
+  '/my-trainers': 'My Trainers',
   '/trainer-dashboard': 'Trainer Dashboard',
   '/trainer-dashboard/exercises': 'Exercise Library',
   '/trainer-dashboard/nutrition': 'Nutrition Library',
@@ -212,7 +214,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       {user?.role === 'user' && user.subscription?.plan === 'basic' && (
-        <div className="mx-3 mb-3 overflow-hidden rounded-2xl border border-primary/15 bg-[radial-gradient(circle_at_top_right,rgba(34,245,154,.14),transparent_65%),rgba(34,245,154,.035)] p-4">
+        <div className="site-accent-surface mx-3 mb-3 overflow-hidden rounded-2xl border border-primary/15  p-4">
           <p className="text-sm font-bold text-foreground">Unlock Pro</p>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Advanced analytics and trainer coaching.</p>
           <Link
@@ -347,7 +349,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </div>
       )}
 
-      <div className="min-h-screen min-w-0 bg-[radial-gradient(circle_at_70%_-10%,rgba(8,122,86,0.06),transparent_32rem)] pt-16 dark:bg-[radial-gradient(circle_at_70%_-10%,rgba(34,211,147,.055),transparent_32rem)] xl:pl-72">
+      <div className="site-flat-surface min-h-screen min-w-0  pt-16  xl:pl-72">
         {children}
       </div>
     </div>

@@ -31,6 +31,7 @@ interface SpoonacularNutrient {
 }
 
 interface SpoonacularResult {
+  id?: number
   name?: string
   nutrition?: { nutrients?: SpoonacularNutrient[] }
 }
@@ -61,14 +62,25 @@ export async function GET(req: NextRequest) {
           const data = await res.json() as SpoonacularResponse
           const spoonResults = data.results || []
           if (spoonResults.length > 0) {
-            const results = spoonResults.map((item) => ({
-              name: item.name || 'Food',
-              calories: Math.round(item.nutrition?.nutrients?.find((n) => n.name === 'Calories')?.amount || 0),
-              protein: Math.round(item.nutrition?.nutrients?.find((n) => n.name === 'Protein')?.amount || 0),
-              carbs: Math.round(item.nutrition?.nutrients?.find((n) => n.name === 'Carbohydrates')?.amount || 0),
-              fat: Math.round(item.nutrition?.nutrients?.find((n) => n.name === 'Fat')?.amount || 0),
-              per: '100g',
+            const details = await Promise.all(spoonResults.slice(0, 5).map(async item => {
+              if (!item.id) return null
+              const info = await fetch(
+                'https://api.spoonacular.com/food/ingredients/' + item.id + '/information?amount=100&unit=g&apiKey=' + encodeURIComponent(spoonKey),
+                { next: { revalidate: 3600 }, signal: AbortSignal.timeout(5000) },
+              )
+              if (!info.ok) return null
+              return info.json() as Promise<SpoonacularResult>
             }))
+            const results = details.filter((item): item is SpoonacularResult => Boolean(item?.nutrition?.nutrients?.some(nutrient => nutrient.name === 'Calories' && typeof nutrient.amount === 'number')))
+              .map(item => ({
+                name: item.name || 'Food',
+                calories: Math.round(item.nutrition!.nutrients!.find(n => n.name === 'Calories')!.amount!),
+                protein: Number(item.nutrition!.nutrients!.find(n => n.name === 'Protein')?.amount || 0),
+                carbs: Number(item.nutrition!.nutrients!.find(n => n.name === 'Carbohydrates')?.amount || 0),
+                fat: Number(item.nutrition!.nutrients!.find(n => n.name === 'Fat')?.amount || 0),
+                per: '100g',
+              }))
+            if (results.length)
             return NextResponse.json({ results })
           }
         }
@@ -87,19 +99,9 @@ export async function GET(req: NextRequest) {
       }))
       .slice(0, 5)
 
-    if (results.length === 0) {
-      // Generic fallback
-      return NextResponse.json({
-        results: [{
-          name: query.charAt(0).toUpperCase() + query.slice(1),
-          calories: 200,
-          protein: 10,
-          carbs: 25,
-          fat: 8,
-          per: '100g (estimated)',
-        }]
-      })
-    }
+    if (!results.length) return NextResponse.json({
+      results: [], message: 'No measured match found. Log this meal from your saved meal plan to use its exact serving values.',
+    })
 
     return NextResponse.json({ results })
   } catch {

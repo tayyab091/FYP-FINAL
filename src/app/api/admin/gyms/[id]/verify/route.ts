@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import Gym from '@/models/Gym'
 import { writeAuditLog } from '@/lib/audit-log'
+import { createNotification } from '@/lib/notifications'
 import { getUser } from '@/lib/auth'
 import { adminActionSchema, parseJsonBody, parseObjectIdParam } from '@/lib/validation'
 
@@ -30,6 +31,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     )
     if (!gym) return NextResponse.json({ message: 'Gym not found' }, { status: 404 })
 
+    await createNotification({
+      userId: gym.ownerId, title: 'Gym verification updated',
+      message: action === 'verify' ? 'Your application has been approved.' : 'Your application was rejected.' + (reason ? ' ' + reason : ''),
+      type: 'system', link: '/gym-owner',
+    }).catch(() => {})
     await writeAuditLog({
       actorId: tokenUser.userId,
       action: action === 'verify' ? 'GYM_VERIFIED' : 'GYM_REJECTED',

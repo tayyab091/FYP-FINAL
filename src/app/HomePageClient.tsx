@@ -4,17 +4,12 @@ import { Suspense, lazy, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useReducedMotion } from 'framer-motion'
 import { useAuth } from '@/hooks/useAuth'
-import { ScrollProgress } from '@/components/motion'
 import { LandingHero } from '@/components/landing/LandingHero'
+import { HomeCursor } from '@/components/landing/HomeCursor'
+import { LandingTrainingWorlds } from '@/components/landing/LandingTrainingWorlds'
 import { LandingMarquee } from '@/components/landing/LandingMarquee'
-import { LandingAbout } from '@/components/landing/LandingAbout'
-import { LandingStats } from '@/components/landing/LandingStats'
-import { LandingPillars } from '@/components/landing/LandingPillars'
-import { LandingFeatures } from '@/components/landing/LandingFeatures'
-import { LandingHowItWorks } from '@/components/landing/LandingHowItWorks'
-import { LandingTestimonial } from '@/components/landing/LandingTestimonial'
+import { LandingMethod, LandingFormStudio, LandingRecovery, LandingStartAndFaq } from '@/components/landing/LandingExperience'
 import { LandingPricing } from '@/components/landing/LandingPricing'
-import { LandingCta } from '@/components/landing/LandingCta'
 import { LandingTrainersBoundary } from '@/components/landing/LandingTrainersBoundary'
 
 const LandingTrainers = lazy(() =>
@@ -42,24 +37,20 @@ function GuestLanding() {
   return (
     <>
       <div className={`landing-page${reduceMotion ? ' landing-page--reduced' : ''}`}>
-        <div className="landing-scroll-progress">
-          <ScrollProgress />
-        </div>
+        <HomeCursor />
         <LandingHero />
         <LandingMarquee />
-        <LandingAbout />
-        <LandingStats />
-        <LandingPillars />
-        <LandingFeatures />
-        <LandingHowItWorks />
+        <LandingTrainingWorlds />
+        <LandingMethod />
+        <LandingFormStudio />
+        <LandingRecovery />
         <LandingTrainersBoundary>
           <Suspense fallback={<TrainersFallback />}>
             <LandingTrainers />
           </Suspense>
         </LandingTrainersBoundary>
-        <LandingTestimonial />
         <LandingPricing />
-        <LandingCta />
+        <LandingStartAndFaq />
       </div>
     </>
   )

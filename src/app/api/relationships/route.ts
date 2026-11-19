@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import Relationship from '@/models/Relationship'
+import '@/models/Trainer'
 import { getUser } from '@/lib/auth'
 import { USER_AVATAR_POPULATE_SELECT } from '@/lib/avatar'
 

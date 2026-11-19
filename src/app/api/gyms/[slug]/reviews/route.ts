@@ -7,6 +7,7 @@ import { parseJsonBody, reviewSchema } from '@/lib/validation'
 import Gym from '@/models/Gym'
 import GymReview from '@/models/GymReview'
 import User from '@/models/User'
+import { createNotification } from '@/lib/notifications'
 
 async function findGym(slug: string) {
   await connectDB()
@@ -26,7 +27,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
     ])
     const mine = tokenUser ? await GymReview.findOne({ gymId: gym._id, userId: tokenUser.userId }).lean() : null
     return NextResponse.json({
-      reviews: rows.map(row => ({ _id: String(row._id), rating: row.rating, comment: row.comment, createdAt: row.createdAt, authorName: row.userId?.fullName || 'Member' })),
+      reviews: rows.map(row => ({ _id: String(row._id), rating: row.rating, comment: row.comment, createdAt: row.createdAt, authorName: row.anonymous ? 'Anonymous member' : row.userId?.fullName || 'Member' })),
       averageRating: gym.rating || 0, reviewCount: gym.reviewsCount || 0,
       currentUserReview: mine ? { rating: mine.rating, comment: mine.comment } : null,
     })
@@ -47,8 +48,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     const [stats] = await GymReview.aggregate([{ $match: { gymId: gym._id } }, { $group: { _id: null, rating: { $avg: '$rating' }, count: { $sum: 1 } } }])
     const averageRating = Math.round(stats.rating * 10) / 10
     await Gym.updateOne({ _id: gym._id }, { $set: { rating: averageRating, reviewsCount: stats.count } })
+    await createNotification({
+      userId: gym.ownerId, title: 'New gym review',
+      message: 'A member left a ' + parsed.data.rating + '-star review for your gym.',
+      type: 'trainer', link: '/gym-owner?tab=analytics', dedupKey: 'gym-review:' + String(review._id),
+    }).catch(() => {})
     const author = await User.findById(member.userId).select('fullName').lean()
-    return NextResponse.json({ review: { _id: String(review._id), ...parsed.data, createdAt: review.createdAt, authorName: author?.fullName || 'Member' }, averageRating, reviewCount: stats.count }, { status: 201 })
+    return NextResponse.json({ review: { _id: String(review._id), ...parsed.data, createdAt: review.createdAt, authorName: parsed.data.anonymous ? 'Anonymous member' : author?.fullName || 'Member' }, averageRating, reviewCount: stats.count }, { status: 201 })
   } catch (error) {
     if ((error as { code?: number })?.code === 11000) return NextResponse.json({ message: 'You have already reviewed this gym' }, { status: 409 })
     return NextResponse.json({ message: 'Unable to save your review. Please try again.' }, { status: 503 })

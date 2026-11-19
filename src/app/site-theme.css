@@ -1,0 +1,89 @@
+/* Shared visual layer only. Layout, dimensions, status colors, and chart series remain unchanged. */
+:root {
+  --background: #f5f8f6;
+  --foreground: #14231c;
+  --card: #ffffff;
+  --primary: #087a56;
+  --primary-foreground: #ffffff;
+  --accent: #087a56;
+  --accent-foreground: #ffffff;
+  --border: #d7e2db;
+  --input: #c3d3c9;
+  --ring: #087a5660;
+}
+.dark {
+  --background: #08100c;
+  --foreground: #e5f0e9;
+  --card: #101c14;
+  --card-foreground: #e5f0e9;
+  --popover: #101c14;
+  --popover-foreground: #e5f0e9;
+  --primary: #22f59a;
+  --primary-foreground: #071c11;
+  --accent: #22f59a;
+  --accent-foreground: #071c11;
+  --secondary: #17271d;
+  --muted: #17271d;
+  --muted-foreground: #9fb5a6;
+  --border: #294031;
+  --input: #38513f;
+  --ring: #22f59a60;
+  --surface: #101c14;
+  --surface-2: #17271d;
+  --accent-dim: #16c97a;
+  --text: #e5f0e9;
+  --text-2: #9fb5a6;
+  --text-3: #789883;
+}
+:root body, .dark body { background: var(--background); }
+body::before, body::after { display: none; }
+.gradient-text { background: none; color: var(--primary); -webkit-text-fill-color: currentColor; }
+.glass, .dark .glass, .page-hero, .dark .page-hero, .elite-panel, .dark .elite-panel,
+[data-slot='card'], .dark [data-slot='card'] {
+  background: var(--card);
+  border-color: var(--border);
+  box-shadow: none;
+}
+.page-hero::before { display: none; }
+.btn-accent, .btn-accent:hover, .btn-accent:active, .dark .btn-accent,
+[data-slot='button'][data-variant='default'] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: none;
+}
+.btn-outline { background: transparent; box-shadow: none; }
+.float-messages, .dark .float-messages { background: var(--primary); color: var(--primary-foreground); }
+.light ::-webkit-scrollbar-thumb { background: #b4c7bb; }
+[data-slot='table-header'] { background: var(--muted); }
+.site-flat-surface { background: var(--background); }
+.site-accent-surface { background: color-mix(in srgb, var(--primary) 7%, var(--card)); }
+.site-solid-button { background: var(--primary); color: var(--primary-foreground); box-shadow: none; }
+.site-solid-table { background: var(--card); }
+.card-athletic::before { background: var(--primary); }
+.ai-chatbot__fab { background: var(--primary); color: var(--primary-foreground); }.ai-chatbot__header { background: var(--card); }
+
+/* Shared photographic chapter treatment, without changing page controls or data. */
+.fitness-photo-hero { position: relative; overflow: hidden; }
+.fitness-photo-hero > :not(.page-photo) { position: relative; z-index: 1; }
+.page-photo { position: relative; height: 160px; overflow: hidden; background: #102019; border-bottom: 3px solid var(--primary); pointer-events: none; }
+.page-photo img { object-fit: cover; object-position: center 43%; transition: transform .7s cubic-bezier(.22,1,.36,1); }
+.page-photo__caption { position: absolute; bottom: .8rem; left: .8rem; right: .8rem; padding: .6rem .75rem; background: #0a1710; color: #fff; border-left: 2px solid #22f59a; }
+.page-photo__caption span { display: block; font: .45rem monospace; letter-spacing: .12em; color: #b5cbbd; }
+.page-photo__caption strong { display: block; margin-top: .3rem; font-size: .65rem; letter-spacing: .04em; }
+.page-photo__cross { position: absolute; right: .7rem; top: .5rem; color: #22f59a; font: 1.2rem monospace; }
+.fitness-photo-hero > .page-photo { margin: -1.5rem -1.5rem 1.5rem; }
+.fitness-photo-hero:hover .page-photo img { transform: scale(1.025); }
+@media (min-width: 640px) { .fitness-photo-hero > .page-photo { margin: -2.5rem -2.5rem 1.5rem; } }
+@media (min-width: 1000px) {
+  .fitness-photo-hero { padding-right: 36%; min-height: 235px; }
+  .fitness-photo-hero > .page-photo { position: absolute; top: 0; bottom: 0; right: 0; width: 31%; height: auto; margin: 0; border-bottom: 0; border-left: 3px solid var(--primary); }
+}
+@media (prefers-reduced-motion: reduce) { .page-photo img { transition: none; }.fitness-photo-hero:hover .page-photo img { transform: none; } }
+.fitness-photo-hero > .page-photo { width: calc(100% + 3rem); flex: 0 0 calc(100% + 3rem); }
+.workspace-sidebar-photo .page-photo { height: 90px; border-radius: .5rem; }
+.workspace-sidebar-photo .page-photo__caption { bottom: .4rem; left: .4rem; right: .4rem; padding: .4rem .5rem; }
+.workspace-sidebar-photo .page-photo__caption span { display: none; }
+.workspace-sidebar-photo .page-photo__caption strong { font-size: .5rem; margin: 0; }
+@media (min-width: 640px) { .fitness-photo-hero > .page-photo { width: calc(100% + 5rem); flex-basis: calc(100% + 5rem); } }
+@media (min-width: 1000px) { .fitness-photo-hero > .page-photo { width: 31%; } }
+.auth-photo { margin-block: 1rem; }.auth-photo .page-photo { height: 120px; }

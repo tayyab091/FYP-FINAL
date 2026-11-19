@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import User from '@/models/User'
+import { namePattern } from '@/lib/unique-name'
 import bcrypt from 'bcryptjs'
 import { createToken, cookieOptions } from '@/lib/auth'
 import { createSecureToken, sendVerificationEmail } from '@/lib/auth-email'
@@ -23,6 +24,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'An account with this email already exists' }, { status: 409 })
     }
 
+    if (await User.exists({ fullName: namePattern(fullName) })) {
+      return NextResponse.json({ message: 'This name is already taken. Please use another username.' }, { status: 409 })
+    }
     const hashedPassword = await bcrypt.hash(password, 12)
     const verifyToken = createSecureToken()
     const user = await User.create({
@@ -68,6 +72,9 @@ export async function POST(req: NextRequest) {
     response.cookies.set('token', token, cookieOptions())
     return response
   } catch (error: unknown) {
+    if ((error as { code?: number })?.code === 11000) {
+      return NextResponse.json({ message: 'This email or name is already taken. Please choose another.' }, { status: 409 })
+    }
     console.error('Register error:', error)
     return NextResponse.json({ message: 'Server error. Please try again.' }, { status: 500 })
   }

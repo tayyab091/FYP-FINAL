@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { exerciseDetailPath } from '@/lib/exercise-slug'
 import { Activity, ArrowRight, Dumbbell, Target, Wrench } from 'lucide-react'
 import { parseInstructionSteps } from '@/lib/parse-instruction-steps'
 
@@ -116,7 +117,7 @@ export function ExerciseMoreInfoPanel({ exercise }: ExerciseMoreInfoPanelProps) 
       </div>
 
       <Link
-        href={`/exercises/${exercise.id}`}
+        href={exerciseDetailPath(exercise)}
         className="group inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-emerald-600/30 bg-emerald-500/10 px-2 py-2.5 text-sm font-bold text-emerald-800 transition-colors hover:bg-emerald-500/20 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300 dark:hover:bg-emerald-400/20"
       >
         View full exercise

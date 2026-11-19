@@ -1,63 +1,86 @@
 'use client'
+import { PagePhoto } from '@/components/shared/PagePhoto'
 
 import Image from '@/components/shared/OptimizedImage'
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Building2, Info, LocateFixed, MapPin, RotateCcw, Search, Star, Users } from 'lucide-react'
+import { ArrowUpRight, Building2, Check, Info, LocateFixed, MapPin, RotateCcw, Search, Star, Users } from 'lucide-react'
 import { GoogleGymMap } from '@/components/gyms/GoogleGymMap'
 import type { PublicGym } from '@/lib/gyms'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/shared/EmptyState'
+import { useAuth } from '@/hooks/useAuth'
+import { distanceKm } from '@/lib/location'
 import { usePublicData } from '@/hooks/usePublicData'
 
 const CITIES = ['All cities', 'Lahore', 'Karachi', 'Islamabad']
 
-function GymCard({ gym, selected, onSelect }: { gym: PublicGym; selected: boolean; onSelect: () => void }) {
-  const content = (
-    <article className={`elite-panel interactive-lift overflow-hidden rounded-2xl ${selected ? 'border-primary/45 ring-2 ring-primary/10' : ''}`}>
-      <div className="relative h-44 overflow-hidden bg-gradient-to-br from-primary/15 to-sky-400/10">
-        {gym.coverImage ? (
-          <Image src={gym.coverImage} alt={gym.name} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
-        ) : (
-          <div className="flex h-full items-center justify-center text-primary"><Building2 className="size-12" /></div>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-        <span className="absolute left-3 top-3 rounded-full border border-white/10 bg-black/65 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur-lg">
-          {gym.source === 'google' ? 'Google nearby' : gym.verificationStatus === 'verified' ? 'Verified' : 'Listed'}
-        </span>
-      </div>
-      <div className="space-y-3 p-5">
-        <div>
-          <h2 className="truncate text-lg font-bold text-white">{gym.name}</h2>
-          <p className="mt-1 flex min-w-0 items-start gap-1.5 text-xs leading-relaxed text-muted-foreground">
-            <MapPin className="mt-0.5 size-3.5 shrink-0 text-primary" />
-            <span className="line-clamp-2 break-words">{gym.address}</span>
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3 text-xs">
-          <span className="inline-flex items-center gap-1 text-amber-300"><Star className="size-3.5 fill-current" /> {gym.rating ? gym.rating.toFixed(1) : 'New'}</span>
-          {gym.trainersCount > 0 && <span className="inline-flex items-center gap-1 text-muted-foreground"><Users className="size-3.5" /> {gym.trainersCount} trainers</span>}
-        </div>
-        {gym.facilities.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {gym.facilities.slice(0, 3).map((facility) => (
-              <span key={facility} className="rounded-full bg-primary/[.08] px-2 py-1 text-[10px] font-semibold text-primary">{facility}</span>
-            ))}
+function GymCard({ gym, selected, onSelect, distance }: {
+  gym: PublicGym; selected: boolean; onSelect: () => void; distance?: number
+}) {
+  const [failedImage, setFailedImage] = useState<string | null>(null)
+  const external = gym.source === 'google' && Boolean(gym.googleMapsUri)
+  const href = external ? gym.googleMapsUri! : '/gyms/' + gym.slug
+  return (
+    <article className={'overflow-hidden rounded-2xl border bg-card transition duration-200 ' + (selected ? 'border-primary/50 shadow-[0_8px_30px_rgba(16,185,129,.08)]' : 'border-border hover:border-primary/30')}>
+      <div className="grid sm:grid-cols-[11rem_minmax(0,1fr)]">
+        <Link href={href} target={external ? '_blank' : undefined} rel={external ? 'noreferrer' : undefined}
+          aria-label={'View ' + gym.name} className="group relative block min-h-44 overflow-hidden bg-muted sm:min-h-full">
+          {gym.coverImage && failedImage !== gym.coverImage ? (
+            <Image src={gym.coverImage} alt={gym.name} fill sizes="(max-width: 640px) 100vw, 176px"
+              onError={() => setFailedImage(gym.coverImage!)} className={(gym.coverImage === gym.logo ? 'object-contain p-4' : 'object-cover') + ' transition duration-500 group-hover:scale-105'} />
+          ) : <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-primary/5 text-primary/50"><Building2 className="size-10" strokeWidth={1} /><span className="text-[10px] text-muted-foreground">No photo available</span></div>}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />
+          {gym.verificationStatus === 'verified' && (
+            <span className="absolute bottom-3 left-3 inline-flex items-center gap-1 rounded-lg bg-background/95 px-2 py-1 text-[10px] font-bold text-foreground shadow-sm">
+              <Check className="size-3 text-primary" /> Verified
+            </span>
+          )}
+        </Link>
+        <div className="flex min-w-0 flex-col p-5">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <span className="font-medium text-muted-foreground">{gym.city || gym.country}{distance !== undefined ? ' - ' + distance.toFixed(1) + ' km away' : ''}</span>
+            <span className="inline-flex items-center gap-1 font-semibold text-foreground">
+              <Star className="size-3.5 fill-amber-400 text-amber-500" />
+              {gym.rating ? gym.rating.toFixed(1) : 'New'}
+              {gym.reviewsCount > 0 && <span className="font-normal text-muted-foreground">({gym.reviewsCount})</span>}
+            </span>
           </div>
-        )}
+          <Link href={href} target={external ? '_blank' : undefined} rel={external ? 'noreferrer' : undefined}
+            className="w-fit text-xl font-bold tracking-tight text-foreground hover:text-primary">
+            <h3>{gym.name}</h3>
+          </Link>
+          <p className="mt-2 flex items-start gap-1.5 text-xs leading-relaxed text-muted-foreground">
+            <MapPin className="mt-0.5 size-3.5 shrink-0" /><span>{gym.address}</span>
+          </p>
+          {gym.description && <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-muted-foreground">{gym.description}</p>}
+          {gym.facilities.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {gym.facilities.slice(0, 3).map(facility => <span key={facility} className="rounded-md bg-muted px-2 py-1 text-[10px] font-medium text-muted-foreground">{facility}</span>)}
+            </div>
+          )}
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+            <button type="button" onClick={onSelect} aria-pressed={selected} aria-label={'Show ' + gym.name + ' on map'}
+              className={'inline-flex items-center gap-1.5 text-xs font-semibold transition hover:text-primary ' + (selected ? 'text-primary' : 'text-muted-foreground')}>
+              <MapPin className="size-3.5" /> {selected ? 'Selected on map' : 'Show on map'}
+            </button>
+            <Link href={href} target={external ? '_blank' : undefined} rel={external ? 'noreferrer' : undefined}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:underline">
+              {external ? 'View on Google Maps' : 'View gym'} <ArrowUpRight className="size-3.5" />
+            </Link>
+          </div>
+          {gym.trainersCount > 0 && <span className="mt-3 inline-flex items-center gap-1 text-[11px] text-muted-foreground"><Users className="size-3" /> {gym.trainersCount} trainers available</span>}
+        </div>
       </div>
     </article>
   )
-
-  if (gym.source === 'google' && gym.googleMapsUri) {
-    return <a href={gym.googleMapsUri} target="_blank" rel="noreferrer" onMouseEnter={onSelect} onFocus={onSelect}>{content}</a>
-  }
-  return <Link href={`/gyms/${gym.slug}`} onMouseEnter={onSelect} onFocus={onSelect}>{content}</Link>
 }
 
 export default function GymsPage() {
   const publicData = usePublicData()
+  const { user } = useAuth()
   const [gyms, setGyms] = useState<PublicGym[]>([])
+  const [radius, setRadius] = useState(10)
   const [search, setSearch] = useState('')
   const [city, setCity] = useState('All cities')
   const [loading, setLoading] = useState(true)
@@ -74,6 +97,11 @@ export default function GymsPage() {
       const params = new URLSearchParams()
       if (search.trim()) params.set('search', search.trim())
       if (city !== 'All cities') params.set('city', city)
+      if (center) {
+        params.set('lat', String(center.latitude))
+        params.set('lng', String(center.longitude))
+        params.set('radius', String(radius))
+      }
       const data = await publicData<{ gyms?: PublicGym[] }>(`/api/gyms?${params}`, signal)
       setGyms(Array.isArray(data.gyms) ? data.gyms : [])
     } catch (error) {
@@ -83,7 +111,7 @@ export default function GymsPage() {
     } finally {
       if (!signal?.aborted) setLoading(false)
     }
-  }, [city, search, publicData])
+  }, [city, search, publicData, center, radius])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -104,26 +132,9 @@ export default function GymsPage() {
     navigator.geolocation.getCurrentPosition(async (position) => {
       const nextCenter = { latitude: position.coords.latitude, longitude: position.coords.longitude }
       setCenter(nextCenter)
-      try {
-        const response = await fetch(`/api/gyms/nearby?lat=${nextCenter.latitude}&lng=${nextCenter.longitude}&radius=10000`)
-        const data = await response.json()
-        const nearby = Array.isArray(data.places) ? data.places as PublicGym[] : []
-        if (response.ok && nearby.length) {
-          setGyms((current) => {
-            const seen = new Set(nearby.map((gym) => gym.id))
-            return [...nearby, ...current.filter((gym) => !seen.has(gym.id))]
-          })
-          setNearbyNotice(`${nearby.length} live Google Places results added.`)
-        } else {
-          setNearbyNotice(data.configured === false
-            ? 'Local listings are shown. Add GOOGLE_MAPS_API_KEY to enable live nearby search.'
-            : 'No additional nearby gyms were found.')
-        }
-      } catch {
-        setNearbyNotice('Nearby search is temporarily unavailable; local listings are still shown.')
-      } finally {
-        setLocating(false)
-      }
+      setNearbyNotice('Showing registered gyms with saved coordinates within your selected radius.')
+      setLocating(false)
+
     }, () => {
       setLocating(false)
       setNearbyNotice('Location permission was not granted. Search by city instead.')
@@ -135,69 +146,121 @@ export default function GymsPage() {
     [gyms, selectedId],
   )
 
-  return (
-    <div className="min-h-screen pb-24 pt-28">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <section className="page-hero gym-floor mb-8 px-6 py-10 sm:px-10 md:py-14">
-          <p className="eyebrow mb-3">Gym Marketplace</p>
-          <div className="grid items-end gap-6 md:grid-cols-[1fr_auto]">
-            <div>
-              <h1 className="display-title max-w-3xl text-4xl text-foreground md:text-6xl">Find your training ground</h1>
-              <p className="mt-4 max-w-2xl text-muted-foreground">Compare verified gyms, explore facilities, and use Google Places to discover options around you.</p>
-            </div>
-            <Button type="button" onClick={findNearby} disabled={locating} className="gap-2">
-              <LocateFixed className="size-4" /> {locating ? 'Finding gyms…' : 'Use my location'}
-            </Button>
-          </div>
-        </section>
+  const selectGym = (id: string) => {
+    setSelectedId(id)
+    if (window.matchMedia('(max-width: 1023px)').matches) {
+      document.getElementById('gym-map')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
 
-        <div className="elite-panel mb-6 grid gap-3 p-4 md:grid-cols-[1fr_12rem]">
-          <label className="relative">
-            <span className="sr-only">Search gyms</span>
-            <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search gym, facility, or area…" className="h-12 w-full rounded-xl border border-white/[.09] bg-black/25 pl-11 pr-4 text-sm outline-none focus:border-primary/45" />
-          </label>
-          <label>
-            <span className="sr-only">Filter gyms by city</span>
-            <select value={city} onChange={(event) => setCity(event.target.value)} className="h-12 w-full rounded-xl border border-white/[.09] bg-black/25 px-4 text-sm outline-none focus:border-primary/45">
-              {CITIES.map((option) => <option key={option}>{option}</option>)}
-            </select>
-          </label>
+  const resetFilters = () => {
+    setSearch('')
+    setCity('All cities')
+    setCenter(null)
+    setRadius(10)
+    setSelectedId(null)
+    setNearbyNotice('')
+  }
+  const hasFilters = Boolean(search || city !== 'All cities' || center)
+
+  return (
+    <div className={'min-h-screen pb-24 ' + (user?.role === 'user' ? 'pt-8' : 'pt-24')}>
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="page-hero fitness-photo-hero mb-7 flex flex-wrap items-end justify-between gap-4 px-6 py-6 sm:px-8">
+          <PagePhoto kind="gym" />
+          <div>
+            <p className="mb-2 text-xs font-bold uppercase tracking-[.16em] text-primary">Find Gyms</p>
+            <h1 className="display-title max-w-3xl text-3xl text-foreground sm:text-4xl">Find your training ground</h1>
+            <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">Explore spaces, compare facilities, and find a gym that fits your routine.</p>
+          </div>
+          <a href="#gym-map" className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground hover:border-primary/40 lg:hidden">
+            <MapPin className="size-4 text-primary" /> View map
+          </a>
         </div>
 
-        {nearbyNotice && (
-          <p role="status" aria-live="polite" className="mb-5 flex items-center gap-2 rounded-xl border border-white/[.07] bg-white/[.025] px-4 py-3 text-xs text-muted-foreground">
-            <Info className="size-3.5 shrink-0 text-primary" /> {nearbyNotice}
-          </p>
-        )}
+        <section aria-label="Filter gyms" className="mb-7 rounded-2xl border border-border bg-card p-4 shadow-sm">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-[minmax(0,1fr)_10rem_8rem_auto]">
+            <label className="col-span-2 block lg:col-span-1">
+              <span className="mb-2 block text-[11px] font-semibold text-muted-foreground">Search</span>
+              <span className="relative block">
+                <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <input value={search} onChange={event => setSearch(event.target.value)} aria-label="Search gyms" placeholder="Gym name, facility, or area"
+                  className="h-11 w-full rounded-xl border border-border bg-background pl-10 pr-3 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+              </span>
+            </label>
+            <label className="block">
+              <span className="mb-2 block text-[11px] font-semibold text-muted-foreground">City</span>
+              <select aria-label="Filter gyms by city" value={city} onChange={event => setCity(event.target.value)}
+                className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-primary">
+                {CITIES.map(option => <option key={option}>{option}</option>)}
+              </select>
+            </label>
+            <label className="block">
+              <span className="mb-2 block text-[11px] font-semibold text-muted-foreground">Radius</span>
+              <select aria-label="Gym distance radius" value={radius} onChange={event => setRadius(Number(event.target.value))}
+                className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-primary">
+                {[2, 5, 10, 25, 50].map(value => <option key={value} value={value}>{value} km</option>)}
+              </select>
+            </label>
+            <div className="col-span-2 flex items-end lg:col-span-1">
+              <Button type="button" onClick={findNearby} disabled={locating} variant={center ? 'default' : 'outline'} className="h-11 w-full gap-2 rounded-xl px-5">
+                <LocateFixed className="size-4" /> {locating ? 'Finding gyms...' : 'Use my location'}
+              </Button>
+            </div>
+          </div>
+          {(hasFilters || nearbyNotice) && (
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
+              <p role="status" className="flex items-center gap-2 text-xs text-muted-foreground">
+                {center ? <LocateFixed className="size-3.5 text-primary" /> : <Info className="size-3.5" />}
+                {nearbyNotice || (center ? 'Within ' + radius + ' km of your location' : 'Filters applied')}
+              </p>
+              <button type="button" onClick={resetFilters} className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"><RotateCcw className="size-3" /> Reset filters</button>
+            </div>
+          )}
+        </section>
 
         {loadError && (
-          <div role="alert" className="mb-5 flex flex-col items-start justify-between gap-3 rounded-xl border border-amber-400/20 bg-amber-400/[.06] px-4 py-3 text-sm text-amber-100 sm:flex-row sm:items-center">
+          <div role="alert" className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-foreground">
             <span>{loadError}</span>
-            <button type="button" onClick={() => void loadMarketplace()} className="inline-flex shrink-0 items-center gap-1.5 font-bold text-primary hover:underline">
-              <RotateCcw className="size-3.5" /> Retry
-            </button>
+            <button type="button" onClick={() => void loadMarketplace()} className="font-semibold text-primary hover:underline">Retry</button>
           </div>
         )}
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(22rem,.9fr)]">
-          <div>
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold">{city === 'All cities' ? 'Recommended gyms' : `Gyms in ${city}`}</h2>
-              <span aria-live="polite" className="text-xs text-muted-foreground">{gyms.length} results</span>
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,.8fr)]">
+          <section aria-label="Gym results" className="min-w-0">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-lg font-bold text-foreground">{center ? 'Gyms near you' : city === 'All cities' ? 'Explore gyms' : 'Gyms in ' + city}</h2>
+              <span aria-live="polite" className="text-xs text-muted-foreground">{loading ? 'Finding gyms...' : gyms.length + (gyms.length === 1 ? ' gym found' : ' gyms found')}</span>
             </div>
             {loading ? (
-              <div aria-busy="true" aria-label="Loading gym listings" className="grid gap-4 sm:grid-cols-2">{[1, 2, 3, 4].map((item) => <div key={item} className="skeleton h-72 rounded-2xl" />)}</div>
-            ) : gyms.length ? (
-              <div className="grid gap-4 sm:grid-cols-2">
-                {gyms.map((gym) => <GymCard key={`${gym.source}-${gym.id}`} gym={gym} selected={selectedGym?.id === gym.id} onSelect={() => setSelectedId(gym.id)} />)}
+              <div aria-busy="true" aria-label="Loading gym listings" className="space-y-4">
+                {[1, 2, 3].map(item => <div key={item} className="skeleton h-60 rounded-2xl" />)}
               </div>
-            ) : (
-              <EmptyState icon={<Building2 className="size-7" />} tagline="No matches" title="No gyms found" description="Try another city or a broader search term." />
-            )}
-          </div>
-          <aside className="lg:sticky lg:top-24 lg:h-[calc(100vh-7rem)]">
-            <GoogleGymMap selectedGym={selectedGym} center={center} className="h-full" />
+            ) : gyms.length ? (
+              <div className="space-y-4">
+                {gyms.map(gym => <GymCard key={gym.source + '-' + gym.id} gym={gym} selected={selectedGym?.id === gym.id}
+                  distance={center && gym.location ? distanceKm(center, gym.location) : undefined}
+                  onSelect={() => selectGym(gym.id)} />)}
+              </div>
+            ) : <EmptyState icon={<Building2 className="size-7" />} tagline="No matches" title="No gyms found" description="Try another city, a larger radius, or a broader search." />}
+          </section>
+
+          <aside id="gym-map" aria-label="Gym map" className="scroll-mt-24 lg:sticky lg:top-24">
+            <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground"><MapPin className="size-4 text-primary" /> Explore the area</div>
+            <div className="overflow-hidden rounded-2xl border border-border bg-card">
+              <GoogleGymMap selectedGym={selectedGym} center={null} className="h-[22rem] !rounded-none !border-0 sm:h-[27rem]" />
+              {selectedGym && (
+                <div className="space-y-2 border-t border-border p-5">
+                  <h2 className="text-base font-bold text-foreground">{selectedGym.name}</h2>
+                  <p className="text-xs leading-relaxed text-muted-foreground">{selectedGym.address}</p>
+                  <a href={'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(selectedGym.address)} target="_blank" rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline">
+                    Open in Google Maps <ArrowUpRight className="size-3.5" />
+                  </a>
+
+                </div>
+              )}
+            </div>
           </aside>
         </div>
       </div>

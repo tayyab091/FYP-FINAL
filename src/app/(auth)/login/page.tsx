@@ -20,6 +20,11 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+    useEffect(() => {
+      if (new URLSearchParams(window.location.search).get('error') === 'name_taken') {
+        setError('This name is already taken. Create an account with another username using the signup form.')
+      }
+    }, [])
 
   useEffect(() => {
     if (authLoading || !user) return

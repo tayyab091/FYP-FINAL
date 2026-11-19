@@ -1,11 +1,13 @@
 'use client'
-import { Suspense, useEffect, useState } from 'react'
+import { PagePhoto } from '@/components/shared/PagePhoto'
+import { Suspense, useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { toast } from 'sonner'
 import { PLANS, type PlanId } from '@/lib/plans'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { useActivityRefresh } from '@/hooks/useActivityRefresh'
 import { Button } from '@/components/ui/button'
 
 function SubscriptionReturnHandler() {
@@ -58,6 +60,14 @@ function SubscriptionReturnHandler() {
 export default function SubscriptionPage() {
   const { user, isLoading: authLoading, refreshUser } = useAuth()
   const router = useRouter()
+  const [billing, setBilling] = useState<{ recurring?: boolean; subscription?: { endDate?: string; cancelAtPeriodEnd?: boolean; plan?: string } } | null>(null)
+  const refreshBilling = useCallback(async () => {
+    if (!user) return
+    const response = await fetch('/api/subscription', { cache: 'no-store' })
+    if (response.ok) setBilling(await response.json())
+  }, [user])
+  useEffect(() => { void refreshBilling().catch(() => {}) }, [refreshBilling])
+  useActivityRefresh(refreshBilling, Boolean(user), 15000)
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<PlanId | null>(null)
   const [processing, setProcessing] = useState(false)
@@ -85,7 +95,7 @@ export default function SubscriptionPage() {
       router.push('/login?redirect=/subscription')
       return
     }
-    if (planId === currentPlan) return
+    if (planId === currentPlan && billing?.recurring) return
     setSelectedPlan(planId)
     setModalOpen(true)
   }
@@ -109,6 +119,7 @@ export default function SubscriptionPage() {
 
       if (data.simulated || data.success) {
         await refreshUser()
+        await refreshBilling()
         const planName = PLANS.find((p) => p.id === selectedPlan)?.name || 'Pro'
         toast.success(`Plan activated! Welcome to ${planName}!`)
         setModalOpen(false)
@@ -125,8 +136,27 @@ export default function SubscriptionPage() {
   }
 
   const getButtonLabel = (plan: typeof PLANS[0]) => {
-    if (plan.id === currentPlan && user) return 'Current Plan'
+    if (plan.id === currentPlan && user) return plan.id === 'basic' || billing?.recurring ? 'Current Plan' : 'Renew plan'
     return plan.cta
+  }
+
+  const manageBilling = async (action: 'cancel' | 'resume' | 'portal') => {
+    if (processing) return
+    if (action === 'cancel' && !window.confirm('Cancel renewal? Your paid access continues until the current term ends.')) return
+    if (action === 'resume' && billing?.recurring && !window.confirm('Resume automatic billing at the end of your current term?')) return
+    setProcessing(true)
+    try {
+      const response = await fetch('/api/subscription', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.message || 'Unable to update subscription')
+      if (result.url) { window.location.assign(result.url); return }
+      toast.success(result.message)
+      await refreshBilling()
+      await refreshUser()
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Unable to update subscription') }
+    finally { setProcessing(false) }
   }
 
   const selectedPlanDetails = PLANS.find(p => p.id === selectedPlan)
@@ -138,7 +168,8 @@ export default function SubscriptionPage() {
       </Suspense>
 
       <div className="max-w-6xl mx-auto">
-        <div className="page-hero text-center mb-12 px-6 py-12 sm:px-10 md:py-16">
+        <div className="page-hero fitness-photo-hero text-center mb-12 px-6 py-12 sm:px-10 md:py-16">
+            <PagePhoto kind="progress" />
           <p className="eyebrow mb-3">Invest in your strongest self</p>
           <h1 className="display-title text-balance text-4xl md:text-6xl text-foreground mb-5">A Plan for Every Ambition</h1>
           <p className="text-muted-foreground max-w-2xl mx-auto">
@@ -151,6 +182,22 @@ export default function SubscriptionPage() {
           )}
         </div>
 
+        {user?.role === 'user' && currentPlan !== 'basic' && (
+          <section aria-label="Manage subscription" className="elite-panel mb-10 space-y-4 rounded-2xl p-6">
+            <h2 className="text-xl font-bold">Your membership</h2>
+            <p className="text-sm text-muted-foreground">
+              {billing?.subscription?.endDate ? 'Paid through ' + new Date(billing.subscription.endDate).toLocaleDateString() : 'Loading billing details...'}
+              {billing?.subscription?.cancelAtPeriodEnd ? '. Cancellation is scheduled.' : billing?.recurring ? '. Renews automatically.' : '. Renew manually to extend your term.'}
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {billing?.recurring && <Button disabled={processing} onClick={() => void manageBilling('portal')}>Manage billing and plan</Button>}
+              {billing?.subscription?.cancelAtPeriodEnd
+                ? <Button disabled={processing} variant="outline" onClick={() => void manageBilling('resume')}>Keep subscription</Button>
+                : <Button disabled={processing} variant="outline" onClick={() => void manageBilling('cancel')}>Cancel renewal</Button>}
+              {!billing?.recurring && <Button disabled={processing} onClick={() => openModal(currentPlan)}>Renew membership</Button>}
+            </div>
+          </section>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {PLANS.map(plan => {
             const isCurrent = !authLoading && user && plan.id === currentPlan
@@ -196,7 +243,7 @@ export default function SubscriptionPage() {
 
                 <button
                   onClick={() => openModal(plan.id)}
-                  disabled={!!isCurrent || authLoading}
+                  disabled={authLoading || Boolean(isCurrent && (plan.id === 'basic' || billing?.recurring))}
                   className={`w-full text-sm disabled:opacity-50 ${
                     plan.highlighted && !isCurrent
                       ? 'btn-accent'

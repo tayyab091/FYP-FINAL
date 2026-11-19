@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import User from '@/models/User'
 import { writeAuditLog } from '@/lib/audit-log'
+import { createNotification } from '@/lib/notifications'
 import { getUser } from '@/lib/auth'
 import type { PlanId } from '@/lib/plans'
 import { normalizePlan } from '@/lib/subscription'
@@ -97,6 +98,11 @@ export async function PUT(
 
     if (!updated) return NextResponse.json({ message: 'User not found' }, { status: 404 })
 
+    await createNotification({
+      userId: updated._id, title: 'Subscription updated',
+      message: 'Your account subscription was updated by an administrator.',
+      type: 'payment', link: '/subscription',
+    }).catch(() => {})
     await writeAuditLog({
       actorId: tokenUser.userId,
       action: auditAction,

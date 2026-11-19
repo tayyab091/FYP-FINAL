@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import User from '@/models/User'
 import Trainer from '@/models/Trainer'
+import { namePattern, normalizedName } from '@/lib/unique-name'
 import { getUser } from '@/lib/auth'
 import { parseJsonBody, profileUpdateSchema } from '@/lib/validation'
 import { resolveAvatarUrl } from '@/lib/avatar'
@@ -18,7 +19,10 @@ export async function PUT(req: NextRequest) {
     const data = parsed.data
     await connectDB()
 
-    const update: Record<string, unknown> = { fullName: data.fullName }
+    if (data.fullName && await User.exists({ _id: { $ne: tokenUser.userId }, fullName: namePattern(data.fullName) })) {
+      return NextResponse.json({ message: 'This name is already taken. Please use another username.' }, { status: 409 })
+    }
+    const update: Record<string, unknown> = { fullName: data.fullName, ...(data.fullName ? { nameKey: normalizedName(data.fullName) } : {}) }
     if (data.country !== undefined) update.country = data.country
     if (data.profileImage !== undefined) update.profileImage = data.profileImage
     if (data.bio !== undefined) update.bio = data.bio

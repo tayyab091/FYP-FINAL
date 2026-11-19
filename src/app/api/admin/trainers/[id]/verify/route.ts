@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import Trainer from '@/models/Trainer'
 import { writeAuditLog } from '@/lib/audit-log'
+import { createNotification } from '@/lib/notifications'
 import { getUser } from '@/lib/auth'
 import { adminActionSchema, parseJsonBody, parseObjectIdParam } from '@/lib/validation'
 
@@ -30,6 +31,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     trainer.isFullyVerified = trainer.adminVerificationStatus === 'approved' && gymApproved
     await trainer.save()
 
+    await createNotification({
+      userId: trainer.userId, title: 'Trainer verification updated',
+      message: action === 'verify' ? 'Your application has been approved.' : 'Your application was rejected.' + (reason ? ' ' + reason : ''),
+      type: 'system', link: '/trainer-dashboard',
+    }).catch(() => {})
     await writeAuditLog({
       actorId: tokenUser.userId,
       action: action === 'verify' ? 'TRAINER_VERIFIED' : 'TRAINER_REJECTED',

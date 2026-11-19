@@ -184,7 +184,7 @@ export function AIGeneratorTab() {
           onClick={generate}
           disabled={loading}
           className="w-full py-4 rounded-2xl font-bold text-primary-foreground text-base transition-all disabled:opacity-50"
-          style={{ background: loading ? '#555' : 'linear-gradient(135deg, #00ff87, #00d4ff)' }}
+          style={{ background: loading ? '#555' : 'var(--primary)' }}
         >
           {loading ? (
             <span className="flex items-center justify-center gap-3">

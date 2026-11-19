@@ -1,9 +1,11 @@
 'use client'
+import { PagePhoto } from '@/components/shared/PagePhoto'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { ChevronDown, Sparkles, Utensils } from 'lucide-react'
+import { useActivityRefresh } from '@/hooks/useActivityRefresh'
 import { useAuth } from '@/hooks/useAuth'
 import { canAccessMealPlansForUser } from '@/lib/access'
 import { PageLoader } from '@/components/shared/PageLoader'
@@ -65,20 +67,24 @@ export default function MealPlansPage() {
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
+  const [loggingServing, setLoggingServing] = useState<string | null>(null)
+  const [loggedServings, setLoggedServings] = useState<string[]>([])
   const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({})
   const [showGenerate, setShowGenerate] = useState(false)
   const [form, setForm] = useState({ goal: 'general_fitness', preferenceNotes: '' })
 
-  const loadPlans = useCallback(async () => {
-    setLoading(true)
+  const loadPlans = useCallback(async (background = false) => {
+    if (!background) setLoading(true)
     try {
       const res = await fetch('/api/meal-plans')
       const data = await res.json()
       if (!res.ok) throw new Error(data.message || 'Failed to load plans')
       setPlans(Array.isArray(data) ? data : [])
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to load meal plans')
-      setPlans([])
+      if (!background) {
+        toast.error(error instanceof Error ? error.message : 'Failed to load meal plans')
+        setPlans([])
+      }
     } finally {
       setLoading(false)
     }
@@ -87,6 +93,8 @@ export default function MealPlansPage() {
   useEffect(() => {
     if (user && canAccessMealPlansForUser(user)) loadPlans()
   }, [user, loadPlans])
+
+  useActivityRefresh(() => loadPlans(true), Boolean(user && canAccessMealPlansForUser(user)), 15000)
 
   const activePlan = useMemo(() => {
     if (selectedPlanId) {
@@ -123,6 +131,24 @@ export default function MealPlansPage() {
     }
   }
 
+  const logServing = async (dayIndex: number, mealIndex: number) => {
+    if (!activePlan || loggingServing) return
+    const key = activePlan._id + ':' + dayIndex + ':' + mealIndex
+    setLoggingServing(key)
+    try {
+      const response = await fetch('/api/meal-plans/' + activePlan._id + '/log', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dayIndex, mealIndex }),
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.message || 'Unable to log serving')
+      setLoggedServings(current => [...current, key])
+      window.dispatchEvent(new CustomEvent('app:activity'))
+      toast.success('Planned serving logged with its saved calories and macros')
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Unable to log serving') }
+    finally { setLoggingServing(null) }
+  }
+
   const toggleDay = (day: string) => {
     setExpandedDays((prev) => ({ ...prev, [day]: !prev[day] }))
   }
@@ -145,11 +171,12 @@ export default function MealPlansPage() {
     <div className="min-h-screen pt-6 pb-28 px-4 sm:px-6">
       <div className="mx-auto max-w-4xl">
         <FadeIn>
-          <div className="page-hero mb-6 px-6 py-8 sm:px-8 gym-floor">
+          <div className="page-hero fitness-photo-hero mb-6 px-6 py-8 sm:px-8 gym-floor">
+            <PagePhoto kind="nutrition" />
             <p className="eyebrow mb-2">Nutrition OS</p>
             <h1 className="display-title text-3xl md:text-4xl">Meal Plans</h1>
             <p className="mt-2 text-muted-foreground">
-              Follow your trainer-assigned plan — or generate one if you&apos;re on Pro/Elite.
+              {user.role === 'trainer' ? 'Review the nutrition schedules assigned to your clients.' : 'Follow your trainer-assigned plan or generate a personalized schedule.'}
             </p>
           </div>
         </FadeIn>
@@ -167,17 +194,17 @@ export default function MealPlansPage() {
               <Utensils className="size-10 text-muted-foreground" />
               <div>
                 <p className="text-base font-semibold text-foreground">
-                  No meal plan yet. Ask your trainer to create one.
+                  {user.role === 'trainer' ? 'No client meal plans yet. Create a plan for an active client.' : 'No meal plan yet. Ask your trainer to create one.'}
                 </p>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Or generate a personalized plan yourself if your subscription allows.
+                  {user.role === 'trainer' ? 'Open your clients to create and assign their nutrition schedules.' : 'Or generate a personalized plan yourself if your subscription allows.'}
                 </p>
               </div>
               <div className="flex flex-wrap justify-center gap-3">
-                <Link href="/coaching" className="btn-accent px-6 py-2.5 text-sm font-bold">
-                  Find a trainer
+                <Link href={user.role === 'trainer' ? '/trainer-dashboard?tab=clients' : '/chat'} className="btn-accent px-6 py-2.5 text-sm font-bold">
+                  {user.role === 'trainer' ? 'Manage client plans' : 'Message your trainer'}
                 </Link>
-                <Button type="button" variant="outline" onClick={() => setShowGenerate(true)}>
+                <Button type="button" variant="outline" hidden={user.role === 'trainer'} onClick={() => setShowGenerate(true)}>
                   Self-generate
                 </Button>
               </div>
@@ -229,7 +256,7 @@ export default function MealPlansPage() {
                             className="h-full rounded-full transition-all"
                             style={{
                               width: `${percent}%`,
-                              background: 'linear-gradient(90deg, #00ff87, #00d4ff)',
+                              background: 'var(--primary)',
                             }}
                           />
                         </div>
@@ -253,8 +280,15 @@ export default function MealPlansPage() {
                             </p>
                             <p className="mt-0.5 text-sm font-medium text-foreground">{meal.name}</p>
                             <p className="mt-1 text-xs text-muted-foreground">
-                              {meal.calories} kcal · P {meal.protein}g · C {meal.carbs}g · F {meal.fat}g
+                              {meal.calories} kcal per planned serving · P {meal.protein}g · C {meal.carbs}g · F {meal.fat}g
                             </p>
+                            {user.role === 'user' && (
+                              <Button type="button" size="sm" variant="outline"
+                                disabled={Boolean(loggingServing) || loggedServings.includes(activePlan._id + ':' + activePlan.days.indexOf(day) + ':' + day.meals.indexOf(meal))}
+                                onClick={() => logServing(activePlan.days.indexOf(day), day.meals.indexOf(meal))}>
+                                {loggedServings.includes(activePlan._id + ':' + activePlan.days.indexOf(day) + ':' + day.meals.indexOf(meal)) ? 'Logged today' : 'Log this serving'}
+                              </Button>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -265,11 +299,11 @@ export default function MealPlansPage() {
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <Button type="button" variant="outline" size="sm" onClick={() => setShowGenerate((v) => !v)}>
+              <Button type="button" variant="outline" size="sm" hidden={user.role === 'trainer'} onClick={() => setShowGenerate((v) => !v)}>
                 {showGenerate ? 'Hide generator' : 'Generate another plan'}
               </Button>
-              <Link href="/coaching" className="text-sm text-primary hover:underline self-center">
-                Ask your trainer
+              <Link href={user.role === 'trainer' ? '/trainer-dashboard?tab=clients' : '/chat'} className="text-sm text-primary hover:underline self-center">
+                {user.role === 'trainer' ? 'Manage client plans' : 'Message your trainer'}
               </Link>
             </div>
           </div>

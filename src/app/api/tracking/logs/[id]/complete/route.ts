@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { POST as startWorkout } from '@/app/api/tracking/logs/route'
 import { connectDB } from '@/lib/mongodb'
 import { getUser } from '@/lib/auth'
 import WorkoutPlan from '@/models/WorkoutPlan'
 import WorkoutLog from '@/models/WorkoutLog'
 import { getWorkoutWeeklyLimit, normalizePlan } from '@/lib/subscription'
 import { syncUserSubscription } from '@/lib/subscription-server'
-import { awardWorkoutXp } from '@/lib/gamification'
+import { awardWorkoutXp, getGamificationMe } from '@/lib/gamification'
 import { parseJsonBody, parseObjectIdParam, workoutCompleteSchema } from '@/lib/validation'
 async function enforceWeeklyLimit(userId: string) {
   const subscription = await syncUserSubscription(userId)
@@ -52,6 +53,14 @@ export async function PUT(
 
     await connectDB()
 
+    const previous = await WorkoutLog.findOne({ _id: idResult.id, userId: tokenUser.userId }).select('status xpAwarded exercises date planId').lean()
+    if (previous?.status === 'completed') {
+      const result = previous.xpAwarded
+        ? { gamification: await getGamificationMe(tokenUser.userId), xpAwarded: 0 }
+        : await awardWorkoutXp(tokenUser.userId, 'workout:' + idResult.id)
+      await WorkoutLog.updateOne({ _id: idResult.id }, { $set: { xpAwarded: true } })
+      return NextResponse.json({ message: 'Workout completed', log: previous, ...result })
+    }
     const limitError = await enforceWeeklyLimit(tokenUser.userId)
     if (limitError) return limitError
 
@@ -88,10 +97,17 @@ export async function PUT(
 
     if (!log) {
       const existing = await WorkoutLog.findOne({ _id: idResult.id, userId: tokenUser.userId })
-        .select('status')
+        .select('status xpAwarded exercises date planId')
         .lean()
       if (!existing) {
         return NextResponse.json({ message: 'Workout log not found' }, { status: 404 })
+      }
+      if (existing.status === 'completed') {
+        const result = existing.xpAwarded
+          ? { gamification: await getGamificationMe(tokenUser.userId), xpAwarded: 0 }
+          : await awardWorkoutXp(tokenUser.userId, 'workout:' + idResult.id)
+        await WorkoutLog.updateOne({ _id: idResult.id }, { $set: { xpAwarded: true } })
+        return NextResponse.json({ message: 'Workout completed', log: existing, ...result })
       }
       return NextResponse.json({ message: existing.status === 'completed' ? 'Workout already completed' : 'Only an in-progress workout can be completed' }, { status: 400 })
     }
@@ -108,9 +124,8 @@ export async function PUT(
       })
     }
 
-    const gamificationResult = await awardWorkoutXp(tokenUser.userId)
-    log.xpAwarded = true
-    await log.save()
+    const gamificationResult = await awardWorkoutXp(tokenUser.userId, 'workout:' + log._id.toString())
+    await WorkoutLog.updateOne({ _id: log._id }, { $set: { xpAwarded: true } })
 
     return NextResponse.json({
       message: 'Workout completed',
@@ -159,33 +174,16 @@ export async function POST(
       return NextResponse.json({ message: 'Active plan not found' }, { status: 404 })
     }
 
-    const limitError = await enforceWeeklyLimit(tokenUser.userId)
-    if (limitError) return limitError
+    const started = await startWorkout(new NextRequest(new URL('/api/tracking/logs', req.url), {
+      method: 'POST', headers: req.headers,
+      body: JSON.stringify({ planId: idResult.id, exercises: parsed.data.exercises, requestKey: 'legacy:' + idResult.id + ':' + new Date().toISOString().slice(0, 10) }),
+    }))
+    if (!started.ok) return started
+    const { log } = await started.json()
+    return PUT(new NextRequest(new URL('/api/tracking/logs/' + log._id + '/complete', req.url), {
+      method: 'PUT', headers: req.headers, body: JSON.stringify(parsed.data),
+    }), { params: Promise.resolve({ id: String(log._id) }) })
 
-    const log = await WorkoutLog.create({
-      userId: tokenUser.userId,
-      planId: plan._id,
-      status: 'completed',
-      exercises: parsed.data.exercises,
-      durationMinutes: parsed.data.durationMinutes || 0,
-      notes: parsed.data.notes || '',
-      date: new Date(),
-      xpAwarded: true,
-    })
-
-    const gamificationResult = await awardWorkoutXp(tokenUser.userId)
-
-    return NextResponse.json(
-      {
-        message: 'Workout completed',
-        log,
-        xpAwarded: gamificationResult.xpAwarded,
-        streakBonus: gamificationResult.streakBonus,
-        newlyUnlocked: gamificationResult.newlyUnlocked,
-        gamification: gamificationResult.gamification,
-      },
-      { status: 201 },
-    )
   } catch {
     return NextResponse.json({ message: 'Server error' }, { status: 500 })
   }
