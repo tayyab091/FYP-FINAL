@@ -64,6 +64,7 @@ const roleNavigation: Record<UserRole, NavItem[]> = {
   ],
   trainer: [
     { label: 'Dashboard', href: '/trainer-dashboard', icon: Home, exact: true },
+    { label: 'My Gym', href: '/trainer-dashboard/my-gym', icon: Building2 },
     { label: 'Messages', href: '/chat', icon: MessageCircle },
     { label: 'Exercises', href: '/trainer-dashboard/exercises', icon: Dumbbell },
     { label: 'Form Checker', href: '/exercise-check', icon: Camera },
@@ -111,6 +112,7 @@ const pageTitles: Record<string, string> = {
   '/analytics': 'Analytics',
   '/my-trainers': 'My Trainers',
   '/trainer-dashboard': 'Trainer Dashboard',
+  '/trainer-dashboard/my-gym': 'My Gym',
   '/trainer-dashboard/exercises': 'Exercise Library',
   '/trainer-dashboard/nutrition': 'Nutrition Library',
   '/gym-owner': 'Gym Management',
