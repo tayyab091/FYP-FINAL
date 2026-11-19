@@ -20,6 +20,8 @@ import { DishMoreInfoPanel } from '@/components/nutrition/DishMoreInfoPanel'
 import { mealDetailPath } from '@/lib/meal-slug'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { usePublicData } from '@/hooks/usePublicData'
+import type { CatalogPage } from '@/lib/public-data-cache'
 
 interface MealItem {
   id: string
@@ -64,6 +66,7 @@ export function RoleNutritionLibrary({
   publicPreviewHref = '/nutrition',
   showTrainerPlans = false,
 }: RoleNutritionLibraryProps) {
+  const publicData = usePublicData()
   const [meals, setMeals] = useState<MealItem[]>([])
   const [meta, setMeta] = useState<MealMeta | null>(null)
   const [total, setTotal] = useState(0)
@@ -122,22 +125,19 @@ export function RoleNutritionLibrary({
     setLoading(true)
     setPage(1)
 
-    fetch(`/api/meals?${buildQuery(1, true)}`, { signal: controller.signal })
-      .then((r) => {
-        if (!r.ok) throw new Error(`Failed to load meals (${r.status})`)
-        return r.json()
-      })
+    publicData<CatalogPage<MealItem, MealMeta>>(`/api/meals?${buildQuery(1, true)}`, controller.signal)
       .then((data) => {
         if (controller.signal.aborted) return
         setMeals(data.meals || [])
         setTotal(data.total ?? 0)
         setTotalPages(data.totalPages ?? 1)
         setPage(data.page ?? 1)
-        if (data.meta) {
+        const nextMeta = data.meta
+        if (nextMeta) {
           setMeta((prev) => ({
-            categories: data.meta.categories?.length ? data.meta.categories : prev?.categories || [],
-            areas: data.meta.areas?.length ? data.meta.areas : prev?.areas || [],
-            total: data.meta.total ?? data.total ?? prev?.total ?? 0,
+            categories: nextMeta.categories?.length ? nextMeta.categories : prev?.categories || [],
+            areas: nextMeta.areas?.length ? nextMeta.areas : prev?.areas || [],
+            total: nextMeta.total ?? data.total ?? prev?.total ?? 0,
           }))
         }
       })
@@ -151,7 +151,7 @@ export function RoleNutritionLibrary({
       })
 
     return () => { controller.abort(); requestVersion.current += 1 }
-  }, [buildQuery, retry])
+  }, [buildQuery, retry, publicData])
 
   const retryLoad = () => {
     setRetry((n) => n + 1)
@@ -164,9 +164,7 @@ export function RoleNutritionLibrary({
     setLoadingMore(true)
     const nextPage = page + 1
     try {
-      const res = await fetch(`/api/meals?${buildQuery(nextPage, false)}`)
-      if (!res.ok) throw new Error('Failed to load more meals')
-      const data = await res.json()
+      const data = await publicData<CatalogPage<MealItem, MealMeta>>(`/api/meals?${buildQuery(nextPage, false)}`)
       if (version !== requestVersion.current) return
       setMeals((prev) => {
         const seen = new Set(prev.map((meal) => meal.id))
@@ -192,9 +190,7 @@ export function RoleNutritionLibrary({
     if (mealDetails[id]) return
     setDetailErrors((prev) => ({ ...prev, [id]: '' }))
     try {
-      const res = await fetch(`/api/meals?id=${encodeURIComponent(id)}`)
-      if (!res.ok) throw new Error('Preview unavailable')
-      const detail = (await res.json()) as MealDetail
+      const detail = await publicData<MealDetail>(`/api/meals?id=${encodeURIComponent(id)}`)
       if (!detail.id || !Array.isArray(detail.ingredients)) throw new Error('Invalid preview')
       setMealDetails((prev) => ({ ...prev, [id]: detail }))
     } catch {

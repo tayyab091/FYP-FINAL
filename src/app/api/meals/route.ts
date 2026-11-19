@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
 
     if (id) {
       const meal = await getMealById(id)
-      if (!meal) return NextResponse.json({ message: 'Meal not found' }, { status: 404 })
+      if (!meal) return NextResponse.json({ message: 'Meal not found' }, { status: 404, headers: { 'Cache-Control': 'private, no-store' } })
       return catalogResponse(meal)
     }
 
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
         limit: Math.min(limit, 24),
         includeMeta: true,
       })
-      return NextResponse.json({
+      return catalogResponse({
         meta: preview.meta,
         meals: preview.meals,
         total: preview.total,
@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
       const remoteResults = await searchMeals(search)
       if (remoteResults.length > 0) {
         const paged = remoteResults.slice((page - 1) * limit, page * limit)
-        return NextResponse.json({
+        return catalogResponse({
           meals: paged,
           total: remoteResults.length,
           page,
@@ -93,8 +93,8 @@ export async function GET(req: NextRequest) {
       includeMeta: searchParams.has('includeMeta'),
     })
 
-    return NextResponse.json(result)
+    return catalogResponse(result)
   } catch {
-    return NextResponse.json({ message: 'Failed to fetch meals' }, { status: 500 })
+    return NextResponse.json({ message: 'Failed to fetch meals' }, { status: 500, headers: { 'Cache-Control': 'private, no-store' } })
   }
 }

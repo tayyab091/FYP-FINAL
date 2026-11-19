@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectDBWithTimeout } from '@/lib/mongodb'
 import Trainer from '@/models/Trainer'
 import { createPublicSlug } from '@/lib/slug'
+import { getOrFetch } from '@/lib/server-cache'
 
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
@@ -15,15 +16,25 @@ const FALLBACK_TRAINERS = [
 ].map((trainer) => ({ ...trainer, isFallback: true }))
 
 export async function GET(req: NextRequest) {
+  const { searchParams } = req.nextUrl
+  const specialty = (searchParams.get('specialty') || '').trim().slice(0, 80)
+  const country = (searchParams.get('country') || '').trim().slice(0, 80)
+  const search = (searchParams.get('search') || '').trim().slice(0, 100)
+  const requestedLimit = parseInt(searchParams.get('limit') || '20')
+  const limit = Number.isFinite(requestedLimit) ? Math.min(100, Math.max(1, requestedLimit)) : 20
+  const featured = Boolean(searchParams.get('featured'))
+
+  const fallbackResponse = () => {
+    let fallback = FALLBACK_TRAINERS
+    if (specialty) fallback = fallback.filter(t => t.specialty.some(s => s.toLowerCase().includes(specialty.toLowerCase())))
+    if (country) fallback = fallback.filter(t => t.country.toLowerCase().includes(country.toLowerCase()))
+    if (search) fallback = fallback.filter(t => t.name.toLowerCase().includes(search.toLowerCase()) || t.bio.toLowerCase().includes(search.toLowerCase()))
+    if (featured) fallback = fallback.filter(t => t.isFeatured)
+    return NextResponse.json({ trainers: fallback.slice(0, limit), meta: { source: 'fallback', connectable: false } }, {
+      headers: { 'Cache-Control': 'private, no-store' },
+    })
+  }
   try {
-    await connectDBWithTimeout(4000)
-    const { searchParams } = req.nextUrl
-    const specialty = searchParams.get('specialty')
-    const country = searchParams.get('country')
-    const search = searchParams.get('search')
-    const requestedLimit = parseInt(searchParams.get('limit') || '20')
-    const limit = Number.isFinite(requestedLimit) ? Math.min(100, Math.max(1, requestedLimit)) : 20
-    const featured = searchParams.get('featured')
 
     const query: Record<string, unknown> = { isFullyVerified: true, isActive: true }
     if (specialty) query.specialty = { $in: [new RegExp(escapeRegex(specialty), 'i')] }
@@ -37,33 +48,30 @@ export async function GET(req: NextRequest) {
       ]
     }
 
-    const trainers = await Trainer.find(query).limit(limit).lean()
+    const trainers = await getOrFetch<Array<Record<string, unknown>>>(
+      `public-trainers:${JSON.stringify([specialty, country, search, limit, featured])}`, 30_000,
+      async () => {
+        await connectDBWithTimeout(4000)
+        return Trainer.find(query)
+          .select('name slug specialty country rating bio isFullyVerified isActive isFeatured profileImage gymName totalClients experience certifications hourlyRate languages')
+          .limit(limit).lean()
+      },
+    )
 
     // Always return data — use fallback if DB is empty
     if (trainers.length === 0) {
-      let fallback = FALLBACK_TRAINERS
-      if (specialty) fallback = fallback.filter(t => t.specialty.some(s => s.toLowerCase().includes(specialty.toLowerCase())))
-      if (country) fallback = fallback.filter(t => t.country.toLowerCase().includes(country.toLowerCase()))
-      if (search) fallback = fallback.filter(t => t.name.toLowerCase().includes(search.toLowerCase()) || t.bio.toLowerCase().includes(search.toLowerCase()))
-      if (featured) fallback = fallback.filter(t => t.isFeatured)
-      return NextResponse.json({
-        trainers: fallback.slice(0, limit),
-        meta: { source: 'fallback', connectable: false },
-      })
+      return fallbackResponse()
     }
 
     return NextResponse.json({
       trainers: trainers.map(trainer => ({
         ...trainer,
-        slug: trainer.slug || createPublicSlug(trainer.name, trainer._id.toString()),
+        slug: trainer.slug || createPublicSlug(String(trainer.name), String(trainer._id)),
       })),
       meta: { source: 'database', connectable: true },
-    })
+    }, { headers: { 'Cache-Control': 'public, max-age=30, s-maxage=60, stale-while-revalidate=30' } })
   } catch (error) {
     console.error('Trainers error:', error)
-    return NextResponse.json({
-      trainers: FALLBACK_TRAINERS,
-      meta: { source: 'fallback', connectable: false },
-    })
+    return fallbackResponse()
   }
 }

@@ -7,8 +7,9 @@ import User from '@/models/User'
 import { withDeadline } from '@/lib/with-deadline'
 import { generateChatFallback, getWeightConflictMessage } from '@/lib/chat-fallback-engine'
 import { APA_CHAT_DISCLAIMER, apaNumbered, apaReply } from '@/lib/chat-apa-format'
+import { requestOpenRouterChat, type ChatMessage } from '@/lib/openrouter-chat'
 
-const GEMINI_APA_INSTRUCTIONS = `You are a professional fitness and nutrition coach for T.E.S.T., a Pakistani fitness platform.
+const COACH_INSTRUCTIONS = `You are a professional fitness and nutrition coach for T.E.S.T., a Pakistani fitness platform.
 
 Format every answer as readable Markdown:
 - Start with a short ## title and use ### section headings when useful.
@@ -79,6 +80,10 @@ function fallbackReply(message: string, profile?: FitnessContext | null): string
   return apaReply(['Fitness Guidance', apaNumbered('Recommended Steps', steps)])
 }
 
+function formatCoachReply(reply: string) {
+  return apaReply(/^#{1,3}\s/m.test(reply) ? [reply] : ['Fitness Guidance', reply])
+}
+
 export async function POST(req: NextRequest) {
   try {
     const limited = rateLimitAi(req)
@@ -104,26 +109,39 @@ export async function POST(req: NextRequest) {
     })(), 1200, null)
 
     const apiKey = process.env.GEMINI_API_KEY
-    if (!apiKey || apiKey === 'PASTE_GEMINI_KEY_HERE') {
-      return NextResponse.json({ reply: fallbackReply(message, profile), source: 'local-coach' })
-    }
-
-    const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
+    const hasGemini = Boolean(apiKey && apiKey !== 'PASTE_GEMINI_KEY_HERE')
     const context = profile
       ? `Member context: goal=${goalLabel(profile.fitnessGoal)}, activity=${profile.activityLevel || 'unknown'}, currentWeight=${profile.currentWeight ?? 'unknown'}, targetWeight=${profile.targetWeight ?? 'unknown'}, otherMetric=${profile.goalMetricCurrent ?? 'unknown'} to ${profile.goalMetricTarget ?? 'unknown'} ${profile.goalMetricUnit || ''}.`
       : 'Member context: not signed in or no saved goal.'
+    const systemPrompt = `${COACH_INSTRUCTIONS}\n\n${context}\nAnswer the user's actual intent and never confuse weight gain with weight loss. Ask one focused follow-up only when essential.`
+    const openRouterReply = await requestOpenRouterChat([
+      { role: 'system', content: systemPrompt },
+      ...safeHistory.map((item): ChatMessage => ({
+        role: item.role === 'assistant' || item.role === 'model' ? 'assistant' : 'user',
+        content: item.content,
+      })),
+      { role: 'user', content: message },
+    ], hasGemini ? 10_000 : 16_000, req.signal)
+    if (openRouterReply) {
+      return NextResponse.json({ reply: formatCoachReply(openRouterReply.reply), source: 'openrouter', model: openRouterReply.model })
+    }
+    if (!hasGemini) {
+      return NextResponse.json({ reply: fallbackReply(message, profile), source: process.env.OPENROUTER_API_KEY ? 'local-fallback' : 'local-coach' })
+    }
+
+    const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey,
+          'x-goog-api-key': apiKey!,
         },
         body: JSON.stringify({
           systemInstruction: {
             parts: [{
-              text: `${GEMINI_APA_INSTRUCTIONS}\n\nMember context: ${context}\nAnswer the user's actual intent and never confuse weight gain with weight loss. Ask one focused follow-up only when essential.`,
+              text: systemPrompt,
             }],
           },
           contents: [
@@ -147,7 +165,7 @@ export async function POST(req: NextRequest) {
       error?: { message?: string }
     }
     if (!response.ok) {
-      console.error('Gemini API error:', data.error?.message || response.status)
+      console.error('Gemini API error:', response.status)
       return NextResponse.json({ reply: fallbackReply(message, profile), source: 'local-fallback' })
     }
 
@@ -156,7 +174,7 @@ export async function POST(req: NextRequest) {
       .join('\n')
       .trim()
     return NextResponse.json({
-      reply: reply || fallbackReply(message, profile),
+      reply: reply ? formatCoachReply(reply) : fallbackReply(message, profile),
       source: reply ? 'gemini' : 'local-fallback',
     })
   } catch (error) {

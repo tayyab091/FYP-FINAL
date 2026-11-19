@@ -8,6 +8,8 @@ import { StatCard } from '@/components/shared/StatCard'
 import { StaggerChildren } from '@/components/motion'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { usePublicData } from '@/hooks/usePublicData'
+import type { CatalogPage } from '@/lib/public-data-cache'
 
 interface Exercise {
   id: string
@@ -41,6 +43,7 @@ export function RoleExerciseLibrary({
   description,
   publicPreviewHref = '/exercises',
 }: RoleExerciseLibraryProps) {
+  const publicData = usePublicData()
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [meta, setMeta] = useState<ExerciseMeta | null>(null)
   const [total, setTotal] = useState(0)
@@ -79,11 +82,7 @@ export function RoleExerciseLibrary({
     setLoadingMore(false)
     setFetchError(null)
     setPage(1)
-    fetch(`/api/exercises?meta=true&${buildQuery(1)}`, { signal: controller.signal })
-      .then((r) => {
-        if (!r.ok) throw new Error('Unable to load exercises. Please try again.')
-        return r.json()
-      })
+    publicData<CatalogPage<Exercise, ExerciseMeta>>(`/api/exercises?meta=true&${buildQuery(1)}`, controller.signal)
       .then((data) => {
         if (controller.signal.aborted) return
         setExercises(data.exercises || [])
@@ -99,7 +98,7 @@ export function RoleExerciseLibrary({
       })
       .finally(() => { if (!controller.signal.aborted) setLoading(false) })
     return () => { controller.abort(); requestVersion.current += 1 }
-  }, [buildQuery, retry])
+  }, [buildQuery, retry, publicData])
 
   const loadMore = async () => {
     if (page >= totalPages || loadingMore || loading) return
@@ -108,17 +107,13 @@ export function RoleExerciseLibrary({
     setLoadingMore(true)
     const nextPage = page + 1
     try {
-      const res = await fetch(`/api/exercises?${buildQuery(nextPage)}`)
-      if (!res.ok) throw new Error('Failed to load more exercises')
-      {
-        const data = await res.json()
-        if (version !== requestVersion.current) return
-        setExercises((prev) => {
-          const seen = new Set(prev.map((exercise) => exercise.id))
-          return [...prev, ...(data.exercises || []).filter((exercise: Exercise) => !seen.has(exercise.id))]
-        })
-        setPage(nextPage)
-      }
+      const data = await publicData<CatalogPage<Exercise, ExerciseMeta>>(`/api/exercises?${buildQuery(nextPage)}`)
+      if (version !== requestVersion.current) return
+      setExercises((prev) => {
+        const seen = new Set(prev.map((exercise) => exercise.id))
+        return [...prev, ...(data.exercises || []).filter((exercise: Exercise) => !seen.has(exercise.id))]
+      })
+      setPage(nextPage)
     } catch {
       if (version === requestVersion.current) setFetchError('Unable to load more exercises. Please try again.')
     } finally {

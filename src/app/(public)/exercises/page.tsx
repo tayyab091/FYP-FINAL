@@ -1,6 +1,7 @@
 'use client'
 import { memo, useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { Dumbbell, Wrench, ChevronDown, ChevronUp, Search, X, Filter } from 'lucide-react'
 import { FitnessBadge } from '@/components/motion/FitnessBadge'
 import { FadeIn } from '@/components/motion'
@@ -8,6 +9,8 @@ import { EmptyState } from '@/components/shared/EmptyState'
 import { CatalogImageFrame } from '@/components/shared/CatalogImageFrame'
 import { ExpandableCardPanel } from '@/components/shared/ExpandableCardPanel'
 import { ExerciseMoreInfoPanel } from '@/components/exercise/ExerciseMoreInfoPanel'
+import { usePublicData } from '@/hooks/usePublicData'
+import type { CatalogPage } from '@/lib/public-data-cache'
 
 interface Exercise {
   id: string
@@ -197,6 +200,7 @@ function FilterSelect({
 }
 
 export default function ExercisesPage() {
+  const publicData = usePublicData()
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
   const [bodyPartCategory, setBodyPartCategory] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -249,8 +253,7 @@ export default function ExercisesPage() {
     setLoading(true)
     setPage(1)
 
-    fetch(`/api/exercises?meta=true&${buildQuery(1)}`, { signal: controller.signal })
-      .then((r) => (r.ok ? r.json() : null))
+    publicData<CatalogPage<Exercise, ExerciseMeta>>(`/api/exercises?meta=true&${buildQuery(1)}`, controller.signal)
       .then((data) => {
         if (!data || controller.signal.aborted) return
         setExercises(data.exercises || [])
@@ -265,19 +268,18 @@ export default function ExercisesPage() {
       .finally(() => { if (!controller.signal.aborted) setLoading(false) })
 
     return () => controller.abort()
-  }, [buildQuery])
+  }, [buildQuery, publicData])
 
   const loadMore = async () => {
     if (page >= totalPages || loadingMore) return
     setLoadingMore(true)
     const nextPage = page + 1
     try {
-      const res = await fetch(`/api/exercises?${buildQuery(nextPage)}`)
-      if (res.ok) {
-        const data = await res.json()
-        setExercises((prev) => [...prev, ...(data.exercises || [])])
-        setPage(nextPage)
-      }
+      const data = await publicData<CatalogPage<Exercise, ExerciseMeta>>(`/api/exercises?${buildQuery(nextPage)}`)
+      setExercises((prev) => [...prev, ...(data.exercises || [])])
+      setPage(nextPage)
+    } catch {
+      toast.error('Unable to load more exercises. Please try again.')
     } finally {
       setLoadingMore(false)
     }

@@ -8,6 +8,7 @@ import { GoogleGymMap } from '@/components/gyms/GoogleGymMap'
 import type { PublicGym } from '@/lib/gyms'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/shared/EmptyState'
+import { usePublicData } from '@/hooks/usePublicData'
 
 const CITIES = ['All cities', 'Lahore', 'Karachi', 'Islamabad']
 
@@ -55,6 +56,7 @@ function GymCard({ gym, selected, onSelect }: { gym: PublicGym; selected: boolea
 }
 
 export default function GymsPage() {
+  const publicData = usePublicData()
   const [gyms, setGyms] = useState<PublicGym[]>([])
   const [search, setSearch] = useState('')
   const [city, setCity] = useState('All cities')
@@ -72,9 +74,7 @@ export default function GymsPage() {
       const params = new URLSearchParams()
       if (search.trim()) params.set('search', search.trim())
       if (city !== 'All cities') params.set('city', city)
-      const response = await fetch(`/api/gyms?${params}`, { signal })
-      if (!response.ok) throw new Error('Unable to load gym listings')
-      const data = await response.json()
+      const data = await publicData<{ gyms?: PublicGym[] }>(`/api/gyms?${params}`, signal)
       setGyms(Array.isArray(data.gyms) ? data.gyms : [])
     } catch (error) {
       if (!(error instanceof DOMException && error.name === 'AbortError')) {
@@ -83,7 +83,7 @@ export default function GymsPage() {
     } finally {
       if (!signal?.aborted) setLoading(false)
     }
-  }, [city, search])
+  }, [city, search, publicData])
 
   useEffect(() => {
     const controller = new AbortController()

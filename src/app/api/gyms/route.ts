@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectDBWithTimeout } from '@/lib/mongodb'
 import Gym from '@/models/Gym'
 import { normalizeGym, PREVIEW_GYMS } from '@/lib/gyms'
+import { getOrFetch } from '@/lib/server-cache'
 
 function escapeRegex(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -12,7 +13,6 @@ export async function GET(req: NextRequest) {
   const city = (req.nextUrl.searchParams.get('city') || '').trim().slice(0, 80)
 
   try {
-    await connectDBWithTimeout(4000)
     const query: Record<string, unknown> = { verificationStatus: 'verified' }
     if (search) {
       const pattern = new RegExp(escapeRegex(search), 'i')
@@ -25,10 +25,15 @@ export async function GET(req: NextRequest) {
     }
     if (city) query.city = new RegExp(`^${escapeRegex(city)}$`, 'i')
 
-    const docs = await Gym.find(query).sort({ rating: -1, createdAt: -1 }).limit(60).lean()
-    const gyms = docs.map((doc) => normalizeGym(doc as unknown as Record<string, unknown>))
+    const gyms = await getOrFetch(`public-gyms:${JSON.stringify([search, city])}`, 30_000, async () => {
+      await connectDBWithTimeout(4000)
+      const docs = await Gym.find(query).sort({ rating: -1, createdAt: -1 }).limit(60).lean()
+      return docs.map((doc) => normalizeGym(doc as unknown as Record<string, unknown>))
+    })
     if (gyms.length > 0) {
-      return NextResponse.json({ gyms, total: gyms.length, isPreview: false })
+      return NextResponse.json({ gyms, total: gyms.length, isPreview: false }, {
+        headers: { 'Cache-Control': 'public, max-age=30, s-maxage=60, stale-while-revalidate=30' },
+      })
     }
   } catch (error) {
     console.error('Public gyms lookup failed:', error)
@@ -42,5 +47,7 @@ export async function GET(req: NextRequest) {
       [gym.name, gym.address, gym.city, ...gym.facilities].some((value) => value.toLowerCase().includes(needle)),
     )
   }
-  return NextResponse.json({ gyms, total: gyms.length, isPreview: true })
+  return NextResponse.json({ gyms, total: gyms.length, isPreview: true }, {
+    headers: { 'Cache-Control': 'private, no-store' },
+  })
 }

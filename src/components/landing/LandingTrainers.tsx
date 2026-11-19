@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Avatar } from '@/components/shared/Avatar'
 import { useHorizontalWheelScroll } from '@/hooks/useHorizontalWheelScroll'
+import { usePublicData } from '@/hooks/usePublicData'
 
 import { motion, useInView, useReducedMotion } from 'framer-motion'
 
@@ -47,6 +48,7 @@ function trainerSpecialties(specialty: Trainer['specialty'] | string | undefined
 
 
 export function LandingTrainers() {
+  const publicData = usePublicData()
 
   const [trainers, setTrainers] = useState<Trainer[]>([])
 
@@ -68,6 +70,7 @@ export function LandingTrainers() {
 
 
     const controller = new AbortController()
+    let active = true
 
     const timeout = setTimeout(() => controller.abort(), 8000)
 
@@ -75,11 +78,10 @@ export function LandingTrainers() {
 
     const startFetch = () => {
 
-      fetch('/api/trainers?limit=8', { signal: controller.signal })
-
-        .then((r) => r.json())
+      publicData<Trainer[] | { trainers?: Trainer[] }>('/api/trainers?limit=8', controller.signal)
 
         .then((data) => {
+          if (!active) return
 
           const list = Array.isArray(data) ? data : data?.trainers
 
@@ -87,13 +89,13 @@ export function LandingTrainers() {
 
         })
 
-        .catch(() => setTrainers([]))
+        .catch(() => { if (active) setTrainers([]) })
 
         .finally(() => {
 
           clearTimeout(timeout)
 
-          setLoading(false)
+          if (active) setLoading(false)
 
         })
 
@@ -116,6 +118,7 @@ export function LandingTrainers() {
 
 
     return () => {
+      active = false
 
       clearTimeout(timeout)
 
@@ -133,7 +136,7 @@ export function LandingTrainers() {
 
     }
 
-  }, [shouldLoad])
+  }, [shouldLoad, publicData])
 
 
 

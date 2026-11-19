@@ -25,7 +25,7 @@ test('all 1500 exercises paginate, and a detail page renders a working animated 
   await page.screenshot({ path: '.perf-artifacts/exercise-detail-mobile.png', fullPage: true })
 })
 
-test('the chatbot loads on interaction and formats a real fallback response', async ({ page }) => {
+test('the chatbot loads on interaction and formats a real coach response', async ({ page }) => {
   const scripts: string[] = []
   page.on('request', request => { if (request.resourceType() === 'script') scripts.push(request.url()) })
   await page.goto('/login')
@@ -36,9 +36,12 @@ test('the chatbot loads on interaction and formats a real fallback response', as
   await expect(panel).toBeVisible()
   expect(scripts.length).toBeGreaterThan(scriptCount)
   await panel.getByPlaceholder('Ask about fitness, nutrition...').fill('How do I lose fat?')
+  const pending = page.waitForResponse(response => response.url().endsWith('/api/ai/chat') && response.request().method() === 'POST')
   await panel.getByRole('button', { name: 'Send message', exact: true }).click()
-  await expect(panel.getByRole('heading', { name: 'Fitness Guidance' })).toBeVisible()
-  await expect(panel.locator('ol li')).toHaveCount(3)
+  expect((await pending).ok()).toBe(true)
+  const answer = panel.locator('.ai-chatbot__bubble--bot').last()
+  await expect(answer.locator('h1, h2, h3').first()).toBeVisible()
+  await expect(answer).toContainText('Note. This information')
   await page.screenshot({ path: '.perf-artifacts/chatbot-formatted.png' })
 })
 

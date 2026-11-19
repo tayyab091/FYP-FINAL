@@ -81,7 +81,8 @@ Optional integrations (see `.env.example`):
 | `CLOUDINARY_URL` | Alternative Cloudinary credential format |
 | `CLOUDINARY_UPLOAD_FOLDER` | Optional Cloudinary folder for chat images |
 | `BLOB_READ_WRITE_TOKEN` | Optional legacy profile image uploads (Vercel Blob) |
-| `GEMINI_API_KEY` / `GEMINI_MODEL` | Goal-aware AI chatbot (local fallback when unset) |
+| `OPENROUTER_API_KEY` / `OPENROUTER_MODELS` | AI chatbot with ordered free model fallbacks; optional comma-separated `:free` model overrides |
+| `GEMINI_API_KEY` / `GEMINI_MODEL` | Optional chatbot provider after OpenRouter; AI workout generation |
 | `GOOGLE_MAPS_API_KEY` / `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Gym search and map display |
 | `SPOONACULAR_API_KEY` | Enhanced food search |
 
@@ -92,6 +93,8 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000). For production on Vercel, set the env vars above in the project settings.
+
+The chatbot tries Nemotron 3.5 Lightning, Ling 3.2 Flash, Gemma 4 26B A4B, and Gemma 4 31B through OpenRouter's ordered model fallback routing, then `openrouter/free`. Only free model IDs are accepted and requests set a zero maximum provider price. Online attempts share a time limit below the chat UI's timeout; Gemini (when configured) and formatted local guidance remain available afterward. Free models share account quotas, so model fallbacks cannot bypass an exhausted daily allowance. Keep `OPENROUTER_API_KEY` in `.env.local` locally and in server environment settings on Vercel, never in a `NEXT_PUBLIC_` variable.
 
 4. **Seed the database** (recommended for demos)
 

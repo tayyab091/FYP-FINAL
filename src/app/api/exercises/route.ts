@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
 
     if (id) {
       const exercise = await fetchExerciseById(id)
-      if (!exercise) return NextResponse.json({ message: 'Exercise not found' }, { status: 404 })
+      if (!exercise) return NextResponse.json({ message: 'Exercise not found' }, { status: 404, headers: { 'Cache-Control': 'private, no-store' } })
       return catalogResponse(exercise)
     }
 
@@ -58,6 +58,6 @@ export async function GET(req: NextRequest) {
 
     return catalogResponse(result)
   } catch {
-    return NextResponse.json({ message: 'Failed to fetch exercises' }, { status: 500 })
+    return NextResponse.json({ message: 'Failed to fetch exercises' }, { status: 500, headers: { 'Cache-Control': 'private, no-store' } })
   }
 }

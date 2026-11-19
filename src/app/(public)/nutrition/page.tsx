@@ -13,6 +13,8 @@ import { mealDetailPath } from '@/lib/meal-slug'
 import { FadeIn, CountUp } from '@/components/motion'
 import { calculateDailyCalories } from '@/lib/nutrition'
 import { NutritionProfile } from '@/components/nutrition/NutritionProfile'
+import { usePublicData } from '@/hooks/usePublicData'
+import type { CatalogPage } from '@/lib/public-data-cache'
 
 interface MealSummary {
   id: string
@@ -64,6 +66,7 @@ const MEAL_TYPES = [
 ]
 
 export default function NutritionPage() {
+  const publicData = usePublicData()
   const queryClient = useQueryClient()
   const { user, isLoading: authLoading } = useAuth()
   const [todayMeals, setTodayMeals] = useState<MealEntry[]>([])
@@ -152,9 +155,9 @@ export default function NutritionPage() {
     setMealsLoading(true)
     setMealPage(1)
 
-    fetch(`/api/meals?meta=true&${buildMealQuery(1)}`, { signal: controller.signal })
-      .then((r) => (r.ok ? r.json() : { meals: [] }))
+    publicData<CatalogPage<MealSummary, { categories: string[]; areas: string[]; total: number }>>(`/api/meals?meta=true&${buildMealQuery(1)}`, controller.signal)
       .then((data) => {
+        if (controller.signal.aborted) return
         setRecipeMeals(data.meals || [])
         setMealTotal(data.total ?? 0)
         setMealTotalPages(data.totalPages ?? 1)
@@ -175,7 +178,7 @@ export default function NutritionPage() {
       })
 
     return () => controller.abort()
-  }, [buildMealQuery])
+  }, [buildMealQuery, publicData])
 
   const loadMoreMeals = async () => {
     if (mealsLoading || mealsLoadingMore) return
@@ -183,15 +186,14 @@ export default function NutritionPage() {
     if (nextPage > mealTotalPages) return
     setMealsLoadingMore(true)
     try {
-      const res = await fetch(`/api/meals?${buildMealQuery(nextPage)}`)
-      if (res.ok) {
-        const data = await res.json()
-        const incoming = data.meals || []
-        if (incoming.length > 0) {
-          setRecipeMeals((prev) => [...prev, ...incoming])
-          setMealPage(data.page ?? nextPage)
-        }
+      const data = await publicData<CatalogPage<MealSummary, never>>(`/api/meals?${buildMealQuery(nextPage)}`)
+      const incoming = data.meals || []
+      if (incoming.length > 0) {
+        setRecipeMeals((prev) => [...prev, ...incoming])
+        setMealPage(data.page ?? nextPage)
       }
+    } catch {
+      toast.error('Unable to load more recipes. Please try again.')
     } finally {
       setMealsLoadingMore(false)
     }
@@ -210,9 +212,7 @@ export default function NutritionPage() {
     if (mealDetails[id]) return
     setDetailErrors((prev) => ({ ...prev, [id]: '' }))
     try {
-      const res = await fetch(`/api/meals?id=${encodeURIComponent(id)}`)
-      if (!res.ok) throw new Error('Preview unavailable')
-      const detail = await res.json()
+      const detail = await publicData<MealDetail>(`/api/meals?id=${encodeURIComponent(id)}`)
       if (!detail.id || !Array.isArray(detail.ingredients)) throw new Error('Invalid preview')
       setMealDetails((prev) => ({ ...prev, [id]: detail }))
     } catch {

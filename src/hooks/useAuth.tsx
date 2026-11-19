@@ -2,6 +2,8 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { useQueryClient } from '@tanstack/react-query'
+import { clearPrivateQueries } from '@/lib/public-data-cache'
 
 interface AuthUser {
   id: string
@@ -31,10 +33,22 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient()
   const [user, setUser] = useState<AuthUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
   const authVersion = useRef(0)
+  const sessionKey = useRef<string | null>(null)
+
+  const applyUser = useCallback((next: AuthUser | null) => {
+    const normalized = next ? { ...next, id: next.id || next._id || '' } : null
+    const key = normalized ? `${normalized.id}:${normalized.role}` : null
+    if (key !== sessionKey.current) {
+      clearPrivateQueries(queryClient)
+      sessionKey.current = key
+    }
+    setUser(normalized)
+  }, [queryClient])
 
   const fetchMe = useCallback(async () => {
     const controller = new AbortController()
@@ -66,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (version !== authVersion.current) return
     if (res?.status === 401) {
-      setUser(null)
+      applyUser(null)
       setIsLoading(false)
       return
     }
@@ -81,13 +95,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (version !== authVersion.current) return
     if (res?.status === 401) {
-      setUser(null)
+      applyUser(null)
     } else if (res?.ok) {
       const data = res.data
-      setUser(data.user ? { ...data.user, id: data.user.id || data.user._id } : null)
+      applyUser(data.user || null)
     }
     setIsLoading(false)
-  }, [fetchMe])
+  }, [fetchMe, applyUser])
 
   useEffect(() => {
     refreshUser()
@@ -103,13 +117,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await res.json()
       if (!res.ok) return { success: false, error: data.message }
       authVersion.current += 1
-      setUser(data.user)
+      applyUser(data.user || null)
       setIsLoading(false)
       return { success: true }
     } catch {
       return { success: false, error: 'Network error. Please try again.' }
     }
-  }, [])
+  }, [applyUser])
 
   const logout = useCallback(async () => {
     try {
@@ -120,11 +134,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
     authVersion.current += 1
-    setUser(null)
+    applyUser(null)
     setIsLoading(false)
     router.replace('/')
     router.refresh()
-  }, [router])
+  }, [router, applyUser])
 
   const contextValue = useMemo(() => ({ user, isLoading, login, logout, refreshUser }), [user, isLoading, login, logout, refreshUser])
 

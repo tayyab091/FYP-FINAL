@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/hooks/useAuth'
+import { usePublicData } from '@/hooks/usePublicData'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Search } from 'lucide-react'
@@ -180,6 +181,7 @@ const SPECIALTIES = ['All', 'Strength Training', 'HIIT', 'Yoga', 'Cardio', 'Body
 const COUNTRIES = ['All', 'Pakistan', 'UAE', 'UK', 'USA']
 
 export default function CoachingPage() {
+  const publicData = usePublicData()
   const { user, isLoading: authLoading } = useAuth()
   const router = useRouter()
   const [trainers, setTrainers] = useState<Trainer[]>([])
@@ -206,6 +208,7 @@ export default function CoachingPage() {
 
   useEffect(() => {
     const controller = new AbortController()
+    let active = true
     const timeout = setTimeout(() => controller.abort(), 8000)
     setLoading(true)
 
@@ -214,18 +217,18 @@ export default function CoachingPage() {
     if (country !== 'All') params.set('country', country)
     if (search.trim()) params.set('search', search.trim())
 
-    fetch(`/api/trainers${params.size ? '?' + params : ''}`, { signal: controller.signal })
-      .then(r => r.ok ? r.json() : { trainers: [] })
+    publicData<unknown>(`/api/trainers${params.size ? '?' + params : ''}`, controller.signal)
       .then(data => {
+        if (!active) return
         const parsed = parseTrainersResponse(data)
         setTrainers(parsed.trainers)
         setMeta(parsed.meta)
       })
-      .catch(() => { setTrainers([]); setMeta(undefined) })
-      .finally(() => { clearTimeout(timeout); setLoading(false) })
+      .catch(() => { if (active) { setTrainers([]); setMeta(undefined) } })
+      .finally(() => { clearTimeout(timeout); if (active) setLoading(false) })
 
-    return () => { controller.abort(); clearTimeout(timeout) }
-  }, [specialty, country, search])
+    return () => { active = false; controller.abort(); clearTimeout(timeout) }
+  }, [specialty, country, search, publicData])
 
   const handleConnect = async (trainerId: string) => {
     if (!user) {

@@ -54,6 +54,11 @@ const nextConfig: NextConfig = {
           { key: 'Access-Control-Allow-Credentials', value: 'true' },
         ],
       },
+      {
+        // Public handlers choose caching per response, including uncached errors/fallbacks.
+        source: '/api/:path((?!exercises(?:/[^/]+/preview)?$|meals$|trainers$|gyms$).*)',
+        headers: [{ key: 'Cache-Control', value: 'private, no-store, max-age=0, must-revalidate' }],
+      },
     ]
   },
   async redirects() {
