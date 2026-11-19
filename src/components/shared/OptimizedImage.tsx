@@ -7,6 +7,7 @@ import { bypassImageOptimization } from '@/lib/image-optimization'
 /** Retry the original source if the remote optimizer is temporarily unavailable. */
 export default function OptimizedImage({ src, alt, unoptimized, onError, ...props }: ImageProps) {
   const [originalSrc, setOriginalSrc] = useState<ImageProps['src'] | null>(null)
+  const [proxiedSrc, setProxiedSrc] = useState<ImageProps['src'] | null>(null)
   const [retry, setRetry] = useState<{ src: ImageProps['src']; attempt: number } | null>(null)
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => () => { if (retryTimer.current) clearTimeout(retryTimer.current) }, [])
@@ -18,6 +19,8 @@ export default function OptimizedImage({ src, alt, unoptimized, onError, ...prop
     requestSrc = url.href
   }
   const bypass = unoptimized ?? (typeof src === 'string' && bypassImageOptimization(src))
+  const exerciseId = typeof src === 'string' ? src.match(/^https:\/\/static\.exercisedb\.dev\/media\/([a-zA-Z0-9_-]+)\.gif(?:\?.*)?$/)?.[1] : undefined
+  if (exerciseId && proxiedSrc === src) requestSrc = `/api/exercises/${encodeURIComponent(exerciseId)}/preview`
   return <Image {...props} src={requestSrc} alt={alt} unoptimized={bypass || originalSrc === src} onError={event => {
     if (!bypass && originalSrc !== src) setOriginalSrc(src)
     else if (typeof src === 'string' && src.startsWith('https://static.exercisedb.dev/') && attempt < 2) {
@@ -26,6 +29,7 @@ export default function OptimizedImage({ src, alt, unoptimized, onError, ...prop
         setRetry({ src, attempt: attempt + 1 })
       }, 300 * (attempt + 1))
     }
+    else if (exerciseId && proxiedSrc !== src) setProxiedSrc(src)
     else onError?.(event)
   }} />
 }

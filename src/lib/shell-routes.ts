@@ -8,6 +8,7 @@ export const DASHBOARD_SHELL_PREFIXES = [
   '/chat',
   '/settings',
   '/meal-plans',
+  '/reviews',
   '/community',
   '/analytics',
   '/live-sessions',

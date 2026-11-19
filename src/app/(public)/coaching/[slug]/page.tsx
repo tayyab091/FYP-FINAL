@@ -1,16 +1,21 @@
 import type { Metadata } from 'next'
 import mongoose from 'mongoose'
+import { cache } from 'react'
 import { permanentRedirect } from 'next/navigation'
 import { JsonLd } from '@/components/seo/JsonLd'
 import { buildPageMetadata, personJsonLd } from '@/lib/seo'
 import { findTrainerByIdOrSlug } from '@/lib/resolve-trainer'
+import { withDeadline } from '@/lib/with-deadline'
 import { CoachingDetailClient } from './CoachingDetailClient'
 
 type PageProps = { params: Promise<{ slug: string }> }
 
+// Metadata and structured data are optional; they must not block the profile UI.
+const publicTrainer = cache((slug: string) => withDeadline(findTrainerByIdOrSlug(slug), 1200, null))
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params
-  const trainer = await findTrainerByIdOrSlug(slug)
+  const trainer = await publicTrainer(slug)
 
   if (!trainer) {
     return buildPageMetadata({
@@ -46,13 +51,13 @@ export default async function TrainerProfilePage({ params }: PageProps) {
   const { slug } = await params
 
   if (mongoose.isValidObjectId(slug)) {
-    const trainer = await findTrainerByIdOrSlug(slug)
+    const trainer = await publicTrainer(slug)
     if (trainer?.slug) {
       permanentRedirect(`/coaching/${trainer.slug}`)
     }
   }
 
-  const trainer = await findTrainerByIdOrSlug(slug)
+  const trainer = await publicTrainer(slug)
 
   return (
     <>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { DietPlanGenerator } from '@/components/nutrition/DietPlanGenerator'
 
 export function AIGeneratorTab() {
   const [form, setForm] = useState({
@@ -38,7 +39,7 @@ export function AIGeneratorTab() {
       if (res.ok) {
         setGeneratedPlan(data.plan)
         if (data.generated) toast.success('AI generated your personalized plan! 🤖')
-        else toast.success('Plan ready! (Using template — add Gemini key for AI generation)')
+        else toast.success('Your workout plan is ready!')
       } else {
         toast.error(data.message || 'Failed to generate plan')
       }
@@ -75,6 +76,7 @@ export function AIGeneratorTab() {
 
   return (
     <div className="space-y-6 max-w-2xl">
+      <DietPlanGenerator />
       <div>
         <p className="section-eyebrow">Powered by Gemini AI</p>
         <h2 className="text-2xl font-black text-foreground">Generate My Workout Plan</h2>

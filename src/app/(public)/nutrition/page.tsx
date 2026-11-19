@@ -12,6 +12,7 @@ import { DishMoreInfoPanel } from '@/components/nutrition/DishMoreInfoPanel'
 import { mealDetailPath } from '@/lib/meal-slug'
 import { FadeIn, CountUp } from '@/components/motion'
 import { calculateDailyCalories } from '@/lib/nutrition'
+import { NutritionProfile } from '@/components/nutrition/NutritionProfile'
 
 interface MealSummary {
   id: string
@@ -77,7 +78,7 @@ export default function NutritionPage() {
   const [logMealType, setLogMealType] = useState('breakfast')
   const [logQuantity, setLogQuantity] = useState('100')
   const [submittingLog, setSubmittingLog] = useState(false)
-  const [calorieGoal, setCalorieGoal] = useState(2000)
+  const calorieGoal = user?.calorieGoal ?? calculateDailyCalories(user || {})
   const [recipeMeals, setRecipeMeals] = useState<MealSummary[]>([])
   const [mealsLoading, setMealsLoading] = useState(true)
   const [mealsLoadingMore, setMealsLoadingMore] = useState(false)
@@ -131,25 +132,6 @@ export default function NutritionPage() {
     if (!authLoading && !user) setSummaryLoaded(true)
   }, [authLoading, user, fetchTodayMeals])
 
-  useEffect(() => {
-    if (!user) return
-    fetch('/api/auth/me', { credentials: 'include' })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        const u = data?.user
-        if (u?.calorieGoal) {
-          setCalorieGoal(u.calorieGoal)
-        } else {
-          setCalorieGoal(calculateDailyCalories({
-            currentWeight: u?.currentWeight,
-            targetWeight: u?.targetWeight,
-            fitnessGoal: u?.fitnessGoal,
-            activityLevel: u?.activityLevel,
-          }))
-        }
-      })
-      .catch(() => {})
-  }, [user])
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedMealSearch(mealSearch), 300)
@@ -381,6 +363,7 @@ export default function NutritionPage() {
           </div>
         </FadeIn>
 
+        <NutritionProfile />
         <section>
           <SectionHeading title="Daily Summary" />
 

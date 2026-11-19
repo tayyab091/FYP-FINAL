@@ -185,6 +185,8 @@ export function CoachingDetailClient({ slug }: { slug: string }) {
   const [trainer, setTrainer] = useState<TrainerDetail | null>(null)
   const [reviewsData, setReviewsData] = useState<ReviewsData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [attempt, setAttempt] = useState(0)
   const [connectStatus, setConnectStatus] = useState<ConnectUiStatus>('idle')
   const [hasActiveRelationship, setHasActiveRelationship] = useState(false)
   const [submittingReview, setSubmittingReview] = useState(false)
@@ -231,27 +233,31 @@ export function CoachingDetailClient({ slug }: { slug: string }) {
 
   useEffect(() => {
     if (!slug) return
+    const controller = new AbortController()
     setLoading(true)
-    fetch(`/api/trainers/${encodeURIComponent(slug)}`)
-      .then(r => r.ok ? r.json() : null)
-      .then((trainerData) => {
-        setTrainer(trainerData)
+    setLoadError(false)
+    fetch(`/api/trainers/${encodeURIComponent(slug)}`, { signal: controller.signal })
+      .then(r => {
+        if (r.status === 404) return null
+        if (!r.ok) throw new Error('Trainer unavailable')
+        return r.json()
       })
-      .finally(() => setLoading(false))
-  }, [slug])
+      .then((trainerData) => {
+        if (!controller.signal.aborted) setTrainer(trainerData)
+      })
+      .catch(() => { if (!controller.signal.aborted) { setTrainer(null); setLoadError(true) } })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false) })
+    return () => controller.abort()
+  }, [slug, attempt])
 
   useEffect(() => {
     const trainerId = trainer?._id
     if (!trainerId) return
-    Promise.all([
-      loadReviews(trainerId),
-      fetch(`/api/trainer/availability?trainerId=${encodeURIComponent(trainerId)}`).then((r) =>
-        r.ok ? r.json() : { slots: [] },
-      ),
-    ]).then(([reviews, availability]) => {
-      setReviewsData(reviews)
-      if (Array.isArray(availability?.slots)) setAvailabilitySlots(availability.slots)
-    })
+    void loadReviews(trainerId).then(setReviewsData).catch(() => toast.error('Unable to load trainer reviews'))
+    void fetch(`/api/trainer/availability?trainerId=${encodeURIComponent(trainerId)}`)
+      .then(response => response.ok ? response.json() : { slots: [] })
+      .then(availability => { if (Array.isArray(availability?.slots)) setAvailabilitySlots(availability.slots) })
+      .catch(() => setAvailabilitySlots([]))
   }, [trainer?._id, loadReviews])
 
   useEffect(() => {
@@ -337,6 +343,8 @@ export function CoachingDetailClient({ slug }: { slug: string }) {
       if (typeof data.averageRating === 'number') {
         setTrainer(prev => prev ? { ...prev, rating: data.averageRating } : prev)
       }
+    } catch {
+      toast.error('Unable to save your review. Please try again.')
     } finally {
       setSubmittingReview(false)
     }
@@ -348,7 +356,8 @@ export function CoachingDetailClient({ slug }: { slug: string }) {
     return (
       <div className="min-h-screen pt-8 pb-24 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-xl font-bold text-foreground mb-4">Trainer not found</h1>
+          <h1 className="text-xl font-bold text-foreground mb-4">{loadError ? 'Trainer temporarily unavailable' : 'Trainer not found'}</h1>
+          {loadError && <button type="button" onClick={() => setAttempt(value => value + 1)} className="btn-accent mb-4">Try again</button>}
           <Link href="/coaching" className="text-primary hover:underline">← Back to coaching</Link>
         </div>
       </div>
@@ -362,7 +371,7 @@ export function CoachingDetailClient({ slug }: { slug: string }) {
   const reviewCount = reviewsData?.reviewCount ?? 0
   const reviews = reviewsData?.reviews ?? []
   const hasUserReview = Boolean(reviewsData?.currentUserReview)
-  const canLeaveReview = Boolean(user && hasActiveRelationship && !hasUserReview)
+  const canLeaveReview = Boolean(user?.role === 'user' && hasActiveRelationship && !hasUserReview)
   const responseTime = trainer.responseTime?.trim() || 'Within 24h'
   const ratingDisplay = reviewCount > 0
     ? averageRating.toFixed(1)
@@ -542,8 +551,8 @@ export function CoachingDetailClient({ slug }: { slug: string }) {
             <FadeIn delay={0.1}>
               <div className="elite-panel rounded-2xl p-6 sm:p-8">
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-                  <h2 className="font-bold text-foreground flex items-center gap-2">
-                    <Star className="size-4 text-yellow-400" /> Client reviews
+                  <h2 id="reviews" className="scroll-mt-24 font-bold text-foreground flex items-center gap-2">
+                    <Star className="size-4 text-primary" /> Client ratings and reviews
                   </h2>
                   <p className="text-xs text-muted-foreground">
                     {reviewCount > 0

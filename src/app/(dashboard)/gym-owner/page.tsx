@@ -46,6 +46,7 @@ function isGymTab(value: string | null): value is GymTab {
 }
 
 interface GymAnalytics {
+  gym?: { rating: number; reviewsCount: number; facilities: string[]; galleryPhotos: number; verificationStatus: string; profileComplete: number; profileFields: number; ratingDistribution: { rating: number; count: number }[]; sessions: Record<string, number> }
   totals: {
     trainers: number
     verifiedTrainers: number
@@ -77,6 +78,7 @@ export default function GymOwnerPage() {
   const [adding, setAdding] = useState(false)
   const [savingGym, setSavingGym] = useState(false)
   const [uploadingGallery, setUploadingGallery] = useState(false)
+  const [analyticsError, setAnalyticsError] = useState('')
   const [analytics, setAnalytics] = useState<GymAnalytics | null>(null)
   const [gym, setGym] = useState<GymDetails>({
     name: '',
@@ -107,6 +109,7 @@ export default function GymOwnerPage() {
     fetch('/api/gym-owner/trainers')
       .then(r => r.ok ? r.json() : [])
       .then(data => setTrainers(Array.isArray(data) ? data : []))
+      .catch(() => toast.error('Unable to load trainers. Please retry.'))
       .finally(() => setLoading(false))
   }
 
@@ -130,13 +133,15 @@ export default function GymOwnerPage() {
           images: Array.isArray(data.images) ? data.images.join(', ') : '',
           verificationStatus: data.verificationStatus,
         })
-      })
+      }).catch(() => toast.error('Unable to load your gym profile'))
   }
 
   const loadAnalytics = () => {
+    setAnalyticsError('')
     fetch('/api/gym-owner/analytics')
-      .then((r) => (r.ok ? r.json() : null))
+      .then((r) => { if (!r.ok) throw new Error('Unable to load gym analytics'); return r.json() })
       .then((data) => setAnalytics(data))
+      .catch(() => setAnalyticsError('Gym analytics are temporarily unavailable.'))
   }
 
   useEffect(() => {
@@ -441,10 +446,23 @@ export default function GymOwnerPage() {
           </TabsContent>
 
           <TabsContent value="analytics">
-            {loading ? <Skeleton className="h-64 bg-muted" /> : trainers.length === 0 ? (
-              <p className="text-muted-foreground text-center py-12">Add trainers to see analytics</p>
-            ) : (
+            {analyticsError && <p role="alert" className="mb-4 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-destructive">{analyticsError} <button type="button" onClick={loadAnalytics} className="font-semibold underline">Retry analytics</button></p>}
+            {loading ? <Skeleton className="h-64 bg-muted" /> : (
               <div className="space-y-8">
+                <h2 className="text-2xl font-bold text-foreground">Gym performance</h2>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <StatCard label="Gym rating" value={analytics?.gym?.rating ? `${analytics.gym.rating.toFixed(1)} / 5` : 'No ratings yet'} icon={Star} variant="amber" />
+                  <StatCard label="Gym reviews" value={analytics?.gym?.reviewsCount ?? 0} icon={Star} variant="primary" />
+                  <StatCard label="Facilities" value={analytics?.gym?.facilities.length ?? 0} icon={Building2} variant="sky" />
+                  <StatCard label="Gallery photos" value={analytics?.gym?.galleryPhotos ?? 0} icon={Building2} variant="primary" />
+                </div>
+                <Card><CardHeader><CardTitle>Facility overview</CardTitle></CardHeader><CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">Verification: <span className="capitalize text-foreground">{analytics?.gym?.verificationStatus || gym.verificationStatus || 'Pending'}</span></p>
+                  <p className="text-sm text-muted-foreground">Profile completeness: {analytics?.gym?.profileComplete ?? 0}/{analytics?.gym?.profileFields ?? 7} fields</p>
+                  <p className="text-sm text-muted-foreground">{analytics?.gym?.facilities.join(' · ') || 'Add facilities to your gym profile to help members compare your gym.'}</p>
+                  <div className="grid grid-cols-3 gap-3">{['scheduled', 'live', 'ended'].map(status => <div key={status} className="rounded-xl bg-muted p-3"><p className="text-xl font-bold text-primary">{analytics?.gym?.sessions[status] ?? 0}</p><p className="text-xs capitalize text-muted-foreground">{status === 'ended' ? 'Completed' : status} sessions</p></div>)}</div>
+                </CardContent></Card>
+                <Card><CardHeader><CardTitle>Member feedback</CardTitle></CardHeader><CardContent>{(analytics?.gym?.ratingDistribution || [5,4,3,2,1].map(rating => ({rating, count:0}))).map(row => <div key={row.rating} className="my-2 flex items-center gap-3 text-sm"><span className="w-14 text-foreground">{row.rating} stars</span><progress aria-label={`${row.rating}-star reviews`} value={row.count} max={Math.max(1, analytics?.gym?.reviewsCount || 0)} className="h-2 flex-1 accent-primary" /><span className="text-muted-foreground">{row.count}</span></div>)}</CardContent></Card>
                 <StaggerChildren className="dashboard-grid cols-3">
                   <StatCard
                     label="Active Clients"

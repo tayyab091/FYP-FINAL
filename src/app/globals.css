@@ -1,5 +1,7 @@
-@import "tailwindcss";
+@import "tailwindcss" source("../");
 @import "tw-animate-css";
+
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
   color-scheme: light;
@@ -112,6 +114,8 @@ button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
 input, textarea, select { max-width: 100%; }
 main, section, article, aside, header, footer { min-width: 0; }
 button, input, textarea, select { font: inherit; }
+input::placeholder, textarea::placeholder { color: var(--muted-foreground); opacity: 1; }
+select, option, optgroup { background-color: var(--card); color: var(--foreground); }
 button, a { touch-action: manipulation; }
 
 body::before {
@@ -610,6 +614,7 @@ h1, h2, h3, h4, h5, h6 {
 /* ─── Custom Select (replaces all plain HTML selects) ─── */
 select,
 .select-native {
+  min-height: 2.75rem;
   appearance: none !important;
   -webkit-appearance: none !important;
   background-color: var(--card) !important;
@@ -641,14 +646,14 @@ select option {
 
 .dark select,
 .dark .select-native {
-  background-color: #0e1a14 !important;
-  border: 1px solid rgba(0, 255, 135, 0.15) !important;
-  color: #ffffff !important;
+  background-color: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--foreground) !important;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2300ff87' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
 }
 .dark select option {
-  background-color: #0a1a0f;
-  color: #ffffff;
+  background-color: var(--card);
+  color: var(--foreground);
 }
 
 /* ─── Card uniform sizing ─── */

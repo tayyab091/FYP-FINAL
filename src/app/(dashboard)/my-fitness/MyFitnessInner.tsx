@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import dynamic from 'next/dynamic'
 
 import { PageLoader } from '@/components/shared/PageLoader'
+import { NutritionProfile } from '@/components/nutrition/NutritionProfile'
 import { SignInGate } from '@/components/shared/AccessGate'
 import { GamificationBar } from '@/components/gamification/GamificationBar'
 import { Avatar } from '@/components/shared/Avatar'
@@ -690,6 +691,7 @@ export default function MyFitnessInner({
           </TabsContent>
 
           <TabsContent value="nutrition">
+            <NutritionProfile />
             {loading ? (
               <Skeleton className="h-48 bg-muted" />
             ) : (

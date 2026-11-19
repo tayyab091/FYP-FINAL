@@ -14,10 +14,10 @@ test('all 1500 exercises paginate, and a detail page renders a working animated 
   const exercise = data.exercises[0]
   await page.goto(`/exercises/${exercise.id}`)
   await expect(page.getByRole('heading', { level: 1, name: exercise.name })).toBeVisible()
-  const demo = page.locator('img[src*="static.exercisedb.dev"]').first()
+  const demo = page.getByAltText(`${exercise.name} — ${exercise.muscle} exercise demonstration`, { exact: true })
   await expect(demo).toBeVisible()
   await expect.poll(() => demo.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0), { timeout: 15000 }).toBe(true)
-  expect(await demo.getAttribute('src')).toContain('.gif')
+  expect(await demo.getAttribute('src')).toMatch(/\.gif|\/api\/exercises\/[^/]+\/preview/)
   expect(duplicateRequests).toEqual([])
   expect(errors).toEqual([])
   await page.setViewportSize({ width: 390, height: 844 })

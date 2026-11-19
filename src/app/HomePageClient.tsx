@@ -97,7 +97,8 @@ function HomePageContent() {
     }
   }, [isLoading, user, router, allowMarketing])
 
-  if (isLoading || (user && !allowMarketing)) {
+  // Public content can render while the optional session lookup is pending.
+  if (user && !allowMarketing) {
     return <HomeLoading />
   }
 

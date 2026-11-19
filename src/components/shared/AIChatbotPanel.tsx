@@ -76,6 +76,7 @@ export function AIChatbotPanel() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [failedMessage, setFailedMessage] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
@@ -206,6 +207,7 @@ export function AIChatbotPanel() {
     setInput('')
     setMessages((m) => [...m, { role: 'user', content: msg }])
     setLoading(true)
+    setFailedMessage('')
     try {
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
@@ -214,9 +216,11 @@ export function AIChatbotPanel() {
         signal: AbortSignal.timeout(20000),
       })
       const data = await res.json()
+      if (!res.ok) setFailedMessage(msg)
       const reply = data.reply || apaReply(['## Coach Unavailable', data.message || 'Please try again shortly.'], { disclaimer: false })
       setMessages((m) => [...m, { role: 'assistant', content: reply }])
     } catch {
+      setFailedMessage(msg)
       setMessages((m) => [...m, { role: 'assistant', content: apaReply(['## Connection Error', 'The coach could not respond in time. Please try again.'], { disclaimer: false }) }])
     } finally {
       setLoading(false)
@@ -334,6 +338,7 @@ export function AIChatbotPanel() {
             </div>
           )}
 
+          {failedMessage && <button type="button" onClick={() => void send(failedMessage)} disabled={loading} className="mx-4 mb-2 rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary">Retry last message</button>}
           <form
             className="ai-chatbot__composer"
             onSubmit={(e) => {

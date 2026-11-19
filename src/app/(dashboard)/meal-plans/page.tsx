@@ -115,7 +115,7 @@ export default function MealPlansPage() {
       toast.success('Meal plan generated')
       setShowGenerate(false)
       if (data?._id) setSelectedPlanId(data._id)
-      await loadPlans()
+      setPlans(previous => [data, ...previous.filter(plan => plan._id !== data._id).map(plan => ({ ...plan, status: 'draft' as const }))])
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Generation failed')
     } finally {

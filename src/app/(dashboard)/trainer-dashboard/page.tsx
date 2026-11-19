@@ -754,7 +754,7 @@ export default function TrainerDashboardPage() {
               <div>
                 <Label>Difficulty</Label>
                 <select value={planForm.difficulty} onChange={e => setPlanForm(f => ({ ...f, difficulty: e.target.value }))}
-                  className="mt-1 w-full h-8 rounded-lg bg-background border border-border px-2 text-sm">
+                  className="mt-1 w-full h-8 rounded-lg bg-card border border-border px-2 text-sm text-foreground">
                   <option value="beginner">Beginner</option>
                   <option value="intermediate">Intermediate</option>
                   <option value="advanced">Advanced</option>
@@ -764,7 +764,7 @@ export default function TrainerDashboardPage() {
             <div>
               <Label>Goal</Label>
               <select value={planForm.goal} onChange={e => setPlanForm(f => ({ ...f, goal: e.target.value }))}
-                className="mt-1 w-full h-8 rounded-lg bg-background border border-border px-2 text-sm">
+                className="mt-1 w-full h-8 rounded-lg bg-card border border-border px-2 text-sm text-foreground">
                 <option value="general_fitness">General Fitness</option>
                 <option value="weight_loss">Weight Loss</option>
                 <option value="muscle_gain">Muscle Gain</option>

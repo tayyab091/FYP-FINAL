@@ -142,7 +142,7 @@ export default function GymsPage() {
           <p className="eyebrow mb-3">Gym Marketplace</p>
           <div className="grid items-end gap-6 md:grid-cols-[1fr_auto]">
             <div>
-              <h1 className="display-title max-w-3xl text-4xl text-white md:text-6xl">Find your training ground</h1>
+              <h1 className="display-title max-w-3xl text-4xl text-foreground md:text-6xl">Find your training ground</h1>
               <p className="mt-4 max-w-2xl text-muted-foreground">Compare verified gyms, explore facilities, and use Google Places to discover options around you.</p>
             </div>
             <Button type="button" onClick={findNearby} disabled={locating} className="gap-2">

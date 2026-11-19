@@ -10,6 +10,11 @@ interface AuthUser {
   email: string
   role: 'user' | 'trainer' | 'gym_owner' | 'admin' | 'super_admin'
   country?: string
+  fitnessGoal?: string
+  activityLevel?: string
+  currentWeight?: number
+  targetWeight?: number
+  calorieGoal?: number
   profileImage?: string
   avatarUrl?: string
   subscription?: { plan: string; status: string }

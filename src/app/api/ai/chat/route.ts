@@ -4,6 +4,7 @@ import { aiChatSchema, parseJsonBody } from '@/lib/validation'
 import { rateLimitAi } from '@/lib/rate-limit'
 import { connectDB } from '@/lib/mongodb'
 import User from '@/models/User'
+import { withDeadline } from '@/lib/with-deadline'
 import { generateChatFallback, getWeightConflictMessage } from '@/lib/chat-fallback-engine'
 import { APA_CHAT_DISCLAIMER, apaNumbered, apaReply } from '@/lib/chat-apa-format'
 
@@ -47,7 +48,7 @@ function localCoachReply(message: string, profile?: FitnessContext | null): stri
   const goalPrefix = profile?.fitnessGoal ? `Keeping your ${savedGoal} goal in mind, ` : ''
 
   // Specific intents must run before broad words such as "weight".
-  if (/gain\s+(?:some\s+)?weight|weight\s+gain|bulk|muscle\s+gain|build\s+muscle/.test(lower)) {
+  if (/gain\s+(?:some\s+)?(?:weight|muscle)|weight\s+gain|bulk|muscle\s+gain|build\s+muscle/.test(lower)) {
     return `${goalPrefix}use a modest 200–300 kcal daily surplus, aim for roughly 1.6–2.2 g protein per kg of body weight, and train each major muscle group twice weekly. Prioritize progressive overload in squats, presses, rows, and hinges. Track weekly averages—not daily scale changes—and adjust food only if weight and strength stay flat for two to three weeks.`
   }
   if (/lose\s+(?:some\s+)?weight|weight\s+loss|fat\s+loss|lose\s+fat|cutting|body\s+recomposition/.test(lower)) {
@@ -91,18 +92,16 @@ export async function POST(req: NextRequest) {
     const weightConflict = getWeightConflictMessage(message)
     if (weightConflict) return NextResponse.json({ reply: weightConflict, source: 'local-coach' })
 
-    let profile: FitnessContext | null = null
-    const tokenUser = await getUser(req)
-    if (tokenUser) {
-      try {
+    const profile = await withDeadline<FitnessContext | null>((async () => {
+      const tokenUser = await getUser(req)
+      if (tokenUser) {
         await connectDB()
-        profile = await User.findById(tokenUser.userId)
+        return await User.findById(tokenUser.userId)
           .select('fullName fitnessGoal activityLevel currentWeight targetWeight goalMetricCurrent goalMetricTarget goalMetricUnit')
           .lean() as FitnessContext | null
-      } catch (error) {
-        console.error('AI profile context unavailable:', error)
       }
-    }
+      return null
+    })(), 1200, null)
 
     const apiKey = process.env.GEMINI_API_KEY
     if (!apiKey || apiKey === 'PASTE_GEMINI_KEY_HERE') {
@@ -137,7 +136,7 @@ export async function POST(req: NextRequest) {
           generationConfig: { maxOutputTokens: 900 },
         }),
         cache: 'no-store',
-        signal: AbortSignal.timeout(12000),
+        signal: AbortSignal.timeout(6000),
       },
     ).catch(() => null)
 

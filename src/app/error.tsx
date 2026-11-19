@@ -16,10 +16,10 @@ export default function GlobalError({
   }, [error])
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-6 text-foreground">
+    <div className="flex min-h-screen items-center justify-center bg-background px-6 text-foreground">
       <div className="page-hero max-w-xl px-8 py-14 text-center sm:px-12">
         <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/10">
-          <AlertTriangle className="h-8 w-8 text-red-400" />
+          <AlertTriangle className="h-8 w-8 text-destructive" />
         </div>
         <h1 className="display-title text-4xl">Something went wrong.</h1>
         <p className="mt-3 text-muted-foreground">

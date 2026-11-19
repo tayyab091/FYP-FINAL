@@ -89,7 +89,7 @@ const ExerciseCard = memo(function ExerciseCard({ exercise }: { exercise: Exerci
   const [imgError, setImgError] = useState(false)
 
   return (
-    <div className="elite-panel interactive-lift card-athletic flex h-full flex-col rounded-2xl overflow-hidden">
+    <div className="elite-panel interactive-lift card-athletic flex flex-col self-start rounded-2xl overflow-hidden">
       <Link href={`/exercises/${exercise.id}`} className="block">
         <CatalogImageFrame
           src={exercise.gifUrl}
@@ -146,10 +146,12 @@ const ExerciseCard = memo(function ExerciseCard({ exercise }: { exercise: Exerci
         </Link>
 
         <button
+          type="button"
+          aria-expanded={expanded}
           onClick={() => setExpanded(!expanded)}
           className={`mt-2 flex w-full items-center gap-1 text-left text-xs font-medium transition-colors ${
             expanded
-              ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.35)]'
+              ? 'text-primary'
               : 'text-primary hover:text-primary/80'
           }`}
         >
@@ -424,7 +426,7 @@ export default function ExercisesPage() {
           </div>
         ) : exercises.length > 0 ? (
           <>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
+            <div className="grid items-start md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredExercises.map((e) => (
                 <ExerciseCard key={e.id} exercise={e} />
               ))}

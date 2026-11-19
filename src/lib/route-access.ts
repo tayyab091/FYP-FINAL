@@ -10,6 +10,7 @@ export const PROTECTED_ROUTES = [
   '/chat',
   '/settings',
   '/meal-plans',
+  '/reviews',
   '/community',
   '/analytics',
   '/live-sessions',
@@ -36,6 +37,7 @@ export const ROLE_ROUTE_RESTRICTIONS: ReadonlyArray<{
   { prefix: '/gym-owner', roles: ['gym_owner'] },
   { prefix: '/my-fitness', roles: ['user'] },
   { prefix: '/dashboard', roles: ['user'] },
+  { prefix: '/reviews', roles: ['user'] },
 ]
 
 export function getRoleDashboardPath(role: string): string {

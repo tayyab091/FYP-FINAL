@@ -24,6 +24,6 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
     return NextResponse.json(normalizeGym(gym as unknown as Record<string, unknown>))
   } catch (error) {
     console.error('Gym detail lookup failed:', error)
-    return NextResponse.json({ message: 'Gym not found' }, { status: 404 })
+    return NextResponse.json({ message: 'Gym temporarily unavailable' }, { status: 503 })
   }
 }

@@ -88,6 +88,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const tokenUser = await getUser(req)
     if (!tokenUser) return NextResponse.json({ message: 'Not authenticated' }, { status: 401 })
+    if (tokenUser.role !== 'user') return NextResponse.json({ message: 'Member account required' }, { status: 403 })
 
     const { id } = await params
     const trainer = await findTrainerByIdOrSlug(id)
