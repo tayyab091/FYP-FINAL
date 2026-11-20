@@ -19,6 +19,7 @@ const GymSchema = new Schema({
   email: { type: String },
   logo: { type: String },
   coverImage: { type: String },
+  googlePlaceId: { type: String, trim: true },
   images: [{ type: String }],
   facilities: [{ type: String }],
   rating: { type: Number, default: 0, min: 0, max: 5 },

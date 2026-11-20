@@ -1,4 +1,4 @@
-export const LEGAL_LAST_UPDATED = 'August 6, 2026'
+export const LEGAL_LAST_UPDATED = 'November 20, 2026'
 
 export const PRIVACY_SECTIONS = [
   {

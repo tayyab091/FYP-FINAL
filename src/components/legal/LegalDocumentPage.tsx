@@ -40,6 +40,10 @@ export function LegalDocumentPage({ title, intro, sections, path }: LegalDocumen
           </section>
         ))}
       </div>
+      <section className="mt-8 space-y-2">
+        <h2 className="text-lg font-bold text-foreground">Google Maps and Places</h2>
+        <p className="text-base leading-relaxed text-muted-foreground">Nearby discovery sends your chosen location to Google when you use it. Google listings, ratings, and attributed photos are supplied by Google. These features are subject to <a href="https://maps.google.com/help/terms_maps/" target="_blank" rel="noreferrer" className="text-primary underline">Google Maps terms</a> and the <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer" className="text-primary underline">Google Privacy Policy</a>.</p>
+      </section>
       <p className="mt-12 text-sm text-muted-foreground">
         See also{' '}
         <Link href={other.href} className="font-medium text-primary hover:underline">

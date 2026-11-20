@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createPublicSlug } from '@/lib/slug'
-import { defaultGymGallery } from '@/lib/media'
+import { photoMetadata, type GooglePhoto } from '@/lib/google-gym-photos'
+import { rateLimit } from '@/lib/rate-limit'
 
 interface GooglePlace {
   id?: string
@@ -12,20 +13,23 @@ interface GooglePlace {
   googleMapsUri?: string
   nationalPhoneNumber?: string
   regularOpeningHours?: { openNow?: boolean }
+  photos?: GooglePhoto[]
 }
 
 function numberParam(value: string | null, fallback: number) {
-  const parsed = Number(value)
+  const parsed = value === null || value.trim() === '' ? NaN : Number(value)
   return Number.isFinite(parsed) ? parsed : fallback
 }
 
 export async function GET(req: NextRequest) {
-  const latitude = numberParam(req.nextUrl.searchParams.get('lat'), 31.5204)
-  const longitude = numberParam(req.nextUrl.searchParams.get('lng'), 74.3587)
+  const latitude = numberParam(req.nextUrl.searchParams.get('lat'), NaN)
+  const longitude = numberParam(req.nextUrl.searchParams.get('lng'), NaN)
   const radius = Math.min(50_000, Math.max(500, numberParam(req.nextUrl.searchParams.get('radius'), 8_000)))
-  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
     return NextResponse.json({ message: 'Invalid map coordinates' }, { status: 400 })
   }
+  const limited = rateLimit(req, 'gym-nearby', 30, 600_000)
+  if (limited) return limited
 
   const apiKey = process.env.GOOGLE_MAPS_API_KEY
   if (!apiKey) {
@@ -51,12 +55,13 @@ export async function GET(req: NextRequest) {
           'places.googleMapsUri',
           'places.nationalPhoneNumber',
           'places.regularOpeningHours.openNow',
+          'places.photos',
         ].join(','),
       },
       body: JSON.stringify({
         includedTypes: ['gym'],
         maxResultCount: 20,
-        rankPreference: 'POPULARITY',
+        rankPreference: 'DISTANCE',
         languageCode: 'en',
         regionCode: 'PK',
         locationRestriction: {
@@ -64,18 +69,20 @@ export async function GET(req: NextRequest) {
         },
       }),
       cache: 'no-store',
+      signal: AbortSignal.timeout(10_000),
     })
 
     const data = await response.json() as { places?: GooglePlace[]; error?: { message?: string } }
     if (!response.ok) {
       return NextResponse.json(
-        { message: data.error?.message || 'Google Places request failed', places: [] },
-        { status: response.status },
+        { message: 'Google gym discovery is unavailable. Registered gyms are still shown.', places: [] },
+        { status: 502 },
       )
     }
 
     const places = (data.places || []).map((place) => {
       const name = place.displayName?.text || 'Nearby gym'
+      const photo = photoMetadata(place.photos?.[0])
       return {
         id: place.id || createPublicSlug(name),
         slug: createPublicSlug(name, place.id),
@@ -87,7 +94,10 @@ export async function GET(req: NextRequest) {
           ? 'Open now · Live result from Google Places'
           : 'Live result from Google Places',
         phone: place.nationalPhoneNumber,
-        images: defaultGymGallery(name),
+        images: [],
+        coverImage: photo?.url,
+        googlePhoto: photo,
+        googlePlaceId: place.id,
         facilities: [],
         trainersCount: 0,
         rating: place.rating || 0,
@@ -101,9 +111,8 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    return NextResponse.json({ configured: true, places })
-  } catch (error) {
-    console.error('Google Places nearby search failed:', error)
+    return NextResponse.json({ configured: true, places, maxResults: 20 }, { headers: { 'Cache-Control': 'private, no-store' } })
+  } catch {
     return NextResponse.json({ message: 'Google Places is temporarily unavailable', places: [] }, { status: 502 })
   }
 }

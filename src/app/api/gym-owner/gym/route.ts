@@ -71,6 +71,7 @@ export async function PUT(req: NextRequest) {
         phone: body.phone || '',
         email: body.email || '',
         logo: body.logo || '',
+        ...(body.googlePlaceId !== undefined ? { googlePlaceId: body.googlePlaceId } : {}),
         facilities: body.facilities || [],
         images: body.images || [],
         ...(body.latitude !== undefined && body.longitude !== undefined

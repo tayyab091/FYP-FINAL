@@ -15,9 +15,9 @@ export function LandingTrainingWorlds() {
   return (
     <section id="explore-fitness" className="fitness-worlds" aria-label="Explore your fitness journey">
       <div className="landing-container">
-        <LandingReveal className="fitness-worlds__heading"><div><p className="eyebrow">YOUR GOALS. YOUR WAY.</p><h2>NOT JUST A WORKOUT.<br /><span>A WAY FORWARD.</span></h2></div><p>Build a routine that moves with you.<br />We bring the pieces together.</p></LandingReveal>
+        <LandingReveal className="fitness-worlds__heading"><div><h2>NOT JUST A WORKOUT.<br /><span>A WAY FORWARD.</span></h2></div></LandingReveal>
         <div className="fitness-worlds__grid">
-          {worlds.map((world, i) => <LandingReveal key={world.number} delay={i * .09} className="fitness-worlds__reveal"><Link href={world.href} className="fitness-world"><div className="fitness-world__image"><Image src={'/images/home/' + world.image} alt={world.alt} fill unoptimized sizes="(min-width: 900px) 33vw, 100vw" /><span className="fitness-world__number">{world.number}</span><span className="fitness-world__arrow"><ArrowUpRight size={22} /></span></div><div className="fitness-world__copy"><span>{world.category}</span><h3>{world.title}</h3><p>{world.text}</p><strong>{world.action} <ArrowUpRight size={16} /></strong></div></Link></LandingReveal>)}
+          {worlds.map((world, i) => <LandingReveal key={world.number} delay={i * .09} className="fitness-worlds__reveal"><Link href={world.href} className="fitness-world"><div className="fitness-world__image"><Image src={'/images/home/' + world.image} alt={world.alt} fill unoptimized sizes="(min-width: 900px) 33vw, 100vw" /><span className="fitness-world__number">{world.number}</span><span className="fitness-world__arrow"><ArrowUpRight size={22} /></span></div><div className="fitness-world__copy"><span>{world.category}</span><h3>{world.title}</h3><strong>{world.action} <ArrowUpRight size={16} /></strong></div></Link></LandingReveal>)}
         </div>
       </div>
     </section>

@@ -21,6 +21,8 @@ export interface PublicGym {
   verificationStatus: 'pending' | 'verified' | 'rejected'
   location?: { latitude: number; longitude: number }
   googleMapsUri?: string
+  googlePlaceId?: string
+  googlePhoto?: { url: string; mapsUri?: string; authors: { name: string; uri?: string }[] }
   source: 'test' | 'google'
 }
 
@@ -123,6 +125,7 @@ export function normalizeGym(doc: Record<string, unknown>): PublicGym {
     country: String(doc.country || 'Pakistan'),
     description: String(doc.description || 'Verified gym on the T.E.S.T. fitness network.'),
     phone: doc.phone ? String(doc.phone) : undefined,
+    googlePlaceId: doc.googlePlaceId ? String(doc.googlePlaceId) : undefined,
     email: doc.email ? String(doc.email) : undefined,
     logo: doc.logo ? String(doc.logo) : undefined,
     coverImage,

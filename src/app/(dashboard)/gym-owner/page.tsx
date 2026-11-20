@@ -25,6 +25,7 @@ import { StaggerChildren } from '@/components/motion'
 import { Avatar } from '@/components/shared/Avatar'
 
 interface GymDetails {
+  googlePlaceId: string
   name: string
   address: string
   city: string
@@ -83,6 +84,7 @@ export default function GymOwnerPage() {
   const [analyticsError, setAnalyticsError] = useState('')
   const [analytics, setAnalytics] = useState<GymAnalytics | null>(null)
   const [gym, setGym] = useState<GymDetails>({
+    googlePlaceId: '',
     name: '',
     address: '',
     city: '',
@@ -121,6 +123,7 @@ export default function GymOwnerPage() {
       .then(data => {
         if (!data) return
         setGym({
+          googlePlaceId: data.googlePlaceId || '',
           name: data.name || '',
           address: data.address || '',
           city: data.city || '',
@@ -336,6 +339,7 @@ export default function GymOwnerPage() {
                     { key: 'phone', label: 'Phone', required: false },
                     { key: 'email', label: 'Email', required: false },
                     { key: 'logo', label: 'Logo URL', required: false },
+                    { key: 'googlePlaceId', label: 'Google Place ID (optional, for original Maps photos)', required: false },
                     { key: 'latitude', label: 'Latitude', required: false },
                     { key: 'longitude', label: 'Longitude', required: false },
                   ].map((field) => (

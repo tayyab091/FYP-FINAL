@@ -19,9 +19,9 @@ export function LandingMethod() {
   return (
     <section className="home-method home-chapter" id="method" aria-label="Explore the T.E.S.T. method">
       <div className="landing-container">
-        <div className="home-chapter-label"><span>01 / THE METHOD</span><span>BUILT AROUND REAL LIFE</span></div>
+        <div className="home-chapter-label"><span>01 / THE METHOD</span></div>
         <div className="home-method__grid">
-          <LandingReveal><p className="eyebrow">SMALL ACTIONS. STRONGER DAYS.</p><h2 className="home-headline">THE OTHER<br /><span>23 HOURS</span><br />MATTER TOO.</h2><p className="home-body">A workout is one part of the story. T.E.S.T. connects how you move, eat, and recover, so every part of your day works toward the same goal.</p><Link href="/signup" className="home-text-link">Build your routine <ArrowUpRight size={18} /></Link></LandingReveal>
+          <LandingReveal><h2 className="home-headline">THE OTHER<br /><span>23 HOURS</span><br />MATTER TOO.</h2><p className="home-body">Training, nutrition, and recovery. One connected routine.</p><Link href="/signup" className="home-text-link">Build your routine <ArrowUpRight size={18} /></Link></LandingReveal>
           <LandingReveal delay={.1} className="home-day">
             <div className="home-day__top"><span>THE DAILY BLUEPRINT</span><span className="home-demo">INTERACTIVE SAMPLE</span></div>
             <div className="home-day__tabs" role="tablist" aria-label="Sample daily routine">{days.map((item, i) => { const Icon = item.icon; return <button key={item.label} id={'day-tab-' + i} role="tab" aria-selected={selected === i} aria-controls="day-panel" onClick={() => setSelected(i)} onKeyDown={e => { if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); const next = (selected + (e.key === 'ArrowRight' ? 1 : 2)) % 3; setSelected(next); document.getElementById('day-tab-' + next)?.focus() } }}><Icon size={16} />{item.label}</button> })}</div>
@@ -44,7 +44,7 @@ export function LandingFormStudio() {
   return (
     <section className="home-studio home-chapter" aria-label="AI form feedback">
       <div className="landing-container">
-        <div className="home-chapter-label"><span>02 / MOVE WITH INTENTION</span><span>YOUR NEXT REP, REFINED</span></div>
+        <div className="home-chapter-label"><span>02 / MOVE WITH INTENTION</span></div>
         <div className="home-studio__grid">
           <LandingReveal className="home-scanner">
             <div className="home-scanner__top"><Crosshair size={17} /><span>MOVEMENT LAB</span><span>DEMO VIEW</span></div>
@@ -64,7 +64,7 @@ export function LandingFormStudio() {
             <div className="home-scanner__controls" aria-label="Illustrated movement"><span>EXPLORE THE MOTION</span><button type="button" aria-pressed={movement === 'squat'} onClick={() => setMovement('squat')}>Squat</button><button type="button" aria-pressed={movement === 'reach'} onClick={() => setMovement('reach')}>Reach</button></div>
             <div className="home-scanner__bottom"><span><i /> FORM OVER EGO</span><span>ILLUSTRATIVE PREVIEW</span></div>
           </LandingReveal>
-          <LandingReveal direction="right"><p className="eyebrow">A BETTER REP STARTS HERE</p><h2 className="home-headline">DON’T JUST<br />COUNT REPS.<br /><span>MAKE THEM COUNT.</span></h2><p className="home-body">Explore camera-based form checks alongside exercise demonstrations. Get a clearer picture of your movement and bring better questions to your coach.</p><Link href="/exercise-check" className="fitness-button">Explore the form checker <ArrowUpRight size={20} /></Link><p className="home-fineprint">Guidance for your training. Not a substitute for a qualified coach or medical advice.</p></LandingReveal>
+          <LandingReveal direction="right"><h2 className="home-headline">DON’T JUST<br />COUNT REPS.<br /><span>MAKE THEM COUNT.</span></h2><p className="home-body">See your movement with camera-based form feedback.</p><Link href="/exercise-check" className="fitness-button">Explore the form checker <ArrowUpRight size={20} /></Link><p className="home-fineprint">Guidance for your training. Not a substitute for a qualified coach or medical advice.</p></LandingReveal>
         </div>
       </div>
     </section>
@@ -75,7 +75,7 @@ export function LandingRecovery() {
   return (
     <section className="home-recovery" aria-label="Sustainable fitness">
       <div className="home-recovery__photo"><Image src="/images/home/male-strength.jpg" alt="A male athlete training with an EZ curl bar" fill unoptimized sizes="(min-width: 900px) 55vw, 100vw" /></div>
-      <div className="home-recovery__copy"><LandingReveal><span className="home-recovery__stamp">T.E.S.T. FIELD NOTES / 003</span><h2>STRONG FOR<br />THE GYM.<br /><em>READY FOR LIFE.</em></h2><p>For the stairs that feel easier. The weekend you say yes to. The confidence that follows you home.</p><p>Fitness should give you more life, not take over your life.</p><Link href="/coaching" className="home-text-link">Find support that fits <ArrowUpRight size={18} /></Link><div className="home-recovery__signature">Train. Eat. Sleep. Thrive.<span>THE EVERYDAY ATHLETE’S MANIFESTO</span></div></LandingReveal></div>
+      <div className="home-recovery__copy"><LandingReveal><h2>STRONG FOR<br />THE GYM.<br /><em>READY FOR LIFE.</em></h2><p>Fitness should give you more life, not take over your life.</p><Link href="/coaching" className="home-text-link">Find support that fits <ArrowUpRight size={18} /></Link></LandingReveal></div>
     </section>
   )
 }
@@ -95,7 +95,7 @@ export function LandingStartAndFaq() {
         ['02', 'FIND YOUR RHYTHM.', 'Explore exercises and build a routine you can repeat.', '/exercises', 'Explore movement'],
         ['03', 'KEEP SHOWING UP.', 'Connect with a coach and track the work you put in.', '/coaching', 'Meet your coach'],
       ].map(([n,title,text,href,cta],i) => <LandingReveal key={n} delay={i * .08}><article><span>{n}</span><h3>{title}</h3><p>{text}</p><Link href={href}>{cta}<ArrowUpRight size={17} /></Link></article></LandingReveal>)}</div></div></section>
-      <section className="home-faq" aria-label="Frequently asked questions"><div className="landing-container home-faq__grid"><div><p className="eyebrow">BEFORE YOU BEGIN</p><h2 className="home-headline">GOOD<br /><span>QUESTIONS.</span></h2><p className="home-body">A little clarity goes a long way.</p></div><div>{questions.map(([q,a]) => <details key={q}><summary>{q}<Plus size={18} aria-hidden /></summary><p>{a}</p></details>)}</div></div></section>
+      <section className="home-faq" aria-label="Frequently asked questions"><div className="landing-container home-faq__grid"><div><h2 className="home-headline">GOOD<br /><span>QUESTIONS.</span></h2></div><div>{questions.map(([q,a]) => <details key={q}><summary>{q}<Plus size={18} aria-hidden /></summary><p>{a}</p></details>)}</div></div></section>
       <section className="home-finale" aria-label="Start your fitness journey"><div className="landing-container"><span>YOUR NEXT CHAPTER DOESN’T WRITE ITSELF.</span><Link href="/signup" className="home-finale__link">LET’S<br /><em>GET TO IT.</em><ArrowUpRight aria-hidden /></Link><div className="home-finale__bottom"><span>TRAIN / EAT / SLEEP / THRIVE</span><Link href="/subscription">Find your plan <ArrowUpRight size={16} /></Link></div></div></section>
     </>
   )

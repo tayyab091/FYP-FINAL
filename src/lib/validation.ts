@@ -384,6 +384,7 @@ export const gymOwnerLinkSchema = z.object({
 })
 
 export const gymUpdateSchema = z.object({
+  googlePlaceId: z.string().trim().max(255).regex(/^[\w-]*$/, 'Enter a Google Place ID, not a Maps URL').optional(),
   name: plainTextSchema(120, 2),
   address: plainTextSchema(300, 2),
   country: optionalPlainTextSchema(80),

@@ -9,6 +9,8 @@ import { GoogleGymMap } from '@/components/gyms/GoogleGymMap'
 import { GymReviews } from '@/components/gyms/GymReviews'
 import type { PublicGym } from '@/lib/gyms'
 import { PageLoader } from '@/components/shared/PageLoader'
+import { useGymGooglePhoto } from '@/hooks/useGymGooglePhoto'
+import { GooglePhotoAttribution } from '@/components/gyms/GooglePhotoAttribution'
 
 export default function GymDetailPage() {
   const { slug } = useParams<{ slug: string }>()
@@ -16,6 +18,9 @@ export default function GymDetailPage() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [attempt, setAttempt] = useState(0)
+  const googlePhoto = useGymGooglePhoto(gym)
+  const [failedPhoto, setFailedPhoto] = useState<string | null>(null)
+  const photo = googlePhoto?.url !== failedPhoto ? googlePhoto : undefined
 
   useEffect(() => {
     if (!slug) return
@@ -68,7 +73,7 @@ export default function GymDetailPage() {
 
         <section className="elite-panel overflow-hidden rounded-3xl">
           <div className="relative h-64 bg-gradient-to-br from-primary/15 to-sky-400/10 sm:h-80">
-            {gym.coverImage ? <Image src={gym.coverImage} alt={gym.name} fill priority sizes="100vw" className="object-cover" /> : <div className="flex h-full items-center justify-center"><Building2 className="size-16 text-primary" /></div>}
+            {photo?.url || gym.coverImage ? <Image src={photo?.url || gym.coverImage!} alt={gym.name} fill priority unoptimized={Boolean(photo)} onError={() => { if (photo) setFailedPhoto(photo.url) }} sizes="100vw" className="object-cover" /> : <div className="flex h-full items-center justify-center"><Building2 className="size-16 text-primary" /></div>}
             <div className="absolute inset-0 bg-gradient-to-t from-[#080b09] via-black/25 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 p-6 sm:p-8">
               <div className="mb-3 flex flex-wrap gap-2"><span className="inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/15 px-3 py-1 text-xs font-bold text-primary"><CheckCircle2 className="size-3.5" /> Verified gym</span></div>
@@ -79,6 +84,7 @@ export default function GymDetailPage() {
 
           <div className="grid gap-8 p-6 sm:p-8 lg:grid-cols-[1fr_22rem]">
             <div className="space-y-8">
+              <GooglePhotoAttribution photo={photo} mapsUri={'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(gym.name) + '&query_place_id=' + encodeURIComponent(gym.googlePlaceId || '')} />
               <div className="grid grid-cols-3 gap-3">
                 <div className="rounded-2xl bg-white/[.035] p-4"><Star className="mb-2 size-4 text-amber-300" /><div className="text-xl font-black">{gym.rating ? gym.rating.toFixed(1) : 'New'}</div><p className="text-[11px] text-muted-foreground">{gym.reviewsCount} reviews</p></div>
                 <div className="rounded-2xl bg-white/[.035] p-4"><Users className="mb-2 size-4 text-primary" /><div className="text-xl font-black">{gym.trainersCount}</div><p className="text-[11px] text-muted-foreground">Trainers</p></div>
