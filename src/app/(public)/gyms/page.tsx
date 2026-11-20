@@ -19,8 +19,8 @@ import { GoogleBrand, GooglePhotoAttribution } from '@/components/gyms/GooglePho
 
 const CITIES = ['All cities', 'Lahore', 'Karachi', 'Islamabad']
 
-function GymCard({ gym, selected, onSelect, distance }: {
-  gym: PublicGym; selected: boolean; onSelect: () => void; distance?: number
+function GymCard({ gym, selected, onSelect, distance, driving }: {
+  gym: PublicGym; selected: boolean; onSelect: () => void; distance?: number; driving?: boolean
 }) {
   const [failedImages, setFailedImages] = useState<string[]>([])
   const photo = useGymGooglePhoto(gym)
@@ -46,7 +46,7 @@ function GymCard({ gym, selected, onSelect, distance }: {
         <div className="flex min-w-0 flex-col p-5">
           <span className={'mb-3 w-fit rounded-lg border px-2 py-1 text-[10px] font-bold ' + (external ? 'border-border text-muted-foreground' : 'border-primary/30 bg-primary/10 text-primary')}>{external ? (gym.source === 'osm' ? 'OpenStreetMap · not registered' : 'Google listing · not registered') : gym.id.startsWith('preview-') ? 'Demo listing' : 'Registered on T.E.S.T.'}</span>
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs">
-            <span className="font-medium text-muted-foreground">{gym.city || gym.country}{distance !== undefined ? ' - ' + distance.toFixed(1) + ' km away' : ''}</span>
+            <span className="font-medium text-muted-foreground">{gym.city || gym.country}{distance !== undefined ? ' - ' + distance.toFixed(1) + (driving ? ' km drive' : ' km straight-line') : ''}</span>
             <span className="inline-flex items-center gap-1 font-semibold text-foreground">
               <Star className="size-3.5 fill-amber-400 text-amber-500" />
               {gym.source === 'osm' ? 'Unrated' : gym.rating ? gym.rating.toFixed(1) : 'New'}
@@ -179,10 +179,10 @@ export default function GymsPage() {
     }, () => {
       setLocating(false)
       setNearbyNotice('Location permission was not granted. Search by city instead.')
-    }, { enableHighAccuracy: false, timeout: 8000 })
+    }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 })
   }
 
-  const gyms = useMemo(() => {
+  const candidates = useMemo(() => {
     const combined = center ? mergeNearbyGyms(registeredGyms, discoveredGyms, center, radius) : registeredGyms
     const needle = search.trim().toLowerCase()
     return combined.filter(gym =>
@@ -191,6 +191,31 @@ export default function GymsPage() {
       (city === 'All cities' || gym.city.toLowerCase() === city.toLowerCase() || gym.address.toLowerCase().includes(city.toLowerCase())),
     )
   }, [registeredGyms, discoveredGyms, center, radius, search, listingType, city])
+  const routeKey = JSON.stringify(center ? { origin: center, destinations: candidates.map(gym => gym.location) } : null)
+  const [routing, setRouting] = useState<{ key: string; distances?: (number | null)[] }>({ key: '' })
+  useEffect(() => {
+    if (!center || !candidates.length) return
+    const controller = new AbortController()
+    void fetch('/api/gyms/distances', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: routeKey,
+      signal: controller.signal,
+    }).then(async response => {
+      if (!response.ok) throw new Error('Routing unavailable')
+      const data = await response.json()
+      if (!controller.signal.aborted) setRouting({ key: routeKey,
+        distances: data.provider === 'google' && Array.isArray(data.distances) && data.distances.length === candidates.length ? data.distances : undefined })
+    }).catch(() => { if (!controller.signal.aborted) setRouting({ key: routeKey }) })
+    return () => controller.abort()
+  }, [routeKey, center, candidates.length])
+  const driving = routing.key === routeKey && Boolean(routing.distances)
+  const routeLoading = Boolean(center && candidates.length && routing.key !== routeKey)
+  const distanceFor = (gym: PublicGym) => driving
+    ? routing.distances?.[candidates.indexOf(gym)] ?? undefined
+    : center && gym.location ? distanceKm(center, gym.location) : undefined
+  const gyms = driving ? candidates.filter(gym => {
+    const distance = distanceFor(gym)
+    return distance !== undefined && distance <= radius
+  }).sort((a, b) => distanceFor(a)! - distanceFor(b)!) : candidates
   const selectedGym = useMemo(
     () => gyms.find((gym) => gym.id === selectedId) || null,
     [gyms, selectedId],
@@ -264,7 +289,7 @@ export default function GymsPage() {
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
               <p role="status" className="flex items-center gap-2 text-xs text-muted-foreground">
                 {center ? <LocateFixed className="size-3.5 text-primary" /> : <Info className="size-3.5" />}
-                {nearbyNotice || (center ? 'Within ' + radius + ' km of your location' : 'Filters applied')}
+                {nearbyNotice || (center ? 'Within ' + radius + (driving ? ' km driving distance (Google Routes)' : ' km straight-line radius; road distances may be longer') : 'Filters applied')}
               </p>
               <button type="button" onClick={resetFilters} className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"><RotateCcw className="size-3" /> Reset filters</button>
             </div>
@@ -285,16 +310,16 @@ export default function GymsPage() {
           <section aria-label="Gym results" className="min-w-0">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-lg font-bold text-foreground">{center ? 'Gyms near you' : city === 'All cities' ? 'Explore gyms' : 'Gyms in ' + city}</h2>
-              <span aria-live="polite" className="text-xs text-muted-foreground">{loading || discoveryLoading ? 'Finding gyms...' : gyms.length + (gyms.length === 1 ? ' gym found' : ' gyms found')}</span>
+              <span aria-live="polite" className="text-xs text-muted-foreground">{loading || discoveryLoading || routeLoading ? 'Finding gyms...' : gyms.length + (gyms.length === 1 ? ' gym found' : ' gyms found')}</span>
             </div>
-            {loading ? (
+            {loading || routeLoading ? (
               <div aria-busy="true" aria-label="Loading gym listings" className="space-y-4">
                 {[1, 2, 3].map(item => <div key={item} className="skeleton h-60 rounded-2xl" />)}
               </div>
             ) : gyms.length ? (
               <div className="space-y-4">
                 {gyms.map(gym => <GymCard key={gym.source + '-' + gym.id} gym={gym} selected={selectedGym?.id === gym.id}
-                  distance={center && gym.location ? distanceKm(center, gym.location) : undefined}
+                  distance={distanceFor(gym)} driving={driving}
                   onSelect={() => selectGym(gym.id)} />)}
               </div>
             ) : <EmptyState icon={<Building2 className="size-7" />} tagline="No matches" title="No gyms found" description="Try another city, a larger radius, or a broader search." />}
