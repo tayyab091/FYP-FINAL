@@ -7,6 +7,7 @@ import { useParams } from 'next/navigation'
 import { ArrowLeft, Building2, CheckCircle2, Mail, MapPin, Phone, RotateCcw, Star, Users } from 'lucide-react'
 import { GoogleGymMap } from '@/components/gyms/GoogleGymMap'
 import { GymReviews } from '@/components/gyms/GymReviews'
+import { GymTrainers } from '@/components/gyms/GymTrainers'
 import type { PublicGym } from '@/lib/gyms'
 import { PageLoader } from '@/components/shared/PageLoader'
 import { useGymGooglePhoto } from '@/hooks/useGymGooglePhoto'
@@ -92,6 +93,7 @@ export default function GymDetailPage() {
               </div>
 
               <div><p className="eyebrow mb-2">About</p><h2 className="text-2xl font-bold">Built for consistent progress</h2><p className="mt-3 max-w-3xl break-words leading-relaxed text-muted-foreground">{gym.description}</p></div>
+              <section aria-label="Gym trainers"><h2 className="mb-4 text-xl font-bold">Meet the trainers</h2><GymTrainers trainers={gym.trainers} /></section>
               {!gym.id.startsWith('preview-') && gym.source !== 'google' && <GymReviews slug={gym.slug} onRatingChange={(rating, reviewsCount) => setGym(current => current ? { ...current, rating, reviewsCount } : current)} />}
 
               {gym.facilities.length > 0 && <div><h2 className="mb-4 text-xl font-bold">Facilities</h2><div className="grid gap-2 sm:grid-cols-2">{gym.facilities.map((facility) => <div key={facility} className="flex items-center gap-2 rounded-xl border border-white/[.07] bg-white/[.025] px-4 py-3 text-sm"><CheckCircle2 className="size-4 text-primary" /> {facility}</div>)}</div></div>}

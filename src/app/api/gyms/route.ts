@@ -4,6 +4,7 @@ import { connectDBWithTimeout } from '@/lib/mongodb'
 import Gym from '@/models/Gym'
 import { normalizeGym, PREVIEW_GYMS } from '@/lib/gyms'
 import { getOrFetch } from '@/lib/server-cache'
+import { withGymTrainers } from '@/lib/gym-trainers'
 
 function escapeRegex(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
     const gyms = await getOrFetch(`public-gyms:${JSON.stringify([search, city, Boolean(nearby)])}`, 30_000, async () => {
       await connectDBWithTimeout(4000)
       const docs = await Gym.find(query).sort({ rating: -1, createdAt: -1 }).limit(nearby ? 0 : 60).lean()
-      return docs.map((doc) => normalizeGym(doc as unknown as Record<string, unknown>))
+      return withGymTrainers(docs.map((doc) => normalizeGym(doc as unknown as Record<string, unknown>)))
     })
     if (nearby) {
       const located = gyms.filter(gym => gym.location).map(gym => ({

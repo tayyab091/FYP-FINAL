@@ -154,6 +154,7 @@ test('directory outages are not cached and can recover on the next request', asy
 
 test('gym listing filters have separate cached results', async () => {
   global.mongooseCache.conn = mongoose
+  mock.method(Trainer, 'find', () => ({ select: () => ({ sort: () => ({ lean: async () => [] }) }) }))
   const find = mock.method(Gym, 'find', () => ({ sort: () => ({ limit: () => ({ lean: async () => [{ _id: '000000000000000000000003', name: 'Cache Gym', address: 'Lahore', city: 'Lahore', facilities: [], images: [] }] }) }) }))
   const request = (city: string) => new NextRequest(`http://localhost/api/gyms?city=${city}&search=cache-fixture`)
   await gyms(request('Lahore'))

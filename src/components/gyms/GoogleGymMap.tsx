@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { MapPin } from 'lucide-react'
 import type { PublicGym } from '@/lib/gyms'
+import { gymMapSource } from '@/lib/gym-map'
 
 export function GoogleGymMap({
   selectedGym,
@@ -15,19 +16,13 @@ export function GoogleGymMap({
 }) {
   const publicKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
   const osmLocation = selectedGym?.source === 'osm' ? selectedGym.location : undefined
-  const query = selectedGym?.address
-    || (center ? `gyms near ${center.latitude},${center.longitude}` : 'gyms in Pakistan')
-  const src = osmLocation
-    ? 'https://www.openstreetmap.org/export/embed.html?' + new URLSearchParams({ bbox: [osmLocation.longitude - .015, osmLocation.latitude - .01, osmLocation.longitude + .015, osmLocation.latitude + .01].join(','), layer: 'mapnik', marker: osmLocation.latitude + ',' + osmLocation.longitude })
-    : publicKey
-    ? `https://www.google.com/maps/embed/v1/search?key=${encodeURIComponent(publicKey)}&q=${encodeURIComponent(query)}`
-    : `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`
+  const src = gymMapSource(selectedGym, center, publicKey)
   const [loadedSource, setLoadedSource] = useState('')
 
   return (
     <div className={`relative overflow-hidden rounded-3xl border border-border bg-muted ${className}`}>
       <iframe
-        title={selectedGym ? `${selectedGym.name} on ${osmLocation ? 'OpenStreetMap' : 'Google Maps'}` : 'Nearby gyms on Google Maps'}
+        title={selectedGym ? `${selectedGym.name} on ${osmLocation ? 'OpenStreetMap' : 'Google Maps'}` : center ? 'Nearby gyms on Google Maps' : 'COMSATS University Lahore campus map'}
         src={src}
         onLoad={() => setLoadedSource(src)}
         className="h-full min-h-[22rem] w-full border-0 grayscale-[.15] contrast-[1.03]"

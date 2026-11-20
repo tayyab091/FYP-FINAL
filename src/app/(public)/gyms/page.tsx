@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowUpRight, Building2, Check, Info, LocateFixed, MapPin, RotateCcw, Search, Star, Users } from 'lucide-react'
 import { GoogleGymMap } from '@/components/gyms/GoogleGymMap'
+import { GymTrainers } from '@/components/gyms/GymTrainers'
 import type { PublicGym } from '@/lib/gyms'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -76,6 +77,7 @@ function GymCard({ gym, selected, onSelect, distance }: {
             </Link>
           </div>
           {gym.trainersCount > 0 && <span className="mt-3 inline-flex items-center gap-1 text-[11px] text-muted-foreground"><Users className="size-3" /> {gym.trainersCount} trainers available</span>}
+          <GymTrainers trainers={gym.trainers} compact />
           {photo && image === photo.url && !failedImages.includes(photo.url) && <div className="mt-3"><GooglePhotoAttribution photo={photo} mapsUri={gym.googleMapsUri || 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(gym.name) + '&query_place_id=' + encodeURIComponent(gym.googlePlaceId || '')} /></div>}
         </div>
       </div>
@@ -167,10 +169,12 @@ export default function GymsPage() {
     navigator.geolocation.getCurrentPosition(async (position) => {
       const nextCenter = { latitude: position.coords.latitude, longitude: position.coords.longitude }
       setCenter(nextCenter)
+      setSelectedId(null)
       setCity('All cities')
       setListingType('all')
       setNearbyNotice('')
       setLocating(false)
+      document.getElementById('gym-map')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
     }, () => {
       setLocating(false)
@@ -188,7 +192,7 @@ export default function GymsPage() {
     )
   }, [registeredGyms, discoveredGyms, center, radius, search, listingType, city])
   const selectedGym = useMemo(
-    () => gyms.find((gym) => gym.id === selectedId) || gyms[0] || null,
+    () => gyms.find((gym) => gym.id === selectedId) || null,
     [gyms, selectedId],
   )
 
@@ -297,7 +301,7 @@ export default function GymsPage() {
           </section>
 
           <aside id="gym-map" aria-label="Gym map" className="scroll-mt-24 lg:sticky lg:top-24">
-            <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground"><MapPin className="size-4 text-primary" /> Explore the area</div>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-sm font-semibold text-foreground"><span className="inline-flex items-center gap-2"><MapPin className="size-4 text-primary" />{selectedGym ? 'Selected gym' : center ? 'Gyms near your location' : 'COMSATS Lahore area'}</span>{selectedGym && <button type="button" onClick={() => setSelectedId(null)} className="text-xs text-primary underline">{center ? 'Show nearby gyms on map' : 'Reset map'}</button>}</div>
             <div className="overflow-hidden rounded-2xl border border-border bg-card">
               <GoogleGymMap selectedGym={selectedGym} center={center} className="h-[22rem] !rounded-none !border-0 sm:h-[27rem]" />
               {selectedGym && (
@@ -311,6 +315,7 @@ export default function GymsPage() {
 
                 </div>
               )}
+              {!selectedGym && <div className="space-y-2 border-t border-border p-5"><p className="text-xs text-muted-foreground">{center ? 'The map searches for gyms around your current location, including gyms outside T.E.S.T.' : 'Centred on COMSATS University Lahore. Choose a gym to view it on the map.'}</p><a href={'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(center ? 'gyms near ' + center.latitude + ',' + center.longitude : 'COMSATS University Lahore Defence Road')} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-primary underline">{center ? 'Open nearby gyms in Google Maps' : 'Open campus area in Google Maps'}<ArrowUpRight className="size-3.5" /></a></div>}
             </div>
           </aside>
         </div>

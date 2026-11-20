@@ -16,6 +16,7 @@ export interface PublicGym {
   images: string[]
   facilities: string[]
   trainersCount: number
+  trainers?: { id: string; name: string; slug: string; specialty: string[]; rating: number; profileImage: string }[]
   rating: number
   reviewsCount: number
   verificationStatus: 'pending' | 'verified' | 'rejected'

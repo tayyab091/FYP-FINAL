@@ -46,6 +46,7 @@ for (const role of ['user', 'admin', 'gym_owner']) test(`${role} cannot read tra
 
 test('only the signed-in trainer saved gym is returned, with no owner or internal data', async () => {
   const req = request()
+  mock.method(Trainer, 'find', () => ({ select: () => ({ sort: () => ({ lean: async () => [{ _id: userId, gymId, name: 'Connected Trainer', specialty: ['Strength'] }] }) }) }))
   trainerRow({ gymId, gymName: 'Connected Gym', gymVerificationStatus: 'approved', adminVerificationStatus: 'approved', isFullyVerified: true })
   mock.method(Gym, 'findById', (id: unknown) => {
     assert.equal(id, gymId)

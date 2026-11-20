@@ -4,6 +4,7 @@ import { connectDBWithTimeout } from '@/lib/mongodb'
 import Gym from '@/models/Gym'
 import { normalizeGym, PREVIEW_GYMS } from '@/lib/gyms'
 import { idFromPublicSlug } from '@/lib/slug'
+import { withGymTrainers } from '@/lib/gym-trainers'
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -18,10 +19,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
     if (mongoose.Types.ObjectId.isValid(slug)) selectors.push({ _id: slug })
 
     const gym = await Gym.findOne({ $or: selectors, verificationStatus: 'verified' })
-      .populate('trainers', 'name specialty rating profileImage isFullyVerified')
       .lean()
     if (!gym) return NextResponse.json({ message: 'Gym not found' }, { status: 404 })
-    return NextResponse.json(normalizeGym(gym as unknown as Record<string, unknown>))
+    const [profile] = await withGymTrainers([normalizeGym(gym as unknown as Record<string, unknown>)])
+    return NextResponse.json(profile)
   } catch (error) {
     console.error('Gym detail lookup failed:', error)
     return NextResponse.json({ message: 'Gym temporarily unavailable' }, { status: 503 })

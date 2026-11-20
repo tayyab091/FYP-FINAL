@@ -1,5 +1,16 @@
 # File changes and starting line numbers
 
+## Latest: gym trainers and nearby map
+
+- `src/lib/gym-trainers.ts:6` — Load current approved public trainer profiles for each gym and correct stale trainer counts.
+- `src/components/gyms/GymTrainers.tsx:5` — Show linked trainer names/photos on cards, public profiles, and trainer My Gym.
+- `src/lib/gym-map.ts:6` — Keep the default map neutral at COMSATS Lahore and search gyms at the supplied current location.
+- `src/components/gyms/GoogleGymMap.tsx:19` — Use the shared map target and accurate campus/nearby titles.
+- `src/app/(public)/gyms/page.tsx:195` — Remove automatic first-gym selection and reset selection when requesting nearby gyms.
+- `next.config.ts:32` — Allow the existing OpenStreetMap embed through the frame policy.
+
+## Earlier changes
+
 - `src/lib/osm-gyms.ts:7` — Fetch and normalize key-free OpenStreetMap gym listings with caching, radius checks, and timeouts.
 - `src/app/api/gyms/nearby/route.ts:25` — Use OpenStreetMap when Google is absent or fails, with a neutral registered-gym fallback.
 - `src/app/(public)/gyms/page.tsx:27` — Distinguish registered and external gyms, filter both sources, and remove the Google configuration warning.

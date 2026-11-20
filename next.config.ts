@@ -29,7 +29,7 @@ const nextConfig: NextConfig = {
       "font-src 'self' data:",
       "connect-src 'self' https: wss: ws:",
       "media-src 'self' blob: https:",
-      "frame-src 'self' https://js.stripe.com https://meet.jit.si https://*.daily.co https://*.stripe.com https://www.google.com https://maps.google.com",
+      "frame-src 'self' https://js.stripe.com https://meet.jit.si https://*.daily.co https://*.stripe.com https://www.google.com https://maps.google.com https://www.openstreetmap.org",
       "worker-src 'self' blob:",
     ].join('; ')
 
