@@ -41,8 +41,8 @@ export function LegalDocumentPage({ title, intro, sections, path }: LegalDocumen
         ))}
       </div>
       <section className="mt-8 space-y-2">
-        <h2 className="text-lg font-bold text-foreground">Google Maps and Places</h2>
-        <p className="text-base leading-relaxed text-muted-foreground">Nearby discovery sends your chosen location to Google when you use it. Google listings, ratings, and attributed photos are supplied by Google. These features are subject to <a href="https://maps.google.com/help/terms_maps/" target="_blank" rel="noreferrer" className="text-primary underline">Google Maps terms</a> and the <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer" className="text-primary underline">Google Privacy Policy</a>.</p>
+        <h2 className="text-lg font-bold text-foreground">Map services</h2>
+        <p className="text-base leading-relaxed text-muted-foreground">Nearby discovery sends your chosen location to Google Places when configured, or the public OpenStreetMap Overpass service otherwise. Community map data is credited to <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" className="text-primary underline">OpenStreetMap contributors</a> under the Open Database License; see the <a href="https://osmfoundation.org/wiki/Privacy_Policy" target="_blank" rel="noreferrer" className="text-primary underline">OpenStreetMap privacy policy</a>. Google listings, ratings, and attributed photos are subject to <a href="https://maps.google.com/help/terms_maps/" target="_blank" rel="noreferrer" className="text-primary underline">Google Maps terms</a> and the <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer" className="text-primary underline">Google Privacy Policy</a>.</p>
       </section>
       <p className="mt-12 text-sm text-muted-foreground">
         See also{' '}

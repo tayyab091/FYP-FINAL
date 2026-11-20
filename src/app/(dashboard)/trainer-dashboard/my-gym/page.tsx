@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Building2, Mail, MapPin, Phone, RefreshCw, ShieldCheck, Star, Users } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useActivityRefresh } from '@/hooks/useActivityRefresh'
@@ -9,6 +9,7 @@ import { PageLoader } from '@/components/shared/PageLoader'
 import { AccessGate } from '@/components/shared/AccessGate'
 import { PagePhoto } from '@/components/shared/PagePhoto'
 import type { PublicGym } from '@/lib/gyms'
+import { GymReviews } from '@/components/gyms/GymReviews'
 
 interface MyGymData {
   gym: PublicGym | null
@@ -20,6 +21,7 @@ function Approval({ label, status }: { label: string; status: string }) {
 }
 
 export default function TrainerGymPage() {
+  const queryClient = useQueryClient()
   const { user, isLoading } = useAuth()
   const enabled = !isLoading && user?.role === 'trainer'
   const query = useQuery<MyGymData>({
@@ -48,6 +50,7 @@ export default function TrainerGymPage() {
           {gym.facilities.length > 0 && <div className="mt-6"><h3 className="text-sm font-bold">Facilities</h3><div className="mt-3 flex flex-wrap gap-2">{gym.facilities.map(facility => <span key={facility} className="rounded-lg border border-border bg-muted px-3 py-2 text-xs">{facility}</span>)}</div></div>}
           <div className="mt-6 flex flex-wrap gap-3">{gym.phone && <a href={'tel:' + gym.phone.replace(/[^+\d]/g, '')} className="btn-outline text-sm"><Phone size={16} />{gym.phone}</a>}{gym.email && <a href={'mailto:' + gym.email} className="btn-outline text-sm"><Mail size={16} />Email gym</a>}<a href={'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(gym.name + ' ' + gym.address)} target="_blank" rel="noopener noreferrer" className="btn-outline text-sm"><MapPin size={16} />View on Google Maps</a>{gym.verificationStatus === 'verified' && <Link href={'/gyms/' + gym.slug} className="btn-accent text-sm">View gym profile</Link>}</div>
         </section>
+        {gym.verificationStatus === 'verified' && connection?.gymApproval === 'approved' && <GymReviews slug={gym.slug} onRatingChange={(rating, reviewsCount) => queryClient.setQueryData<MyGymData>(['trainer', 'my-gym', user?.id], current => current?.gym ? { ...current, gym: { ...current.gym, rating, reviewsCount } } : current)} />}
       </>}
     </>}
   </div></div>

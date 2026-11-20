@@ -64,7 +64,7 @@ export function LandingFormStudio() {
             <div className="home-scanner__controls" aria-label="Illustrated movement"><span>EXPLORE THE MOTION</span><button type="button" aria-pressed={movement === 'squat'} onClick={() => setMovement('squat')}>Squat</button><button type="button" aria-pressed={movement === 'reach'} onClick={() => setMovement('reach')}>Reach</button></div>
             <div className="home-scanner__bottom"><span><i /> FORM OVER EGO</span><span>ILLUSTRATIVE PREVIEW</span></div>
           </LandingReveal>
-          <LandingReveal direction="right"><h2 className="home-headline">DON’T JUST<br />COUNT REPS.<br /><span>MAKE THEM COUNT.</span></h2><p className="home-body">See your movement with camera-based form feedback.</p><Link href="/exercise-check" className="fitness-button">Explore the form checker <ArrowUpRight size={20} /></Link><p className="home-fineprint">Guidance for your training. Not a substitute for a qualified coach or medical advice.</p></LandingReveal>
+          <LandingReveal direction="right"><h2 className="home-headline">DON’T JUST<br />COUNT REPS.<br /><span>MAKE THEM COUNT.</span></h2><p className="home-body">See your movement with camera-based form feedback.</p><Link href="/exercise-check?marketing=1" className="fitness-button">Explore the form checker <ArrowUpRight size={20} /></Link><p className="home-fineprint">Guidance for your training. Not a substitute for a qualified coach or medical advice.</p></LandingReveal>
         </div>
       </div>
     </section>

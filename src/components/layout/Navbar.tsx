@@ -19,12 +19,12 @@ const NAV_LINKS = [
   { label: 'Find Trainers', href: '/coaching' },
   { label: 'Find Gyms', href: '/gyms' },
   { label: 'Exercises', href: '/exercises' },
-  { label: 'Form Checker', href: '/exercise-check' },
+  { label: 'Form Checker', href: '/exercise-check?marketing=1' },
   { label: 'Nutrition', href: '/nutrition' },
   { label: 'Pricing', href: '/subscription' },
 ] as const
 
-export function Navbar() {
+export function Navbar({ forceVisible = false }: { forceVisible?: boolean }) {
   const { user, isLoading, logout } = useAuth()
   const pathname = usePathname()
   const [scrolled, setScrolled] = useState(false)
@@ -51,7 +51,7 @@ export function Navbar() {
     }
   }, [menuOpen])
 
-  if (shouldHidePublicNavbar(pathname) || ((isLoading || user?.role === 'user') && isMemberCatalogPath(pathname))) return null
+  if (!forceVisible && (shouldHidePublicNavbar(pathname) || ((isLoading || user?.role === 'user') && isMemberCatalogPath(pathname)))) return null
 
   const dashboardHref = user ? getRoleHomePath(user.role) : '/login'
 
@@ -77,7 +77,8 @@ export function Navbar() {
           <div className="ml-2 hidden flex-1 items-center justify-center xl:flex">
             <div className="flex items-center gap-0.5 rounded-xl border border-border bg-muted/50 p-1">
               {NAV_LINKS.map((l) => {
-                const active = pathname === l.href || pathname.startsWith(`${l.href}/`)
+                const base = l.href.split('?')[0]
+                const active = pathname === base || pathname.startsWith(`${base}/`)
                 return (
                   <Link
                     key={l.href}
@@ -206,7 +207,8 @@ export function Navbar() {
 
               <nav className="flex-1 space-y-1 overflow-y-auto p-4">
                 {NAV_LINKS.map((l, i) => {
-                  const active = pathname === l.href || pathname.startsWith(`${l.href}/`)
+                  const base = l.href.split('?')[0]
+                  const active = pathname === base || pathname.startsWith(`${base}/`)
                   return (
                     <motion.div
                       key={l.href}

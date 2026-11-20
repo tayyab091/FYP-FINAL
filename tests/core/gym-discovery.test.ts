@@ -6,6 +6,7 @@ import { photoMetadata, readPhotoToken } from '../../src/lib/google-gym-photos'
 import { GET } from '../../src/app/api/gyms/nearby/route'
 import { GET as photoGET } from '../../src/app/api/gyms/photo/route'
 import { PREVIEW_GYMS, type PublicGym } from '../../src/lib/gyms'
+import { normalizeOsmGyms } from '../../src/lib/osm-gyms'
 
 const oldEnv = { ...process.env }
 const center = { latitude: 31.52, longitude: 74.35 }
@@ -35,11 +36,20 @@ test('Google nearby rejects missing or invalid coordinates before making a paid 
   for (const query of ['', 'lat=x&lng=2', 'lat=91&lng=2']) assert.equal((await GET(req(query))).status, 400)
   assert.equal(fetchMock.mock.callCount(), 0)
 })
-test('Google nearby has an explicit unconfigured response', async () => {
+test('nearby search works through OpenStreetMap when no Google key is configured', async () => {
   delete process.env.GOOGLE_MAPS_API_KEY
+  process.env.PLAYWRIGHT_TEST = '1'
+  mock.method(global, 'fetch', async (url: unknown, options: RequestInit) => {
+    assert.equal(url, 'https://overpass.private.coffee/api/interpreter')
+    assert.match(String(options.body), /fitness_centre/)
+    return Response.json({ elements: [{ type: 'node', id: 123, lat: 31.52, lon: 74.35, tags: { name: 'Mapped Gym' } }] })
+  })
   const response = await GET(req())
-  assert.equal(response.status, 503)
-  assert.equal((await response.json()).configured, false)
+  const data = await response.json()
+  assert.equal(response.status, 200)
+  assert.equal(data.provider, 'osm')
+  assert.equal(data.places[0].source, 'osm')
+  assert.equal(data.places[0].osmUri, 'https://www.openstreetmap.org/node/123')
 })
 test('Google nearby uses meters, distance ranking and real attributed photos without exposing keys', async () => {
   process.env.GOOGLE_MAPS_API_KEY = 'private-fixture-key'
@@ -66,8 +76,8 @@ test('Google errors do not leak provider messages or secrets', async () => {
   process.env.GOOGLE_MAPS_API_KEY = 'fixture'
   process.env.PLAYWRIGHT_TEST = '1'
   mock.method(global, 'fetch', async () => Response.json({ error: { message: 'private key details' } }, { status: 403 }))
-  const response = await GET(req())
-  assert.equal(response.status, 502)
+  const response = await GET(req('lat=31.521&lng=74.35&radius=2000'))
+  assert.equal(response.status, 200)
   assert.doesNotMatch(JSON.stringify(await response.json()), /private key details/)
 })
 test('photo tokens reject tampering, arbitrary paths and unrelated credentials', async () => {
@@ -78,4 +88,29 @@ test('photo tokens reject tampering, arbitrary paths and unrelated credentials',
   assert.equal(readPhotoToken(token + 'tampered'), null)
   assert.equal(photoMetadata({ name: '../secrets' }), undefined)
   assert.equal((await photoGET(new NextRequest('http://localhost/api/gyms/photo?token=arbitrary'))).status, 400)
+})
+
+test('OpenStreetMap handles areas, filters missing names and distant gyms, and does not invent photos or ratings', () => {
+  const rows = normalizeOsmGyms([
+    { type: 'way', id: 55, center: { lat: 31.52, lon: 74.35 }, tags: { name: 'Area Gym', 'addr:street': 'Gym Road', 'addr:city': 'Lahore' } },
+    { type: 'node', id: 56, lat: 31.52, lon: 74.35, tags: {} },
+    { type: 'node', id: 57, lat: 0, lon: 0, tags: { name: 'Far Gym' } },
+  ], center, 2000)
+  assert.equal(rows.length, 1)
+  assert.equal(rows[0].address, 'Gym Road, Lahore')
+  assert.equal(rows[0].osmUri, 'https://www.openstreetmap.org/way/55')
+  assert.equal(rows[0].rating, 0)
+  assert.deepEqual(rows[0].images, [])
+})
+
+test('map provider failures keep the endpoint usable without a Google configuration error', async () => {
+  delete process.env.GOOGLE_MAPS_API_KEY
+  process.env.PLAYWRIGHT_TEST = '1'
+  mock.method(global, 'fetch', async () => { throw new Error('Map provider offline') })
+  const response = await GET(req('lat=31.529&lng=74.35&radius=2000'))
+  const data = await response.json()
+  assert.equal(response.status, 200)
+  assert.deepEqual(data.places, [])
+  assert.match(data.notice, /registered gyms/i)
+  assert.doesNotMatch(JSON.stringify(data), /Google|not configured|offline/)
 })

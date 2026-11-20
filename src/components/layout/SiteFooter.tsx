@@ -11,7 +11,7 @@ const links = [
   { label: 'Trainers', href: '/coaching' },
   { label: 'Gyms', href: '/gyms' },
   { label: 'Exercises', href: '/exercises' },
-  { label: 'Form Checker', href: '/exercise-check' },
+  { label: 'Form Checker', href: '/exercise-check?marketing=1' },
   { label: 'Nutrition', href: '/nutrition' },
   { label: 'Pricing', href: '/subscription' },
   { label: 'Privacy', href: '/privacy' },

@@ -1,5 +1,7 @@
 # Google Places setup for T.E.S.T.
 
+Nearby gym discovery also works without a Google key through OpenStreetMap / Overpass. This guide is only needed for optional Google results and original Google Maps photos. Public map coverage and service availability vary.
+
 ## 1. Google Cloud
 
 1. Open https://console.cloud.google.com/ and select or create a project for T.E.S.T.
@@ -31,8 +33,8 @@ The app does not copy Google photos into MongoDB or Cloudinary. It fetches them 
 
 1. Open `/gyms` on HTTPS or localhost, click **Use my location**, and allow location for that site.
 2. Select a radius. Results combine registered gyms with up to 20 nearest gyms returned by Google, including unregistered businesses.
-3. Use **Listings** to show all, registered only, or Google-only results. Registered cards open T.E.S.T. profiles; unregistered cards open Google Maps.
-4. If Google is not configured or unavailable, an explicit notice appears and registered results still work. This API cannot guarantee an exhaustive directory of every gym; use Google Maps for further exploration.
+3. Use **Listings** to show all, registered only, or unregistered map results. Registered cards open T.E.S.T. profiles; unregistered cards open Google Maps.
+4. If Google is not configured or unavailable, OpenStreetMap is used. If that public service is also unavailable, a neutral notice appears and registered results still work. This API cannot guarantee an exhaustive directory of every gym; use Google Maps for further exploration.
 
 ## Optional: official Maps Embed key
 

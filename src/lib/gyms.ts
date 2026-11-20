@@ -23,7 +23,8 @@ export interface PublicGym {
   googleMapsUri?: string
   googlePlaceId?: string
   googlePhoto?: { url: string; mapsUri?: string; authors: { name: string; uri?: string }[] }
-  source: 'test' | 'google'
+  osmUri?: string
+  source: 'test' | 'google' | 'osm'
 }
 
 const previewData: Omit<PublicGym, 'slug'>[] = [

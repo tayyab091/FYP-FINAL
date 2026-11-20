@@ -24,8 +24,8 @@ function GymCard({ gym, selected, onSelect, distance }: {
   const [failedImages, setFailedImages] = useState<string[]>([])
   const photo = useGymGooglePhoto(gym)
   const image = photo && !failedImages.includes(photo.url) ? photo.url : gym.coverImage
-  const external = gym.source === 'google'
-  const href = external ? gym.googleMapsUri || 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(gym.name + ' ' + gym.address) + '&query_place_id=' + encodeURIComponent(gym.googlePlaceId || '') : '/gyms/' + gym.slug
+  const external = gym.source !== 'test'
+  const href = external ? gym.osmUri || gym.googleMapsUri || 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(gym.name + ' ' + gym.address) + '&query_place_id=' + encodeURIComponent(gym.googlePlaceId || '') : '/gyms/' + gym.slug
   return (
     <article className={'overflow-hidden rounded-2xl border bg-card transition duration-200 ' + (selected ? 'border-primary/50 shadow-[0_8px_30px_rgba(16,185,129,.08)]' : 'border-border hover:border-primary/30')}>
       <div className="grid sm:grid-cols-[11rem_minmax(0,1fr)]">
@@ -43,12 +43,12 @@ function GymCard({ gym, selected, onSelect, distance }: {
           )}
         </Link>
         <div className="flex min-w-0 flex-col p-5">
-          <span className={'mb-3 w-fit rounded-lg border px-2 py-1 text-[10px] font-bold ' + (external ? 'border-border text-muted-foreground' : 'border-primary/30 bg-primary/10 text-primary')}>{external ? 'Google listing · not registered' : gym.id.startsWith('preview-') ? 'Demo listing' : 'Registered on T.E.S.T.'}</span>
+          <span className={'mb-3 w-fit rounded-lg border px-2 py-1 text-[10px] font-bold ' + (external ? 'border-border text-muted-foreground' : 'border-primary/30 bg-primary/10 text-primary')}>{external ? (gym.source === 'osm' ? 'OpenStreetMap · not registered' : 'Google listing · not registered') : gym.id.startsWith('preview-') ? 'Demo listing' : 'Registered on T.E.S.T.'}</span>
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs">
             <span className="font-medium text-muted-foreground">{gym.city || gym.country}{distance !== undefined ? ' - ' + distance.toFixed(1) + ' km away' : ''}</span>
             <span className="inline-flex items-center gap-1 font-semibold text-foreground">
               <Star className="size-3.5 fill-amber-400 text-amber-500" />
-              {gym.rating ? gym.rating.toFixed(1) : 'New'}
+              {gym.source === 'osm' ? 'Unrated' : gym.rating ? gym.rating.toFixed(1) : 'New'}
               {gym.reviewsCount > 0 && <span className="font-normal text-muted-foreground">({gym.reviewsCount})</span>}
             </span>
           </div>
@@ -72,7 +72,7 @@ function GymCard({ gym, selected, onSelect, distance }: {
             </button>
             <Link href={href} target={external ? '_blank' : undefined} rel={external ? 'noreferrer' : undefined}
               className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:underline">
-              {external ? 'View on Google Maps' : 'View gym'} <ArrowUpRight className="size-3.5" />
+              {external ? (gym.source === 'osm' ? 'View on OpenStreetMap' : 'View on Google Maps') : 'View gym'} <ArrowUpRight className="size-3.5" />
             </Link>
           </div>
           {gym.trainersCount > 0 && <span className="mt-3 inline-flex items-center gap-1 text-[11px] text-muted-foreground"><Users className="size-3" /> {gym.trainersCount} trainers available</span>}
@@ -87,9 +87,10 @@ export default function GymsPage() {
   const publicData = usePublicData()
   const { user } = useAuth()
   const [registeredGyms, setGyms] = useState<PublicGym[]>([])
-  const [googleGyms, setGoogleGyms] = useState<PublicGym[]>([])
-  const [googleLoading, setGoogleLoading] = useState(false)
-  const [googleNotice, setGoogleNotice] = useState('')
+  const [discoveredGyms, setDiscoveredGyms] = useState<PublicGym[]>([])
+  const [discoveryLoading, setDiscoveryLoading] = useState(false)
+  const [discoveryNotice, setDiscoveryNotice] = useState('')
+  const [discoveryProvider, setDiscoveryProvider] = useState<'google' | 'osm'>('osm')
   const [listingType, setListingType] = useState('all')
   const [radius, setRadius] = useState(10)
   const [search, setSearch] = useState('')
@@ -134,23 +135,25 @@ export default function GymsPage() {
   }, [loadMarketplace])
 
   useEffect(() => {
-    setGoogleGyms([])
-    setGoogleNotice('')
-    if (!center) { setGoogleLoading(false); return }
+    setDiscoveredGyms([])
+    setDiscoveryNotice('')
+    if (!center) { setDiscoveryLoading(false); return }
     const controller = new AbortController()
-    setGoogleLoading(true)
+    setDiscoveryLoading(true)
     const params = new URLSearchParams({ lat: String(center.latitude), lng: String(center.longitude), radius: String(radius * 1000) })
-    void fetch('/api/gyms/nearby?' + params, { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(12_000)]), cache: 'no-store' }).then(async response => {
+    void fetch('/api/gyms/nearby?' + params, { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(18_000)]), cache: 'no-store' }).then(async response => {
       const data = await response.json()
       if (controller.signal.aborted) return
       if (!response.ok) {
-        setGoogleNotice(data.configured === false ? 'Google discovery is not configured yet. Only registered gyms are available.' : 'Google discovery is temporarily unavailable. Registered gyms are still available.')
+        setDiscoveryNotice('Showing registered gyms. Nearby map listings are temporarily unavailable.')
         return
       }
-      setGoogleGyms(Array.isArray(data.places) ? data.places : [])
+      setDiscoveredGyms(Array.isArray(data.places) ? data.places : [])
+      setDiscoveryProvider(data.provider === 'google' ? 'google' : 'osm')
+      setDiscoveryNotice(typeof data.notice === 'string' ? data.notice : '')
     }).catch(() => {
-      if (!controller.signal.aborted) setGoogleNotice('Google discovery could not be refreshed. Registered gyms are still available.')
-    }).finally(() => { if (!controller.signal.aborted) setGoogleLoading(false) })
+      if (!controller.signal.aborted) setDiscoveryNotice('Showing registered gyms. Nearby map listings could not be refreshed.')
+    }).finally(() => { if (!controller.signal.aborted) setDiscoveryLoading(false) })
     return () => controller.abort()
   }, [center, radius])
 
@@ -176,14 +179,14 @@ export default function GymsPage() {
   }
 
   const gyms = useMemo(() => {
-    const combined = center ? mergeNearbyGyms(registeredGyms, googleGyms, center, radius) : registeredGyms
+    const combined = center ? mergeNearbyGyms(registeredGyms, discoveredGyms, center, radius) : registeredGyms
     const needle = search.trim().toLowerCase()
     return combined.filter(gym =>
-      (listingType === 'all' || (listingType === 'google' ? gym.source === 'google' : gym.source !== 'google')) &&
+      (listingType === 'all' || (listingType === 'external' ? gym.source !== 'test' : gym.source === 'test')) &&
       (!needle || [gym.name, gym.address, gym.city, ...gym.facilities].some(value => value.toLowerCase().includes(needle))) &&
       (city === 'All cities' || gym.city.toLowerCase() === city.toLowerCase() || gym.address.toLowerCase().includes(city.toLowerCase())),
     )
-  }, [registeredGyms, googleGyms, center, radius, search, listingType, city])
+  }, [registeredGyms, discoveredGyms, center, radius, search, listingType, city])
   const selectedGym = useMemo(
     () => gyms.find((gym) => gym.id === selectedId) || gyms[0] || null,
     [gyms, selectedId],
@@ -252,7 +255,7 @@ export default function GymsPage() {
               </Button>
             </div>
           </div>
-          {center && <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3"><label className="flex items-center gap-2 text-xs text-muted-foreground">Listings<select aria-label="Gym registration filter" value={listingType} onChange={event => setListingType(event.target.value)} className="rounded-lg border border-border bg-background px-3 py-2 text-foreground"><option value="all">All nearby gyms</option><option value="registered">Registered on T.E.S.T.</option><option value="google">Google · not registered</option></select></label><span className="max-w-md text-xs text-muted-foreground">Registered profiles plus up to 20 nearest Google results within {radius} km. Google listings are not verified by T.E.S.T.</span><a href={'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent('gyms near ' + center.latitude + ',' + center.longitude)} target="_blank" rel="noreferrer" className="text-xs font-semibold text-primary underline">Explore more on Google Maps</a></div>}
+          {center && <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3"><label className="flex items-center gap-2 text-xs text-muted-foreground">Listings<select aria-label="Gym registration filter" value={listingType} onChange={event => setListingType(event.target.value)} className="rounded-lg border border-border bg-background px-3 py-2 text-foreground"><option value="all">All nearby gyms</option><option value="registered">Registered on T.E.S.T.</option><option value="external">Map listings · not registered</option></select></label><span className="max-w-md text-xs text-muted-foreground">Registered profiles and {discoveryProvider === 'google' ? 'up to 20 Google results' : 'up to 200 community-mapped gyms'} within {radius} km. Map coverage may be incomplete.</span><a href={'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent('gyms near ' + center.latitude + ',' + center.longitude)} target="_blank" rel="noreferrer" className="text-xs font-semibold text-primary underline">Explore more on Google Maps</a></div>}
           {(hasFilters || nearbyNotice) && (
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
               <p role="status" className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -264,8 +267,8 @@ export default function GymsPage() {
           )}
         </section>
 
-        {center && googleNotice && <p role="status" className="mb-5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm">{googleNotice}</p>}
-        {center && googleGyms.length > 0 && <div className="mb-4 flex items-center gap-2 text-xs text-muted-foreground"><GoogleBrand /><span>Google ratings belong to Google listings; registered profiles show T.E.S.T. reviews.</span></div>}
+        {center && discoveryNotice && <p role="status" className="mb-5 text-xs text-muted-foreground">{discoveryNotice}</p>}
+        {center && discoveredGyms.length > 0 && <div className="mb-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">{discoveryProvider === 'google' ? <><GoogleBrand /><span>Google ratings belong to Google listings; registered profiles show T.E.S.T. reviews.</span></> : <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" className="underline">© OpenStreetMap contributors · Open Database License</a>}</div>}
 
         {loadError && (
           <div role="alert" className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-foreground">
@@ -278,7 +281,7 @@ export default function GymsPage() {
           <section aria-label="Gym results" className="min-w-0">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-lg font-bold text-foreground">{center ? 'Gyms near you' : city === 'All cities' ? 'Explore gyms' : 'Gyms in ' + city}</h2>
-              <span aria-live="polite" className="text-xs text-muted-foreground">{loading || googleLoading ? 'Finding gyms...' : gyms.length + (gyms.length === 1 ? ' gym found' : ' gyms found')}</span>
+              <span aria-live="polite" className="text-xs text-muted-foreground">{loading || discoveryLoading ? 'Finding gyms...' : gyms.length + (gyms.length === 1 ? ' gym found' : ' gyms found')}</span>
             </div>
             {loading ? (
               <div aria-busy="true" aria-label="Loading gym listings" className="space-y-4">
@@ -301,9 +304,9 @@ export default function GymsPage() {
                 <div className="space-y-2 border-t border-border p-5">
                   <h2 className="text-base font-bold text-foreground">{selectedGym.name}</h2>
                   <p className="text-xs leading-relaxed text-muted-foreground">{selectedGym.address}</p>
-                  <a href={'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(selectedGym.address)} target="_blank" rel="noreferrer"
+                  <a href={selectedGym.osmUri || selectedGym.googleMapsUri || 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(selectedGym.name + ' ' + selectedGym.address)} target="_blank" rel="noreferrer"
                     className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline">
-                    Open in Google Maps <ArrowUpRight className="size-3.5" />
+                    Open in {selectedGym.source === 'osm' ? 'OpenStreetMap' : 'Google Maps'} <ArrowUpRight className="size-3.5" />
                   </a>
 
                 </div>

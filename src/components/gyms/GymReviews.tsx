@@ -6,7 +6,7 @@ import { StarRatingInput } from '@/components/shared/StarRatingInput'
 import { useAuth } from '@/hooks/useAuth'
 
 interface Review { _id: string; rating: number; comment: string; authorName: string }
-interface Reviews { reviews: Review[]; averageRating: number; reviewCount: number; currentUserReview: { rating: number; comment: string } | null }
+interface Reviews { reviews: Review[]; averageRating: number; reviewCount: number; canReview?: boolean; currentUserReview: { rating: number; comment: string } | null }
 
 export function GymReviews({ slug, onRatingChange }: { slug: string; onRatingChange: (rating: number, count: number) => void }) {
   const { user } = useAuth()
@@ -34,7 +34,7 @@ export function GymReviews({ slug, onRatingChange }: { slug: string; onRatingCha
       const response = await fetch(`/api/gyms/${encodeURIComponent(slug)}/reviews`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rating, comment, anonymous }) })
       const result = await response.json()
       if (!response.ok) throw new Error(result.message || 'Unable to save review')
-      setData(previous => ({ reviews: [result.review, ...(previous?.reviews || [])], averageRating: result.averageRating, reviewCount: result.reviewCount, currentUserReview: result.review }))
+      setData(previous => ({ reviews: [result.review, ...(previous?.reviews || [])], averageRating: result.averageRating, reviewCount: result.reviewCount, currentUserReview: result.review, canReview: previous?.canReview }))
       onRatingChange(result.averageRating, result.reviewCount)
       setComment('')
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Unable to save review') }
@@ -45,7 +45,7 @@ export function GymReviews({ slug, onRatingChange }: { slug: string; onRatingCha
     {data && <p className="text-sm text-muted-foreground">{data.reviewCount ? `${data.averageRating.toFixed(1)} / 5 · ${data.reviewCount} reviews` : 'No reviews yet. Share your experience.'}</p>}
     {error && <div role="alert" className="text-sm text-destructive">{error} <button type="button" onClick={() => setAttempt(value => value + 1)} className="underline">Retry reviews</button></div>}
     {!data && !error && <p role="status" className="text-sm text-muted-foreground">Loading reviews…</p>}
-    {!user ? <Link href="/login" className="text-primary">Sign in to rate this gym</Link> : data?.currentUserReview ? <p role="status" className="text-primary">Your {data.currentUserReview.rating}-star review has been saved.</p> : user.role === 'user' && data && <form onSubmit={submit} className="space-y-3 rounded-xl border border-border bg-card p-4">
+    {!user ? <Link href="/login" className="text-primary">Sign in to rate this gym</Link> : data?.currentUserReview ? <p role="status" className="text-primary">Your {data.currentUserReview.rating}-star review has been saved.</p> : data?.canReview && <form onSubmit={submit} className="space-y-3 rounded-xl border border-border bg-card p-4">
       <StarRatingInput value={rating} onChange={setRating} disabled={saving} />
       <label className="block text-sm font-semibold" htmlFor="gym-review">Your experience</label><textarea id="gym-review" value={comment} onChange={event => setComment(event.target.value)} minLength={3} maxLength={1000} required rows={3} placeholder="Share your experience with the facilities, atmosphere, and service (at least 3 characters)" className="w-full rounded-xl border border-border bg-background p-3 text-sm text-foreground" />
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={anonymous} onChange={event => setAnonymous(event.target.checked)} />Post anonymously (hide my name)</label>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createPublicSlug } from '@/lib/slug'
 import { photoMetadata, type GooglePhoto } from '@/lib/google-gym-photos'
 import { rateLimit } from '@/lib/rate-limit'
+import { searchOsmGyms } from '@/lib/osm-gyms'
 
 interface GooglePlace {
   id?: string
@@ -30,13 +31,18 @@ export async function GET(req: NextRequest) {
   }
   const limited = rateLimit(req, 'gym-nearby', 30, 600_000)
   if (limited) return limited
+  const openMapResponse = async () => {
+    try {
+      const places = await searchOsmGyms({ latitude, longitude }, radius)
+      return NextResponse.json({ configured: true, provider: 'osm', places, maxResults: 200 }, { headers: { 'Cache-Control': 'private, no-store' } })
+    } catch {
+      return NextResponse.json({ configured: true, provider: 'osm', places: [], notice: 'Showing registered gyms. Nearby map listings are temporarily unavailable.' }, { headers: { 'Cache-Control': 'private, no-store' } })
+    }
+  }
 
   const apiKey = process.env.GOOGLE_MAPS_API_KEY
   if (!apiKey) {
-    return NextResponse.json(
-      { message: 'Google Places is not configured', configured: false, places: [] },
-      { status: 503 },
-    )
+    return openMapResponse()
   }
 
   try {
@@ -69,15 +75,12 @@ export async function GET(req: NextRequest) {
         },
       }),
       cache: 'no-store',
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(4000),
     })
 
     const data = await response.json() as { places?: GooglePlace[]; error?: { message?: string } }
     if (!response.ok) {
-      return NextResponse.json(
-        { message: 'Google gym discovery is unavailable. Registered gyms are still shown.', places: [] },
-        { status: 502 },
-      )
+      return openMapResponse()
     }
 
     const places = (data.places || []).map((place) => {
@@ -111,8 +114,8 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    return NextResponse.json({ configured: true, places, maxResults: 20 }, { headers: { 'Cache-Control': 'private, no-store' } })
+    return NextResponse.json({ configured: true, provider: 'google', places, maxResults: 20 }, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch {
-    return NextResponse.json({ message: 'Google Places is temporarily unavailable', places: [] }, { status: 502 })
+    return openMapResponse()
   }
 }
