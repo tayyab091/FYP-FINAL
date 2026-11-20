@@ -8,15 +8,17 @@ import { gymMapSource } from '@/lib/gym-map'
 export function GoogleGymMap({
   selectedGym,
   center,
+  radiusKm = 10,
   className = '',
 }: {
   selectedGym?: PublicGym | null
   center?: { latitude: number; longitude: number } | null
+  radiusKm?: number
   className?: string
 }) {
   const publicKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
   const osmLocation = selectedGym?.source === 'osm' ? selectedGym.location : undefined
-  const src = gymMapSource(selectedGym, center, publicKey)
+  const src = gymMapSource(selectedGym, center, publicKey, radiusKm)
   const [loadedSource, setLoadedSource] = useState('')
 
   return (

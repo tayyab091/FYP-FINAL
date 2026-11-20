@@ -28,14 +28,19 @@ export async function searchOsmGyms(center: GeoPoint, radius: number) {
   return getOrFetch(key, 300_000, async () => {
     const around = `${radius},${center.latitude},${center.longitude}`
     const query = `[out:json][timeout:8];(nwr["leisure"="fitness_centre"]["name"](around:${around});nwr["sport"="fitness"]["name"](around:${around});nwr["amenity"="gym"]["name"](around:${around}););out center 200;`
-    const response = await fetch('https://overpass.private.coffee/api/interpreter', {
-      method: 'POST', body: new URLSearchParams({ data: query }),
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'TEST-Fitness/1.0 (https://fyp-final-ten.vercel.app)' },
-      signal: AbortSignal.timeout(10_000), cache: 'no-store',
-    })
-    if (!response.ok) throw new Error('Nearby map search unavailable')
-    const data = await response.json() as { elements?: OsmElement[]; remark?: string }
-    if (!Array.isArray(data.elements) || data.remark) throw new Error('Nearby map search incomplete')
-    return normalizeOsmGyms(data.elements, center, radius)
+    for (const endpoint of ['https://overpass.private.coffee/api/interpreter', 'https://overpass-api.de/api/interpreter']) {
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST', body: new URLSearchParams({ data: query }),
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'TEST-Fitness/1.0 (https://fyp-final-ten.vercel.app)' },
+          signal: AbortSignal.timeout(6000), cache: 'no-store',
+        })
+        if (!response.ok) throw new Error('Nearby map search unavailable')
+        const data = await response.json() as { elements?: OsmElement[]; remark?: string }
+        if (!Array.isArray(data.elements) || data.remark) throw new Error('Nearby map search incomplete')
+        return normalizeOsmGyms(data.elements, center, radius)
+      } catch { /* Try the independent mirror before reporting an outage. */ }
+    }
+    throw new Error('Nearby map search unavailable')
   })
 }

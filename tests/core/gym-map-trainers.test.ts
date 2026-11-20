@@ -18,13 +18,30 @@ test('nearby map uses the current coordinates independently of external listing 
 })
 test('explicit gym selection uses that gym and clearing returns to nearby search', () => {
   const center = { latitude: 31.4, longitude: 74.2 }
-  assert.match(new URL(gymMapSource(PREVIEW_GYMS[0], center)).searchParams.get('q')!, /FitZone Lahore/)
+  assert.equal(new URL(gymMapSource(PREVIEW_GYMS[0], center)).searchParams.get('q'), PREVIEW_GYMS[0].location!.latitude + ',' + PREVIEW_GYMS[0].location!.longitude)
   assert.equal(new URL(gymMapSource(null, center)).searchParams.get('q'), 'gyms near 31.4,74.2')
 })
 test('keyed neutral embeds use view mode instead of selecting a business', () => {
   const url = new URL(gymMapSource(null, null, 'fixture-key'))
   assert.equal(url.pathname, '/maps/embed/v1/view')
   assert.equal(url.searchParams.get('center'), COMSATS_LAHORE.latitude + ',' + COMSATS_LAHORE.longitude)
+})
+
+test('keyed nearby map explicitly centres on the user, not a registered business', () => {
+  const center = { latitude: 24.86, longitude: 67.01 }
+  const url = new URL(gymMapSource(null, center, 'fixture-key', 2))
+  assert.equal(url.searchParams.get('center'), '24.86,67.01')
+  assert.equal(url.searchParams.get('q'), 'gyms')
+  const wider = new URL(gymMapSource(null, center, 'fixture-key', 25))
+  assert.ok(Number(url.searchParams.get('zoom')) > Number(wider.searchParams.get('zoom')))
+})
+
+test('key-free map keeps search origin and viewport at the browser coordinates', () => {
+  const url = new URL(gymMapSource(null, { latitude: 31.4, longitude: 74.2 }, undefined, 5))
+  assert.equal(url.searchParams.get('sll'), '31.4,74.2')
+  assert.equal(url.searchParams.get('ll'), '31.4,74.2')
+  const wider = new URL(gymMapSource(null, { latitude: 31.4, longitude: 74.2 }, undefined, 50))
+  assert.ok(Number(url.searchParams.get('z')) > Number(wider.searchParams.get('z')))
 })
 test('gym rosters use current approved public trainers and never expose private fields or stale counts', async () => {
   mock.method(Trainer, 'find', (filter: Record<string, unknown>) => {

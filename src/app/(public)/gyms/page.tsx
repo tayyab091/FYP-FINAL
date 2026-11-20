@@ -100,6 +100,7 @@ export default function GymsPage() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [locating, setLocating] = useState(false)
+  const [locationAccuracy, setLocationAccuracy] = useState<number | null>(null)
   const [nearbyNotice, setNearbyNotice] = useState('')
   const [center, setCenter] = useState<{ latitude: number; longitude: number } | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -117,6 +118,7 @@ export default function GymsPage() {
         params.set('radius', String(radius))
       }
       const data = await publicData<{ gyms?: PublicGym[] }>(`/api/gyms?${params}`, signal)
+      if (signal?.aborted) return
       setGyms(Array.isArray(data.gyms) ? data.gyms : [])
     } catch (error) {
       if (!(error instanceof DOMException && error.name === 'AbortError')) {
@@ -165,12 +167,15 @@ export default function GymsPage() {
       return
     }
     setLocating(true)
+    setSelectedId(null)
     setNearbyNotice('')
     navigator.geolocation.getCurrentPosition(async (position) => {
       const nextCenter = { latitude: position.coords.latitude, longitude: position.coords.longitude }
       setCenter(nextCenter)
+      setLocationAccuracy(position.coords.accuracy)
       setSelectedId(null)
       setCity('All cities')
+      setSearch('')
       setListingType('all')
       setNearbyNotice('')
       setLocating(false)
@@ -232,6 +237,7 @@ export default function GymsPage() {
     setSearch('')
     setCity('All cities')
     setCenter(null)
+    setLocationAccuracy(null)
     setRadius(10)
     setSelectedId(null)
     setNearbyNotice('')
@@ -328,11 +334,13 @@ export default function GymsPage() {
           <aside id="gym-map" aria-label="Gym map" className="scroll-mt-24 lg:sticky lg:top-24">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-sm font-semibold text-foreground"><span className="inline-flex items-center gap-2"><MapPin className="size-4 text-primary" />{selectedGym ? 'Selected gym' : center ? 'Gyms near your location' : 'COMSATS Lahore area'}</span>{selectedGym && <button type="button" onClick={() => setSelectedId(null)} className="text-xs text-primary underline">{center ? 'Show nearby gyms on map' : 'Reset map'}</button>}</div>
             <div className="overflow-hidden rounded-2xl border border-border bg-card">
-              <GoogleGymMap selectedGym={selectedGym} center={center} className="h-[22rem] !rounded-none !border-0 sm:h-[27rem]" />
+              {center && <div className="space-y-1 border-b border-border p-4 text-xs text-muted-foreground"><p>Your detected location: {center.latitude.toFixed(5)}, {center.longitude.toFixed(5)}{locationAccuracy !== null ? ' (accuracy ±' + Math.round(locationAccuracy) + ' m)' : ''}.</p>{locationAccuracy !== null && locationAccuracy > 1000 && <p role="status">Your browser returned an approximate location. Enable precise location on your device and try again for accurate distances.</p>}<p>Search area: {radius} km. Google may also display results outside this area; the list applies the selected distance limit.</p></div>}
+              <GoogleGymMap selectedGym={selectedGym} center={center} radiusKm={radius} className="h-[22rem] !rounded-none !border-0 sm:h-[27rem]" />
               {selectedGym && (
                 <div className="space-y-2 border-t border-border p-5">
                   <h2 className="text-base font-bold text-foreground">{selectedGym.name}</h2>
                   <p className="text-xs leading-relaxed text-muted-foreground">{selectedGym.address}</p>
+                  {center && selectedGym.location && <a className="block text-xs font-semibold text-primary underline" target="_blank" rel="noreferrer" href={'https://www.google.com/maps/dir/?' + new URLSearchParams({ api: '1', origin: center.latitude + ',' + center.longitude, destination: selectedGym.location.latitude + ',' + selectedGym.location.longitude, travelmode: 'driving', ...(selectedGym.googlePlaceId ? { destination_place_id: selectedGym.googlePlaceId } : {}) })}>Driving route from your detected location</a>}
                   <a href={selectedGym.osmUri || selectedGym.googleMapsUri || 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(selectedGym.name + ' ' + selectedGym.address)} target="_blank" rel="noreferrer"
                     className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline">
                     Open in {selectedGym.source === 'osm' ? 'OpenStreetMap' : 'Google Maps'} <ArrowUpRight className="size-3.5" />
